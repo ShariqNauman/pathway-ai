@@ -96,6 +96,47 @@
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-primary/50;
   }
+  
+  /* Markdown styling */
+  .prose {
+    @apply text-foreground;
+  }
+  
+  .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+    @apply text-foreground font-bold;
+  }
+  
+  .prose a {
+    @apply text-primary underline;
+  }
+  
+  .prose strong {
+    @apply font-bold;
+  }
+  
+  .prose ul, .prose ol {
+    @apply my-4 ml-4;
+  }
+  
+  .prose ul {
+    @apply list-disc;
+  }
+  
+  .prose ol {
+    @apply list-decimal;
+  }
+  
+  .prose blockquote {
+    @apply border-l-4 border-muted pl-4 italic;
+  }
+  
+  .prose code {
+    @apply bg-muted/50 px-1 py-0.5 rounded;
+  }
+  
+  .prose pre {
+    @apply bg-muted/50 p-4 rounded overflow-x-auto my-4;
+  }
 }
 
 /* Glass morphism */

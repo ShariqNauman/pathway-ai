@@ -4,13 +4,15 @@ interface GeminiResponse {
   error?: string;
 }
 
+// Fixed API key - replace "YOUR_FIXED_API_KEY" with the actual key provided by the user
+const GEMINI_API_KEY = "YOUR_FIXED_API_KEY";
+
 export async function getGeminiResponse(
-  prompt: string,
-  apiKey: string
+  prompt: string
 ): Promise<GeminiResponse> {
   try {
     // Using gemini-2.0-flash model instead of gemini-1.0-pro
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
     
     const response = await fetch(url, {
       method: 'POST',

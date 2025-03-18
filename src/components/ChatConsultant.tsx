@@ -3,6 +3,10 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { getGeminiResponse } from "@/utils/geminiApi";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Send, RotateCcw } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: string;
@@ -22,10 +26,9 @@ const ChatConsultant = () => {
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("gemini_api_key") || "");
-  const [showApiInput, setShowApiInput] = useState(!localStorage.getItem("gemini_api_key"));
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -35,16 +38,22 @@ const ChatConsultant = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Auto resize textarea based on content
+  const autoResizeTextarea = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "inherit";
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  };
+
+  useEffect(() => {
+    autoResizeTextarea();
+  }, [inputValue]);
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!inputValue.trim()) return;
-
-    if (!apiKey) {
-      toast.error("Please set your Gemini API key first");
-      setShowApiInput(true);
-      return;
-    }
     
     // Add user message to chat
     const userMessage: Message = {
@@ -60,7 +69,7 @@ const ChatConsultant = () => {
     
     try {
       // Call Gemini API
-      const response = await getGeminiResponse(inputValue, apiKey);
+      const response = await getGeminiResponse(inputValue);
       
       if (response.error) {
         console.error("Gemini API Error:", response.error);
@@ -85,19 +94,28 @@ const ChatConsultant = () => {
     }
   };
 
-  const handleApiKeySave = () => {
-    if (apiKey.trim()) {
-      localStorage.setItem("gemini_api_key", apiKey);
-      toast.success("API key saved successfully");
-      setShowApiInput(false);
-    } else {
-      toast.error("Please enter a valid API key");
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(e);
     }
+  };
+
+  const clearChat = () => {
+    setMessages([
+      {
+        id: "reset-" + Date.now().toString(),
+        content: "Hello! I'm your AI university consultant. How can I help with your educational journey today?",
+        sender: "ai",
+        timestamp: new Date(),
+      },
+    ]);
+    toast.success("Chat has been reset");
   };
 
   return (
     <section id="consultation" className="py-20 px-6 lg:px-10 bg-gradient-to-b from-background to-accent/20">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <div className="text-center mb-16">
           <motion.span 
             className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-accent text-accent-foreground mb-6"
@@ -116,7 +134,7 @@ const ChatConsultant = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            Chat with Your AI Education Consultant
+            Pathway AI Education Consultant
           </motion.h2>
           
           <motion.p 
@@ -132,7 +150,7 @@ const ChatConsultant = () => {
         </div>
         
         <motion.div 
-          className="max-w-3xl mx-auto glass-card rounded-xl overflow-hidden shadow-xl"
+          className="bg-card rounded-xl overflow-hidden shadow-xl border border-border flex flex-col h-[600px]"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -148,114 +166,85 @@ const ChatConsultant = () => {
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold">Pathway AI Assistant</h3>
-                <p className="text-xs text-primary-foreground/80">Online</p>
+                <h3 className="font-semibold">Pathway AI</h3>
+                <p className="text-xs text-primary-foreground/80">University & Education Consultant</p>
               </div>
             </div>
             <button 
-              onClick={() => setShowApiInput(!showApiInput)}
-              className="text-xs bg-primary-foreground/20 hover:bg-primary-foreground/30 px-3 py-1 rounded-md transition-colors"
+              onClick={clearChat}
+              className="text-xs bg-primary-foreground/20 hover:bg-primary-foreground/30 px-3 py-2 rounded-md transition-colors flex items-center gap-2"
             >
-              {showApiInput ? "Cancel" : "Set API Key"}
+              <RotateCcw size={14} />
+              New Chat
             </button>
           </div>
           
-          {/* API Key input */}
-          <AnimatePresence>
-            {showApiInput && (
-              <motion.div 
-                className="p-4 bg-background border-b border-border"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="flex flex-col space-y-2">
-                  <label htmlFor="apiKey" className="text-sm font-medium">Enter Gemini API Key</label>
-                  <input
-                    id="apiKey"
-                    type="password"
-                    className="p-2 border border-border rounded-md"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="Enter your Gemini API key"
-                  />
-                  <button 
-                    onClick={handleApiKeySave}
-                    className="self-end bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm"
-                  >
-                    Save Key
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          
           {/* Chat messages */}
-          <div className="h-96 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-secondary/30">
             {messages.map((message) => (
-              <motion.div
+              <div
                 key={message.id}
-                className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
+                className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
               >
                 <div 
-                  className={`max-w-xs sm:max-w-md rounded-lg p-3 ${
+                  className={`max-w-3xl rounded-lg p-4 ${
                     message.sender === "user" 
-                      ? "bg-primary text-primary-foreground rounded-tr-none" 
-                      : "bg-secondary text-secondary-foreground rounded-tl-none"
+                      ? "bg-primary text-primary-foreground ml-12" 
+                      : "bg-card border border-border mr-12"
                   }`}
                 >
-                  <p className="text-sm">{message.content}</p>
-                  <p className="text-xs opacity-70 text-right mt-1">
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                  {message.sender === "ai" ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown>
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p>{message.content}</p>
+                  )}
                 </div>
-              </motion.div>
+              </div>
             ))}
             
             {isLoading && (
-              <motion.div
-                className="flex justify-start"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                <div className="bg-secondary text-secondary-foreground rounded-lg rounded-tl-none p-3">
+              <div className="flex justify-start animate-fade-in">
+                <div className="bg-card border border-border rounded-lg p-4 mr-12">
                   <div className="flex space-x-2">
                     <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse"></div>
                     <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse animation-delay-200"></div>
                     <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse animation-delay-400"></div>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
             
             <div ref={messagesEndRef} />
           </div>
           
           {/* Chat input */}
-          <form onSubmit={handleSendMessage} className="border-t border-border p-4">
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                className="flex-1 rounded-lg border border-border bg-background p-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+          <form onSubmit={handleSendMessage} className="border-t border-border p-4 bg-card">
+            <div className="flex items-end space-x-2 relative">
+              <Textarea
+                ref={textareaRef}
+                className="flex-1 resize-none rounded-lg border border-input bg-background p-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 max-h-32"
                 placeholder="Ask about universities, programs, admissions..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                rows={1}
                 disabled={isLoading}
               />
               <button
                 type="submit"
-                className="bg-primary text-primary-foreground rounded-lg p-2 text-sm disabled:opacity-50"
-                disabled={isLoading || !inputValue.trim() || !apiKey}
+                className="absolute right-3 bottom-3 text-primary hover:text-primary/80 disabled:text-muted-foreground"
+                disabled={isLoading || !inputValue.trim()}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                </svg>
+                <Send size={18} />
               </button>
             </div>
+            <p className="text-xs text-muted-foreground mt-2 px-2">
+              Press Enter to send, Shift+Enter for a new line
+            </p>
           </form>
         </motion.div>
       </div>
