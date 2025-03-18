@@ -9,8 +9,8 @@ export async function getGeminiResponse(
   apiKey: string
 ): Promise<GeminiResponse> {
   try {
-    // Using Gemini-1.0-pro model
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent?key=${apiKey}`;
+    // Using gemini-2.0-flash model instead of gemini-1.0-pro
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
       method: 'POST',
