@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { getGeminiResponse } from "@/utils/geminiApi";
 
 interface Message {
   id: string;
@@ -10,7 +11,6 @@ interface Message {
   timestamp: Date;
 }
 
-// Note: In a real implementation, this would connect to a Gemini API
 const ChatConsultant = () => {
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([
@@ -22,8 +22,8 @@ const ChatConsultant = () => {
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKey, setApiKey] = useState("");
-  const [showApiInput, setShowApiInput] = useState(false);
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("gemini_api_key") || "");
+  const [showApiInput, setShowApiInput] = useState(!localStorage.getItem("gemini_api_key"));
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +39,12 @@ const ChatConsultant = () => {
     e.preventDefault();
     
     if (!inputValue.trim()) return;
+
+    if (!apiKey) {
+      toast.error("Please set your Gemini API key first");
+      setShowApiInput(true);
+      return;
+    }
     
     // Add user message to chat
     const userMessage: Message = {
@@ -53,47 +59,34 @@ const ChatConsultant = () => {
     setIsLoading(true);
     
     try {
-      // Simulate API call to Gemini (would be replaced with actual API call)
-      setTimeout(() => {
-        // Example AI response (would come from Gemini API)
-        const aiResponses: { [key: string]: string } = {
-          "university": "I'd be happy to help you find universities! Could you tell me about your academic interests, preferred locations, and any specific programs you're looking for?",
-          "scholarship": "Scholarships are a great way to fund your education! There are many types available based on merit, need, field of study, and more. Would you like information on specific scholarship opportunities?",
-          "admission": "Admission requirements vary by university and program. Generally, they consider your academic performance, test scores (like SAT/ACT/GRE), recommendation letters, and personal statements. What specific admission process are you curious about?",
-          "application": "The application process typically involves submitting your academic records, standardized test scores, letters of recommendation, and personal essays. Many universities use common application platforms. Is there a specific part of the application process you need help with?",
-        };
-        
-        let aiResponse = "I understand you're interested in university education. Could you provide more details about what specific information you're looking for?";
-        
-        // Check if any keywords match
-        for (const [keyword, response] of Object.entries(aiResponses)) {
-          if (inputValue.toLowerCase().includes(keyword)) {
-            aiResponse = response;
-            break;
-          }
-        }
-        
-        const newAiMessage: Message = {
-          id: Date.now().toString(),
-          content: aiResponse,
-          sender: "ai",
-          timestamp: new Date(),
-        };
-        
-        setMessages((prev) => [...prev, newAiMessage]);
-        setIsLoading(false);
-      }, 1500);
+      // Call Gemini API
+      const response = await getGeminiResponse(inputValue, apiKey);
       
+      if (response.error) {
+        console.error("Gemini API Error:", response.error);
+        toast.error(`Error: ${response.error}`);
+        setIsLoading(false);
+        return;
+      }
+      
+      const newAiMessage: Message = {
+        id: Date.now().toString(),
+        content: response.text || "I apologize, but I'm having trouble processing your request right now. Please try again later.",
+        sender: "ai",
+        timestamp: new Date(),
+      };
+      
+      setMessages((prev) => [...prev, newAiMessage]);
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to get response. Please try again.");
+    } finally {
       setIsLoading(false);
     }
   };
 
   const handleApiKeySave = () => {
     if (apiKey.trim()) {
-      // In a real implementation, you would validate and store the API key securely
       localStorage.setItem("gemini_api_key", apiKey);
       toast.success("API key saved successfully");
       setShowApiInput(false);
@@ -167,7 +160,7 @@ const ChatConsultant = () => {
             </button>
           </div>
           
-          {/* API Key input (would be hidden in production with proper backend) */}
+          {/* API Key input */}
           <AnimatePresence>
             {showApiInput && (
               <motion.div 
@@ -256,7 +249,7 @@ const ChatConsultant = () => {
               <button
                 type="submit"
                 className="bg-primary text-primary-foreground rounded-lg p-2 text-sm disabled:opacity-50"
-                disabled={isLoading || !inputValue.trim()}
+                disabled={isLoading || !inputValue.trim() || !apiKey}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
