@@ -16,24 +16,28 @@ export async function analyzeEssay(
 ): Promise<EssayAnalysisResult> {
   try {
     const promptForAI = `
-You are an experienced college admissions officer evaluating the following ${essayType}. 
+You are an experienced college admissions officer evaluating the following ${essayType}.
 
 ESSAY PROMPT: "${prompt}"
 
 ESSAY: "${essay}"
 
-Please analyze this essay line by line as an admissions officer would. For each paragraph:
-1. Identify specific parts that need improvement or refinement (with exact text excerpts).
-2. For each identified part, provide a brief, constructive comment explaining why it needs improvement and how to make it stronger.
-3. After analyzing all paragraphs, provide overall feedback (under 500 words) on the essay's strengths and weaknesses.
+Please analyze this essay line by line and provide specific feedback. Your response MUST follow this exact format:
 
-Format your response as follows:
 ---HIGHLIGHTED_PARTS---
-[exact text that needs improvement]||[your comment]
-[next text part]||[your comment]
-...
+[exact text that needs improvement]||[your specific comment about this text]
+[next text part]||[your specific comment]
+...add more highlighted parts as needed
+
 ---OVERALL_FEEDBACK---
-[your detailed feedback here]
+[provide detailed feedback on the entire essay's strengths and weaknesses in 400-500 words]
+
+Important instructions:
+1. Include 5-10 specific text excerpts that need improvement
+2. Make sure each highlighted text is an EXACT match to text in the original essay
+3. Keep comments concise and actionable (1-2 sentences)
+4. For overall feedback, be constructive but honest about areas for improvement
+5. ONLY use the format above with the exact section headers
 `;
     
     const response = await getGeminiResponse(promptForAI);
@@ -56,6 +60,11 @@ Format your response as follows:
       // Look for the overall feedback section
       const feedbackMatch = response.text.match(/---OVERALL_FEEDBACK---\s*([\s\S]*?)$/);
       const overallFeedbackSection = feedbackMatch?.[1]?.trim() || "";
+      
+      console.log("Parsed sections:", { 
+        highlightedPartSection: highlightedPartSection.substring(0, 100) + "...", 
+        overallFeedbackSection: overallFeedbackSection.substring(0, 100) + "..." 
+      });
       
       if (!highlightedPartSection && !overallFeedbackSection) {
         // If we can't parse the response in the expected format, display the full response
@@ -81,53 +90,39 @@ Format your response as follows:
       let segments: EssaySegment[] = [];
       
       if (highlights.length > 0) {
-        let lastIndex = 0;
+        let remainingEssay = essay;
+        let processedChars = 0;
         
-        highlights.forEach(highlight => {
-          if (!highlight.text) return;
+        for (const highlight of highlights) {
+          if (!highlight.text || !remainingEssay.includes(highlight.text)) continue;
           
-          // Try to find the exact text match
-          let startIndex = essay.indexOf(highlight.text, lastIndex);
+          const startIndex = remainingEssay.indexOf(highlight.text);
+          if (startIndex === -1) continue;
           
-          // If exact match fails, try a more flexible approach
-          if (startIndex === -1) {
-            // Try to find a close match by searching for a shorter substring
-            const minLength = Math.min(highlight.text.length, 20);
-            const searchText = highlight.text.substring(0, minLength);
-            startIndex = essay.indexOf(searchText, lastIndex);
-            
-            if (startIndex === -1) {
-              // If we still can't find it, just add this highlight as a separate note
-              return;
-            }
-            
-            // Adjust the text to what's actually in the essay
-            highlight.text = essay.substring(startIndex, startIndex + highlight.text.length);
-          }
-          
-          // Text before the highlight
-          if (startIndex > lastIndex) {
+          // Add non-highlighted text before this highlight
+          if (startIndex > 0) {
             segments.push({
-              text: essay.substring(lastIndex, startIndex),
+              text: remainingEssay.substring(0, startIndex),
               highlighted: false,
               comment: null,
             });
           }
           
-          // The highlighted text
+          // Add the highlighted text
           segments.push({
             text: highlight.text,
             highlighted: true,
             comment: highlight.comment,
           });
           
-          lastIndex = startIndex + highlight.text.length;
-        });
+          // Update the remaining essay
+          remainingEssay = remainingEssay.substring(startIndex + highlight.text.length);
+        }
         
         // Add any remaining text
-        if (lastIndex < essay.length) {
+        if (remainingEssay.length > 0) {
           segments.push({
-            text: essay.substring(lastIndex),
+            text: remainingEssay,
             highlighted: false,
             comment: null,
           });

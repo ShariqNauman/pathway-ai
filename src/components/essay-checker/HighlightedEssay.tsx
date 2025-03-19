@@ -23,7 +23,7 @@ const HighlightedEssay = ({ segments }: HighlightedEssayProps) => {
           segment.highlighted ? (
             <HoverCard key={index} openDelay={200}>
               <HoverCardTrigger asChild>
-                <span className="bg-yellow-200 dark:bg-yellow-500/30 cursor-help rounded px-0.5">
+                <span className="bg-red-200 dark:bg-red-500/30 text-red-700 dark:text-red-300 cursor-help rounded px-0.5">
                   {segment.text}
                 </span>
               </HoverCardTrigger>

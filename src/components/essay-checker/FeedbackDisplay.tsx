@@ -30,11 +30,11 @@ const FeedbackDisplay = ({ highlightedEssay, feedback, isAnalyzing }: FeedbackDi
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       {highlightedEssay.length > 0 && <HighlightedEssay segments={highlightedEssay} />}
       
       {feedback && (
-        <div>
+        <div className="mt-6 border-t pt-6">
           <h4 className="font-medium mb-2 text-sm">Overall Feedback:</h4>
           <div 
             className="prose dark:prose-invert prose-sm max-w-none" 
