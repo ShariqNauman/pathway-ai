@@ -2,64 +2,11 @@
 import { getGeminiResponse } from "./geminiApi";
 import { renderMarkdown } from "./markdownUtils";
 import { EssaySegment } from "@/components/essay-checker/HighlightedEssay";
-import { RatingCategory } from "@/components/essay-checker/EssayRating";
-import { Lightbulb, Music, Waves, Heart, Target, ScanLine } from "lucide-react";
 
 export interface EssayAnalysisResult {
   highlightedEssay: EssaySegment[];
   feedback: string;
-  ratings?: {
-    overall: number;
-    categories: RatingCategory[];
-  };
   error?: string;
-}
-
-function generateDefaultRatings(): {
-  overall: number;
-  categories: RatingCategory[];
-} {
-  return {
-    overall: 85,
-    categories: [
-      {
-        name: "Uniqueness",
-        score: 87,
-        description: "How original and distinctive your essay is compared to others.",
-        icon: <Lightbulb className="h-4 w-4 text-primary" />
-      },
-      {
-        name: "Hook",
-        score: 87,
-        description: "How effectively your introduction captures the reader's attention.",
-        icon: <Target className="h-4 w-4 text-primary" />
-      },
-      {
-        name: "Voice",
-        score: 92,
-        description: "How well your personal tone and style come through in your writing.",
-        icon: <Music className="h-4 w-4 text-primary" />
-      },
-      {
-        name: "Flow",
-        score: 82,
-        description: "How smoothly your essay transitions between ideas and paragraphs.",
-        icon: <Waves className="h-4 w-4 text-primary" />
-      },
-      {
-        name: "Authenticity",
-        score: 92,
-        description: "How genuine and true to yourself your essay feels.",
-        icon: <Heart className="h-4 w-4 text-primary" />
-      },
-      {
-        name: "Conciseness",
-        score: 82,
-        description: "How efficiently you express your ideas without unnecessary words.",
-        icon: <ScanLine className="h-4 w-4 text-primary" />
-      }
-    ]
-  };
 }
 
 export async function analyzeEssay(
@@ -85,22 +32,12 @@ Please analyze this essay line by line and provide specific feedback. Your respo
 ---OVERALL_FEEDBACK---
 [provide detailed feedback on the entire essay's strengths and weaknesses in 400-500 words]
 
----RATINGS---
-Overall: [score from 1-100]
-Uniqueness: [score from 1-100]
-Hook: [score from 1-100]
-Voice: [score from 1-100]
-Flow: [score from 1-100]
-Authenticity: [score from 1-100]
-Conciseness: [score from 1-100]
-
 Important instructions:
 1. Include 5-10 specific text excerpts that need improvement
 2. Make sure each highlighted text is an EXACT match to text in the original essay
 3. Keep comments concise and actionable (1-2 sentences)
 4. For overall feedback, be constructive but honest about areas for improvement
 5. ONLY use the format above with the exact section headers
-6. Rate each category from 1-100, with higher numbers being better
 `;
     
     const response = await getGeminiResponse(promptForAI);
@@ -121,17 +58,12 @@ Important instructions:
       const highlightedPartSection = highlightedMatch?.[1]?.trim() || "";
       
       // Look for the overall feedback section
-      const feedbackMatch = response.text.match(/---OVERALL_FEEDBACK---\s*([\s\S]*?)(?:---RATINGS---|$)/);
+      const feedbackMatch = response.text.match(/---OVERALL_FEEDBACK---\s*([\s\S]*?)$/);
       const overallFeedbackSection = feedbackMatch?.[1]?.trim() || "";
-      
-      // Look for the ratings section
-      const ratingsMatch = response.text.match(/---RATINGS---\s*([\s\S]*?)$/);
-      const ratingsSection = ratingsMatch?.[1]?.trim() || "";
       
       console.log("Parsed sections:", { 
         highlightedPartSection: highlightedPartSection.substring(0, 100) + "...", 
-        overallFeedbackSection: overallFeedbackSection.substring(0, 100) + "...",
-        ratingsSection: ratingsSection
+        overallFeedbackSection: overallFeedbackSection.substring(0, 100) + "..." 
       });
       
       if (!highlightedPartSection && !overallFeedbackSection) {
@@ -139,8 +71,7 @@ Important instructions:
         const renderedFeedback = await renderMarkdown(response.text);
         return { 
           highlightedEssay: [], 
-          feedback: renderedFeedback,
-          ratings: generateDefaultRatings()
+          feedback: renderedFeedback 
         };
       }
       
@@ -160,6 +91,7 @@ Important instructions:
       
       if (highlights.length > 0) {
         let remainingEssay = essay;
+        let processedChars = 0;
         
         for (const highlight of highlights) {
           if (!highlight.text || !remainingEssay.includes(highlight.text)) continue;
@@ -213,57 +145,9 @@ Important instructions:
         finalFeedback = await renderMarkdown(response.text);
       }
       
-      // Parse ratings
-      let ratings = generateDefaultRatings();
-      
-      if (ratingsSection) {
-        try {
-          const ratingLines = ratingsSection.split('\n').filter(line => line.includes(':'));
-          
-          // Parse overall rating
-          const overallMatch = ratingsSection.match(/Overall:\s*(\d+)/i);
-          if (overallMatch && overallMatch[1]) {
-            const overallScore = parseInt(overallMatch[1], 10);
-            if (!isNaN(overallScore) && overallScore >= 1 && overallScore <= 100) {
-              ratings.overall = overallScore;
-            }
-          }
-          
-          // Parse category ratings
-          const categoryMap: Record<string, keyof typeof ratings.categories[0]> = {
-            'Uniqueness': 'name',
-            'Hook': 'name',
-            'Voice': 'name',
-            'Flow': 'name',
-            'Authenticity': 'name',
-            'Conciseness': 'name'
-          };
-          
-          Object.keys(categoryMap).forEach(category => {
-            const regex = new RegExp(`${category}:\\s*(\\d+)`, 'i');
-            const match = ratingsSection.match(regex);
-            
-            if (match && match[1]) {
-              const score = parseInt(match[1], 10);
-              if (!isNaN(score) && score >= 1 && score <= 100) {
-                const categoryIndex = ratings.categories.findIndex(c => c.name === category);
-                if (categoryIndex !== -1) {
-                  ratings.categories[categoryIndex].score = score;
-                }
-              }
-            }
-          });
-          
-        } catch (ratingError) {
-          console.error("Error parsing ratings:", ratingError);
-          // Use default ratings if parsing fails
-        }
-      }
-      
       return {
         highlightedEssay: segments,
-        feedback: finalFeedback,
-        ratings
+        feedback: finalFeedback
       };
     } catch (parseError) {
       console.error("Error parsing AI response:", parseError);
@@ -272,7 +156,6 @@ Important instructions:
       return { 
         highlightedEssay: [], 
         feedback: renderedFeedback,
-        ratings: generateDefaultRatings(),
         error: parseError instanceof Error ? parseError.message : "Unknown parsing error"
       };
     }
@@ -281,7 +164,6 @@ Important instructions:
     return { 
       highlightedEssay: [], 
       feedback: "An error occurred while analyzing your essay. Please try again.",
-      ratings: generateDefaultRatings(),
       error: error instanceof Error ? error.message : "Unknown error"
     };
   }
