@@ -68,17 +68,29 @@ Format your response as follows:
 `;
       
       const response = await getGeminiResponse(promptForAI);
+      console.log("Gemini API Response:", response);
       
       if (response.error) {
         setFeedback(`Error analyzing essay: ${response.error}`);
         return;
       }
       
-      // Parse the response
-      const parts = response.text.split("---HIGHLIGHTED_PARTS---");
-      if (parts.length > 1) {
-        const highlightedPartSection = parts[1].split("---OVERALL_FEEDBACK---")[0].trim();
-        const overallFeedbackSection = parts[1].split("---OVERALL_FEEDBACK---")[1]?.trim() || "";
+      // Parse the response with improved error handling
+      try {
+        // Look for the highlighted parts section
+        const highlightedMatch = response.text.match(/---HIGHLIGHTED_PARTS---\s*([\s\S]*?)(?:---OVERALL_FEEDBACK---|$)/);
+        const highlightedPartSection = highlightedMatch?.[1]?.trim() || "";
+        
+        // Look for the overall feedback section
+        const feedbackMatch = response.text.match(/---OVERALL_FEEDBACK---\s*([\s\S]*?)$/);
+        const overallFeedbackSection = feedbackMatch?.[1]?.trim() || "";
+        
+        if (!highlightedPartSection && !overallFeedbackSection) {
+          // If we can't parse the response in the expected format, display the full response
+          const renderedFeedback = await renderMarkdown(response.text);
+          setFeedback(renderedFeedback);
+          return;
+        }
         
         // Process highlighted parts
         const highlights = highlightedPartSection
@@ -89,14 +101,36 @@ Format your response as follows:
             return { text, comment };
           });
         
-        // Create highlighted essay by marking up original text
-        const essay = data.essay;
-        const segments = [];
-        let lastIndex = 0;
+        console.log("Parsed highlights:", highlights);
         
-        highlights.forEach(highlight => {
-          const startIndex = essay.indexOf(highlight.text, lastIndex);
-          if (startIndex !== -1) {
+        if (highlights.length > 0) {
+          // Create highlighted essay by marking up original text
+          const essay = data.essay;
+          const segments = [];
+          let lastIndex = 0;
+          
+          highlights.forEach(highlight => {
+            if (!highlight.text) return;
+            
+            // Try to find the exact text match
+            let startIndex = essay.indexOf(highlight.text, lastIndex);
+            
+            // If exact match fails, try a more flexible approach
+            if (startIndex === -1) {
+              // Try to find a close match by searching for a shorter substring
+              const minLength = Math.min(highlight.text.length, 20);
+              const searchText = highlight.text.substring(0, minLength);
+              startIndex = essay.indexOf(searchText, lastIndex);
+              
+              if (startIndex === -1) {
+                // If we still can't find it, just add this highlight as a separate note
+                return;
+              }
+              
+              // Adjust the text to what's actually in the essay
+              highlight.text = essay.substring(startIndex, startIndex + highlight.text.length);
+            }
+            
             // Text before the highlight
             if (startIndex > lastIndex) {
               segments.push({
@@ -114,25 +148,40 @@ Format your response as follows:
             });
             
             lastIndex = startIndex + highlight.text.length;
+          });
+          
+          // Add any remaining text
+          if (lastIndex < essay.length) {
+            segments.push({
+              text: essay.substring(lastIndex),
+              highlighted: false,
+              comment: null,
+            });
           }
-        });
-        
-        // Add any remaining text
-        if (lastIndex < essay.length) {
-          segments.push({
-            text: essay.substring(lastIndex),
+          
+          console.log("Processed segments:", segments);
+          setHighlightedEssay(segments);
+        } else {
+          // If no highlights were found, just display the original essay
+          setHighlightedEssay([{
+            text: data.essay,
             highlighted: false,
             comment: null,
-          });
+          }]);
         }
         
-        setHighlightedEssay(segments);
-        
         // Process and set overall feedback
-        const renderedFeedback = await renderMarkdown(overallFeedbackSection);
-        setFeedback(renderedFeedback);
-      } else {
-        // If the AI didn't format correctly, just display the raw response
+        if (overallFeedbackSection) {
+          const renderedFeedback = await renderMarkdown(overallFeedbackSection);
+          setFeedback(renderedFeedback);
+        } else {
+          // If no overall feedback section was found, display what we got
+          const renderedFeedback = await renderMarkdown(response.text);
+          setFeedback(renderedFeedback);
+        }
+      } catch (parseError) {
+        console.error("Error parsing AI response:", parseError);
+        // If parsing fails, just display the raw response
         const renderedFeedback = await renderMarkdown(response.text);
         setFeedback(renderedFeedback);
       }

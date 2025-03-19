@@ -24,9 +24,7 @@ export async function getGeminiResponse(
           {
             parts: [
               {
-                text: `You are an AI university consultant named Pathway AI. Your role is to help students find the right universities, programs, and guide them through the application process. 
-                
-                Respond to the following question or statement from a student: "${prompt}"`,
+                text: prompt,
               },
             ],
           },
