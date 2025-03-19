@@ -7,6 +7,7 @@ import ChatConsultant from "@/components/ChatConsultant";
 import Testimonials from "@/components/Testimonials";
 import CallToAction from "@/components/CallToAction";
 import Footer from "@/components/Footer";
+import EssayChecker from "@/components/EssayChecker";
 
 const Index = () => {
   return (
@@ -21,6 +22,7 @@ const Index = () => {
       <main className="flex-grow">
         <Hero />
         <Features />
+        <EssayChecker />
         <ChatConsultant />
         <Testimonials />
         <CallToAction />
