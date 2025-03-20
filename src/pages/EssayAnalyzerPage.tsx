@@ -1,13 +1,10 @@
 
 import { motion } from "framer-motion";
 import Header from "@/components/Header";
-import Hero from "@/components/Hero";
-import Features from "@/components/Features";
-import Testimonials from "@/components/Testimonials";
-import CallToAction from "@/components/CallToAction";
 import Footer from "@/components/Footer";
+import EssayChecker from "@/components/EssayChecker";
 
-const Index = () => {
+const EssayAnalyzerPage = () => {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -18,14 +15,11 @@ const Index = () => {
     >
       <Header />
       <main className="flex-grow">
-        <Hero />
-        <Features />
-        <Testimonials />
-        <CallToAction />
+        <EssayChecker />
       </main>
       <Footer />
     </motion.div>
   );
 };
 
-export default Index;
+export default EssayAnalyzerPage;
