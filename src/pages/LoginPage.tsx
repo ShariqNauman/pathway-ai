@@ -13,11 +13,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
+import { UserCredentials } from "@/types/user";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(8, { message: "Password must be at least 8 characters" })
 });
+
+// This ensures the login form values will match the UserCredentials type
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginPage = () => {
   const { login, isLoading } = useUser();
@@ -25,7 +29,7 @@ const LoginPage = () => {
   const { toast } = useToast();
   const [error, setError] = useState("");
 
-  const form = useForm<z.infer<typeof loginSchema>>({
+  const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
@@ -33,9 +37,16 @@ const LoginPage = () => {
     }
   });
 
-  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+  const onSubmit = async (values: LoginFormValues) => {
     setError("");
-    const success = await login(values);
+    // Since we've defined LoginFormValues to match the schema which has required fields,
+    // we can safely cast this to UserCredentials which also has required fields
+    const credentials: UserCredentials = {
+      email: values.email,
+      password: values.password
+    };
+    
+    const success = await login(credentials);
     
     if (success) {
       toast({
