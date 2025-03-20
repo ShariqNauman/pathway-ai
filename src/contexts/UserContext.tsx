@@ -21,35 +21,62 @@ export const useUser = () => {
   return context;
 };
 
+// A key for storing users in sessionStorage
+const USERS_STORAGE_KEY = "app_users";
+const CURRENT_USER_KEY = "user";
+
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check for stored user on mount
-    const storedUser = localStorage.getItem("user");
+    const storedUser = localStorage.getItem(CURRENT_USER_KEY);
     if (storedUser) {
       setCurrentUser(JSON.parse(storedUser));
     }
+    
+    // Initialize users in sessionStorage if not present
+    if (!sessionStorage.getItem(USERS_STORAGE_KEY)) {
+      // Get users from localStorage first if they exist
+      const localUsers = localStorage.getItem("users");
+      if (localUsers) {
+        sessionStorage.setItem(USERS_STORAGE_KEY, localUsers);
+      } else {
+        sessionStorage.setItem(USERS_STORAGE_KEY, "[]");
+      }
+    }
+    
     setIsLoading(false);
   }, []);
 
-  // For demo purposes, we'll use localStorage
+  // For demo purposes, we'll use sessionStorage to sync across tabs but persist across page reloads
   const login = async (credentials: UserCredentials): Promise<boolean> => {
     setIsLoading(true);
     try {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // In a real app, this would be an API call to verify credentials
-      const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-      const user = storedUsers.find((u: any) => u.email === credentials.email);
+      // Get users from sessionStorage first
+      let users = JSON.parse(sessionStorage.getItem(USERS_STORAGE_KEY) || "[]");
+      
+      // If no users in sessionStorage, try localStorage as fallback
+      if (users.length === 0) {
+        const localUsers = localStorage.getItem("users");
+        if (localUsers) {
+          users = JSON.parse(localUsers);
+          // Save to sessionStorage for future use
+          sessionStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+        }
+      }
+      
+      const user = users.find((u: any) => u.email === credentials.email);
       
       if (user && user.password === credentials.password) {
         // Don't store password in current user
         const { password, ...userWithoutPassword } = user;
         setCurrentUser(userWithoutPassword);
-        localStorage.setItem("user", JSON.stringify(userWithoutPassword));
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userWithoutPassword));
         return true;
       }
       return false;
@@ -64,11 +91,20 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // In a real app, this would be an API call to create a user
-      const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
+      // Get users from both storages to make sure we have all users
+      const sessionUsers = JSON.parse(sessionStorage.getItem(USERS_STORAGE_KEY) || "[]");
+      const localUsers = JSON.parse(localStorage.getItem("users") || "[]");
+      
+      // Combine users from both sources, ensuring no duplicates
+      let combinedUsers = [...sessionUsers];
+      for (const localUser of localUsers) {
+        if (!combinedUsers.some((u: any) => u.email === localUser.email)) {
+          combinedUsers.push(localUser);
+        }
+      }
       
       // Check if user already exists
-      if (storedUsers.some((u: any) => u.email === userData.email)) {
+      if (combinedUsers.some((u: any) => u.email === userData.email)) {
         return false;
       }
       
@@ -88,12 +124,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Store with password for login simulation
       const userWithPassword = { ...newUser, password: userData.password };
-      storedUsers.push(userWithPassword);
-      localStorage.setItem("users", JSON.stringify(storedUsers));
+      combinedUsers.push(userWithPassword);
+      
+      // Update both storages
+      sessionStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(combinedUsers));
+      localStorage.setItem("users", JSON.stringify(combinedUsers));
       
       // Set current user without password
       setCurrentUser(newUser);
-      localStorage.setItem("user", JSON.stringify(newUser));
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
       return true;
     } finally {
       setIsLoading(false);
@@ -102,7 +141,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setCurrentUser(null);
-    localStorage.removeItem("user");
+    localStorage.removeItem(CURRENT_USER_KEY);
   };
 
   const updateUserPreferences = (preferences: UserPreferences) => {
@@ -114,14 +153,20 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     
     setCurrentUser(updatedUser);
-    localStorage.setItem("user", JSON.stringify(updatedUser));
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
     
-    // Also update in the users array
-    const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-    const updatedUsers = storedUsers.map((u: any) => 
+    // Update in both storages
+    const sessionUsers = JSON.parse(sessionStorage.getItem(USERS_STORAGE_KEY) || "[]");
+    const updatedSessionUsers = sessionUsers.map((u: any) => 
       u.id === currentUser.id ? { ...u, preferences } : u
     );
-    localStorage.setItem("users", JSON.stringify(updatedUsers));
+    sessionStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedSessionUsers));
+    
+    const localUsers = JSON.parse(localStorage.getItem("users") || "[]");
+    const updatedLocalUsers = localUsers.map((u: any) => 
+      u.id === currentUser.id ? { ...u, preferences } : u
+    );
+    localStorage.setItem("users", JSON.stringify(updatedLocalUsers));
   };
 
   const value = {
