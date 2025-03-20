@@ -2,13 +2,18 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
+import { useUser } from "@/contexts/UserContext";
 import Logo from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { LogIn, User } from "lucide-react";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { currentUser } = useUser();
 
   const navItems = [
     { name: "Home", href: "/" },
@@ -31,6 +36,14 @@ const Header = () => {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map(n => n[0])
+      .join("")
+      .toUpperCase();
+  };
 
   return (
     <motion.header
@@ -63,21 +76,48 @@ const Header = () => {
           
           <div className="flex items-center space-x-4">
             <ThemeToggle />
-            <Link to="/consultant">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Get Started
-              </motion.button>
-            </Link>
+            
+            {currentUser ? (
+              <Link to="/dashboard">
+                <Avatar className="h-8 w-8 cursor-pointer">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                    {getInitials(currentUser.name)}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Link to="/login">
+                  <Button variant="ghost" size="sm" className="flex items-center gap-1">
+                    <LogIn className="h-4 w-4" />
+                    <span>Login</span>
+                  </Button>
+                </Link>
+                <Link to="/signup">
+                  <Button size="sm" className="flex items-center gap-1">
+                    <User className="h-4 w-4" />
+                    <span>Sign Up</span>
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </nav>
 
         {/* Mobile Menu Button */}
         <div className="flex items-center space-x-4 md:hidden">
           <ThemeToggle />
+          
+          {currentUser && (
+            <Link to="/dashboard">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                  {getInitials(currentUser.name)}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
+          )}
+          
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="text-foreground focus:outline-none"
@@ -131,15 +171,23 @@ const Header = () => {
                   {item.name}
                 </Link>
               ))}
-              <Link to="/consultant">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-full bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium"
-                >
-                  Get Started
-                </motion.button>
-              </Link>
+              
+              {!currentUser && (
+                <div className="flex flex-col space-y-2 pt-4 border-t border-border">
+                  <Link to="/login">
+                    <Button variant="outline" className="w-full justify-start">
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Login
+                    </Button>
+                  </Link>
+                  <Link to="/signup">
+                    <Button className="w-full justify-start">
+                      <User className="mr-2 h-4 w-4" />
+                      Sign Up
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </nav>
           </motion.div>
         )}
