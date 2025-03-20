@@ -1,5 +1,6 @@
 
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 const CallToAction = () => {
   return (
@@ -62,18 +63,18 @@ const CallToAction = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <a 
-                href="#consultation" 
+              <Link 
+                to="/consultant" 
                 className="px-8 py-3 bg-primary text-primary-foreground rounded-md font-medium shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all text-center"
               >
                 Start Consultation
-              </a>
-              <a 
-                href="/universities" 
+              </Link>
+              <Link 
+                to="/essay-analyzer" 
                 className="px-8 py-3 border border-border bg-white/90 backdrop-blur-sm rounded-md font-medium hover:bg-white transition-all text-center"
               >
-                Browse Universities
-              </a>
+                Essay Analyzer
+              </Link>
             </motion.div>
           </div>
         </motion.div>

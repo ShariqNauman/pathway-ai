@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Link } from "react-router-dom";
 import Logo from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -9,11 +10,11 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { name: "Home", href: "#" },
-    { name: "Features", href: "#features" },
-    { name: "Consultation", href: "#consultation" },
-    { name: "Testimonials", href: "#testimonials" },
-    { name: "Contact", href: "#contact" },
+    { name: "Home", href: "/" },
+    { name: "Features", href: "/#features" },
+    { name: "Essay Analyzer", href: "/essay-analyzer" },
+    { name: "Consultant", href: "/consultant" },
+    { name: "Contact", href: "/#contact" },
   ];
 
   useEffect(() => {
@@ -33,32 +34,45 @@ const Header = () => {
     >
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         {/* Logo */}
-        <Logo />
+        <Link to="/">
+          <Logo />
+        </Link>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
           <ul className="flex space-x-8">
             {navItems.map((item) => (
               <li key={item.name}>
-                <a
-                  href={item.href}
-                  className="text-sm font-medium hover:text-primary transition-colors"
-                >
-                  {item.name}
-                </a>
+                {item.href.startsWith("/#") ? (
+                  <a
+                    href={item.href}
+                    className="text-sm font-medium hover:text-primary transition-colors"
+                  >
+                    {item.name}
+                  </a>
+                ) : (
+                  <Link
+                    to={item.href}
+                    className="text-sm font-medium hover:text-primary transition-colors"
+                  >
+                    {item.name}
+                  </Link>
+                )}
               </li>
             ))}
           </ul>
           
           <div className="flex items-center space-x-4">
             <ThemeToggle />
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium"
-            >
-              Get Started
-            </motion.button>
+            <Link to="/consultant">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium"
+              >
+                Get Started
+              </motion.button>
+            </Link>
           </div>
         </nav>
 
@@ -108,22 +122,35 @@ const Header = () => {
           >
             <nav className="px-4 py-5 space-y-4">
               {navItems.map((item) => (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  className="block py-2 text-foreground hover:text-primary transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {item.name}
-                </a>
+                item.href.startsWith("/#") ? (
+                  <a
+                    key={item.name}
+                    href={item.href}
+                    className="block py-2 text-foreground hover:text-primary transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.name}
+                  </a>
+                ) : (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className="block py-2 text-foreground hover:text-primary transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.name}
+                  </Link>
+                )
               ))}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-full bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Get Started
-              </motion.button>
+              <Link to="/consultant" onClick={() => setMobileMenuOpen(false)}>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="w-full bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium"
+                >
+                  Get Started
+                </motion.button>
+              </Link>
             </nav>
           </motion.div>
         )}

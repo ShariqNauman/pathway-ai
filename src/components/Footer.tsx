@@ -1,10 +1,12 @@
 
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import Logo from "./Logo";
 
 const Footer = () => {
   return (
     <motion.footer
+      id="contact"
       className="w-full bg-secondary/50 border-t border-border py-12 px-6 lg:px-10"
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
@@ -13,7 +15,9 @@ const Footer = () => {
     >
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10">
         <div className="space-y-4">
-          <Logo />
+          <Link to="/">
+            <Logo />
+          </Link>
           <p className="text-sm text-muted-foreground max-w-xs">
             Your AI-powered university consultant helping you find the perfect educational path.
           </p>
@@ -22,20 +26,33 @@ const Footer = () => {
         <div>
           <h4 className="text-sm font-semibold mb-4">Navigation</h4>
           <ul className="space-y-3">
-            {["Home", "About", "Universities", "Contact"].map((item) => (
-              <li key={item}>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  {item}
-                </a>
-              </li>
-            ))}
+            <li>
+              <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Home
+              </Link>
+            </li>
+            <li>
+              <a href="/#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Features
+              </a>
+            </li>
+            <li>
+              <Link to="/essay-analyzer" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Essay Analyzer
+              </Link>
+            </li>
+            <li>
+              <Link to="/consultant" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Consultant
+              </Link>
+            </li>
           </ul>
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold mb-4">Resources</h4>
+          <h4 className="text-sm font-semibold mb-4">Legal</h4>
           <ul className="space-y-3">
-            {["Blog", "FAQ", "Terms", "Privacy"].map((item) => (
+            {["Terms", "Privacy"].map((item) => (
               <li key={item}>
                 <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   {item}
@@ -48,8 +65,8 @@ const Footer = () => {
         <div>
           <h4 className="text-sm font-semibold mb-4">Contact</h4>
           <ul className="space-y-3">
-            <li className="text-sm text-muted-foreground">hello@pathwayai.com</li>
-            <li className="text-sm text-muted-foreground">San Francisco, CA</li>
+            <li className="text-sm text-muted-foreground">shariqnaumann@gmail.com</li>
+            <li className="text-sm text-muted-foreground">Jeddah, Saudi Arabia</li>
             <li className="flex space-x-4 mt-4">
               {[
                 "M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z",
