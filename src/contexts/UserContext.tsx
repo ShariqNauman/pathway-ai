@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, UserCredentials, UserPreferences } from "@/types/user";
 
 interface UserContextType {
@@ -21,64 +22,89 @@ export const useUser = () => {
   return context;
 };
 
-// A key for storing users in sessionStorage
-const USERS_STORAGE_KEY = "app_users";
-const CURRENT_USER_KEY = "user";
-
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Check for user session on mount
   useEffect(() => {
-    // Check for stored user on mount
-    const storedUser = localStorage.getItem(CURRENT_USER_KEY);
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
-    
-    // Initialize users in sessionStorage if not present
-    if (!sessionStorage.getItem(USERS_STORAGE_KEY)) {
-      // Get users from localStorage first if they exist
-      const localUsers = localStorage.getItem("users");
-      if (localUsers) {
-        sessionStorage.setItem(USERS_STORAGE_KEY, localUsers);
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (profileData) {
+          setCurrentUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: profileData.name || '',
+            preferences: {
+              intendedMajor: profileData.intended_major || '',
+              budget: profileData.budget || 0,
+              preferredCountry: profileData.preferred_country || '',
+              preferredUniversityType: profileData.preferred_university_type || '',
+              studyLevel: profileData.study_level || ''
+            },
+            createdAt: new Date(profileData.created_at)
+          });
+        }
       } else {
-        sessionStorage.setItem(USERS_STORAGE_KEY, "[]");
+        setCurrentUser(null);
       }
-    }
-    
-    setIsLoading(false);
+      setIsLoading(false);
+    });
+
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profileData }) => {
+            if (profileData) {
+              setCurrentUser({
+                id: session.user.id,
+                email: session.user.email || '',
+                name: profileData.name || '',
+                preferences: {
+                  intendedMajor: profileData.intended_major || '',
+                  budget: profileData.budget || 0,
+                  preferredCountry: profileData.preferred_country || '',
+                  preferredUniversityType: profileData.preferred_university_type || '',
+                  studyLevel: profileData.study_level || ''
+                },
+                createdAt: new Date(profileData.created_at)
+              });
+            }
+            setIsLoading(false);
+          });
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
-  // For demo purposes, we'll use sessionStorage to sync across tabs but persist across page reloads
   const login = async (credentials: UserCredentials): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password
+      });
       
-      // Get users from sessionStorage first
-      let users = JSON.parse(sessionStorage.getItem(USERS_STORAGE_KEY) || "[]");
-      
-      // If no users in sessionStorage, try localStorage as fallback
-      if (users.length === 0) {
-        const localUsers = localStorage.getItem("users");
-        if (localUsers) {
-          users = JSON.parse(localUsers);
-          // Save to sessionStorage for future use
-          sessionStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-        }
-      }
-      
-      const user = users.find((u: any) => u.email === credentials.email);
-      
-      if (user && user.password === credentials.password) {
-        // Don't store password in current user
-        const { password, ...userWithoutPassword } = user;
-        setCurrentUser(userWithoutPassword);
-        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userWithoutPassword));
-        return true;
-      }
+      if (error) return false;
+      return true;
+    } catch (error) {
+      console.error('Login error:', error);
       return false;
     } finally {
       setIsLoading(false);
@@ -88,85 +114,56 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (userData: UserCredentials & { name: string }): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Get users from both storages to make sure we have all users
-      const sessionUsers = JSON.parse(sessionStorage.getItem(USERS_STORAGE_KEY) || "[]");
-      const localUsers = JSON.parse(localStorage.getItem("users") || "[]");
-      
-      // Combine users from both sources, ensuring no duplicates
-      let combinedUsers = [...sessionUsers];
-      for (const localUser of localUsers) {
-        if (!combinedUsers.some((u: any) => u.email === localUser.email)) {
-          combinedUsers.push(localUser);
-        }
-      }
-      
-      // Check if user already exists
-      if (combinedUsers.some((u: any) => u.email === userData.email)) {
-        return false;
-      }
-      
-      const newUser: UserProfile = {
-        id: Date.now().toString(),
+      const { error } = await supabase.auth.signUp({
         email: userData.email,
-        name: userData.name,
-        preferences: {
-          intendedMajor: "",
-          budget: 0,
-          preferredCountry: "",
-          preferredUniversityType: "",
-          studyLevel: ""
-        },
-        createdAt: new Date()
-      };
+        password: userData.password,
+        options: {
+          data: {
+            name: userData.name
+          }
+        }
+      });
       
-      // Store with password for login simulation
-      const userWithPassword = { ...newUser, password: userData.password };
-      combinedUsers.push(userWithPassword);
-      
-      // Update both storages
-      sessionStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(combinedUsers));
-      localStorage.setItem("users", JSON.stringify(combinedUsers));
-      
-      // Set current user without password
-      setCurrentUser(newUser);
-      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
+      if (error) return false;
       return true;
+    } catch (error) {
+      console.error('Signup error:', error);
+      return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setCurrentUser(null);
-    localStorage.removeItem(CURRENT_USER_KEY);
   };
 
-  const updateUserPreferences = (preferences: UserPreferences) => {
+  const updateUserPreferences = async (preferences: UserPreferences) => {
     if (!currentUser) return;
     
-    const updatedUser = {
-      ...currentUser,
-      preferences: preferences
-    };
-    
-    setCurrentUser(updatedUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
-    
-    // Update in both storages
-    const sessionUsers = JSON.parse(sessionStorage.getItem(USERS_STORAGE_KEY) || "[]");
-    const updatedSessionUsers = sessionUsers.map((u: any) => 
-      u.id === currentUser.id ? { ...u, preferences } : u
-    );
-    sessionStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedSessionUsers));
-    
-    const localUsers = JSON.parse(localStorage.getItem("users") || "[]");
-    const updatedLocalUsers = localUsers.map((u: any) => 
-      u.id === currentUser.id ? { ...u, preferences } : u
-    );
-    localStorage.setItem("users", JSON.stringify(updatedLocalUsers));
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          intended_major: preferences.intendedMajor,
+          budget: preferences.budget,
+          preferred_country: preferences.preferredCountry,
+          preferred_university_type: preferences.preferredUniversityType,
+          study_level: preferences.studyLevel,
+          updated_at: new Date()
+        })
+        .eq('id', currentUser.id);
+      
+      if (error) throw error;
+      
+      setCurrentUser({
+        ...currentUser,
+        preferences
+      });
+    } catch (error) {
+      console.error('Failed to update user preferences:', error);
+    }
   };
 
   const value = {
