@@ -1,4 +1,3 @@
-
 import { getGeminiResponse } from "./geminiApi";
 import { renderMarkdown } from "./markdownUtils";
 import { EssaySegment } from "@/components/essay-checker/HighlightedEssay";
@@ -26,37 +25,37 @@ function generateDefaultRatings(): {
         name: "Uniqueness",
         score: 87,
         description: "How original and distinctive your essay is compared to others.",
-        icon: <Lightbulb className="h-4 w-4 text-primary" />
+        icon: Lightbulb
       },
       {
         name: "Hook",
         score: 87,
         description: "How effectively your introduction captures the reader's attention.",
-        icon: <Target className="h-4 w-4 text-primary" />
+        icon: Target
       },
       {
         name: "Voice",
         score: 92,
         description: "How well your personal tone and style come through in your writing.",
-        icon: <Music className="h-4 w-4 text-primary" />
+        icon: Music
       },
       {
         name: "Flow",
         score: 82,
         description: "How smoothly your essay transitions between ideas and paragraphs.",
-        icon: <Waves className="h-4 w-4 text-primary" />
+        icon: Waves
       },
       {
         name: "Authenticity",
         score: 92,
         description: "How genuine and true to yourself your essay feels.",
-        icon: <Heart className="h-4 w-4 text-primary" />
+        icon: Heart
       },
       {
         name: "Conciseness",
         score: 82,
         description: "How efficiently you express your ideas without unnecessary words.",
-        icon: <ScanLine className="h-4 w-4 text-primary" />
+        icon: ScanLine
       }
     ]
   };
