@@ -1,20 +1,21 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import Logo from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
 
   const navItems = [
     { name: "Home", href: "/" },
-    { name: "Features", href: "/#features" },
+    { name: "Features", href: "/features" },
     { name: "Essay Analyzer", href: "/essay-analyzer" },
     { name: "Consultant", href: "/consultant" },
-    { name: "Contact", href: "/#contact" },
+    { name: "Contact", href: "/contact" },
   ];
 
   useEffect(() => {
@@ -25,6 +26,11 @@ const Header = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   return (
     <motion.header
@@ -43,21 +49,14 @@ const Header = () => {
           <ul className="flex space-x-8">
             {navItems.map((item) => (
               <li key={item.name}>
-                {item.href.startsWith("/#") ? (
-                  <a
-                    href={item.href}
-                    className="text-sm font-medium hover:text-primary transition-colors"
-                  >
-                    {item.name}
-                  </a>
-                ) : (
-                  <Link
-                    to={item.href}
-                    className="text-sm font-medium hover:text-primary transition-colors"
-                  >
-                    {item.name}
-                  </Link>
-                )}
+                <Link
+                  to={item.href}
+                  className={`text-sm font-medium transition-colors ${
+                    location.pathname === item.href ? "text-primary font-semibold" : "hover:text-primary"
+                  }`}
+                >
+                  {item.name}
+                </Link>
               </li>
             ))}
           </ul>
@@ -122,27 +121,17 @@ const Header = () => {
           >
             <nav className="px-4 py-5 space-y-4">
               {navItems.map((item) => (
-                item.href.startsWith("/#") ? (
-                  <a
-                    key={item.name}
-                    href={item.href}
-                    className="block py-2 text-foreground hover:text-primary transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    {item.name}
-                  </a>
-                ) : (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className="block py-2 text-foreground hover:text-primary transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    {item.name}
-                  </Link>
-                )
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`block py-2 transition-colors ${
+                    location.pathname === item.href ? "text-primary font-semibold" : "text-foreground hover:text-primary"
+                  }`}
+                >
+                  {item.name}
+                </Link>
               ))}
-              <Link to="/consultant" onClick={() => setMobileMenuOpen(false)}>
+              <Link to="/consultant">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}

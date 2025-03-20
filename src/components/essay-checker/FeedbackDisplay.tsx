@@ -1,9 +1,9 @@
+
 import React from "react";
 import { FileText, Loader2 } from "lucide-react";
 import { EssaySegment } from "./HighlightedEssay";
 import HighlightedEssay from "./HighlightedEssay";
 import EssayRating, { RatingCategory } from "./EssayRating";
-import { Lightbulb, Music, Waves, Heart, Target, ScanLine } from "lucide-react";
 
 interface FeedbackDisplayProps {
   highlightedEssay: EssaySegment[];
@@ -15,49 +15,7 @@ interface FeedbackDisplayProps {
   };
 }
 
-const defaultRatings = {
-  overall: 85,
-  categories: [
-    {
-      name: "Uniqueness",
-      score: 87,
-      description: "How original and distinctive your essay is compared to others.",
-      icon: Lightbulb
-    },
-    {
-      name: "Hook",
-      score: 87,
-      description: "How effectively your introduction captures the reader's attention.",
-      icon: Target
-    },
-    {
-      name: "Voice",
-      score: 92,
-      description: "How well your personal tone and style come through in your writing.",
-      icon: Music
-    },
-    {
-      name: "Flow",
-      score: 82,
-      description: "How smoothly your essay transitions between ideas and paragraphs.",
-      icon: Waves
-    },
-    {
-      name: "Authenticity",
-      score: 92,
-      description: "How genuine and true to yourself your essay feels.",
-      icon: Heart
-    },
-    {
-      name: "Conciseness",
-      score: 82,
-      description: "How efficiently you express your ideas without unnecessary words.",
-      icon: ScanLine
-    }
-  ]
-};
-
-const FeedbackDisplay = ({ highlightedEssay, feedback, isAnalyzing, ratings = defaultRatings }: FeedbackDisplayProps) => {
+const FeedbackDisplay = ({ highlightedEssay, feedback, isAnalyzing, ratings }: FeedbackDisplayProps) => {
   if (isAnalyzing) {
     return (
       <div className="text-center py-12">
@@ -87,12 +45,6 @@ const FeedbackDisplay = ({ highlightedEssay, feedback, isAnalyzing, ratings = de
             className="prose dark:prose-invert prose-sm max-w-none" 
             dangerouslySetInnerHTML={{ __html: feedback }} 
           />
-        </div>
-      )}
-
-      {highlightedEssay.length > 0 && feedback && (
-        <div className="mt-8 border-t pt-6">
-          <EssayRating ratings={ratings} />
         </div>
       )}
     </div>

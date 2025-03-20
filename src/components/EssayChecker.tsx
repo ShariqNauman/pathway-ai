@@ -5,21 +5,29 @@ import EssayForm, { EssayFormValues } from "./essay-checker/EssayForm";
 import FeedbackDisplay from "./essay-checker/FeedbackDisplay";
 import { analyzeEssay } from "@/utils/essayAnalysis";
 import { EssaySegment } from "./essay-checker/HighlightedEssay";
+import EssayRating, { RatingCategory } from "./essay-checker/EssayRating";
+import { ScrollArea } from "./ui/scroll-area";
 
 const EssayChecker = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [feedback, setFeedback] = useState<string>("");
   const [highlightedEssay, setHighlightedEssay] = useState<EssaySegment[]>([]);
+  const [ratings, setRatings] = useState<{
+    overall: number;
+    categories: RatingCategory[];
+  } | undefined>(undefined);
   
   const handleAnalyzeEssay = async (data: EssayFormValues) => {
     setIsAnalyzing(true);
     setFeedback("");
     setHighlightedEssay([]);
+    setRatings(undefined);
     
     try {
       const result = await analyzeEssay(data.essayType, data.prompt, data.essay);
       setHighlightedEssay(result.highlightedEssay);
       setFeedback(result.feedback);
+      setRatings(result.ratings);
     } finally {
       setIsAnalyzing(false);
     }
@@ -76,18 +84,33 @@ const EssayChecker = () => {
           </div>
           
           {/* Feedback Display */}
-          <div className="bg-card shadow-md rounded-xl p-6 border border-border overflow-auto max-h-[700px]">
+          <div className="bg-card shadow-md rounded-xl p-6 border border-border">
             <div className="mb-4">
               <h3 className="text-xl font-semibold border-b pb-2 mb-4">Essay Analysis</h3>
               
-              <FeedbackDisplay
-                highlightedEssay={highlightedEssay}
-                feedback={feedback}
-                isAnalyzing={isAnalyzing}
-              />
+              <ScrollArea className="h-[500px] pr-4">
+                <FeedbackDisplay
+                  highlightedEssay={highlightedEssay}
+                  feedback={feedback}
+                  isAnalyzing={isAnalyzing}
+                  ratings={ratings}
+                />
+              </ScrollArea>
             </div>
           </div>
         </motion.div>
+        
+        {/* Ratings Display - Separate Container */}
+        {ratings && !isAnalyzing && (
+          <motion.div
+            className="mt-8 max-w-4xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <EssayRating ratings={ratings} />
+          </motion.div>
+        )}
       </div>
     </section>
   );

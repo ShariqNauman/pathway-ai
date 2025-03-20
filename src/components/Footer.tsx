@@ -32,9 +32,9 @@ const Footer = () => {
               </Link>
             </li>
             <li>
-              <a href="/#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link to="/features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Features
-              </a>
+              </Link>
             </li>
             <li>
               <Link to="/essay-analyzer" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -46,19 +46,27 @@ const Footer = () => {
                 Consultant
               </Link>
             </li>
+            <li>
+              <Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Contact
+              </Link>
+            </li>
           </ul>
         </div>
 
         <div>
           <h4 className="text-sm font-semibold mb-4">Legal</h4>
           <ul className="space-y-3">
-            {["Terms", "Privacy"].map((item) => (
-              <li key={item}>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  {item}
-                </a>
-              </li>
-            ))}
+            <li>
+              <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Terms
+              </Link>
+            </li>
+            <li>
+              <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Privacy
+              </Link>
+            </li>
           </ul>
         </div>
 
