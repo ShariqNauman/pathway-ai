@@ -11,7 +11,7 @@ import { EssaySegment } from "./essay-checker/HighlightedEssay";
 import EssayRating, { RatingCategory } from "./essay-checker/EssayRating";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
-import { Folder, Save, FileText } from "lucide-react";
+import { Folder, RotateCcw, FileText } from "lucide-react";
 import {
   SidebarProvider,
   Sidebar,
@@ -76,7 +76,7 @@ const EssayChecker = () => {
         const essays = data.map(item => ({
           id: item.id,
           // Generate a title since there's no title field in the database
-          title: `${item.essay_type} essay - ${new Date(item.created_at).toLocaleDateString()}`,
+          title: generateEssayTitle(item.essay_type, item.prompt, new Date(item.created_at)),
           essayType: item.essay_type,
           prompt: item.prompt,
           essay: item.essay,
@@ -90,6 +90,24 @@ const EssayChecker = () => {
     } catch (error) {
       console.error("Error fetching saved essays:", error);
     }
+  };
+  
+  // Generate a title for the essay
+  const generateEssayTitle = (essayType: string, prompt: string, date: Date): string => {
+    if (prompt && prompt.length > 0) {
+      // Extract first few words from the prompt
+      const words = prompt.split(' ');
+      const shortPrompt = words.slice(0, 4).join(' ');
+      
+      if (shortPrompt.length > 30) {
+        return shortPrompt.substring(0, 27) + '...';
+      }
+      
+      return `${essayType}: ${shortPrompt}${words.length > 4 ? '...' : ''}`;
+    }
+    
+    // Fallback if no prompt
+    return `${essayType} essay - ${date.toLocaleDateString()}`;
   };
   
   const handleAnalyzeEssay = async (data: EssayFormValues) => {
@@ -185,27 +203,16 @@ const EssayChecker = () => {
     }
   };
 
-  // Since there's no title field in the database, let's modify how we handle titles
-  const updateEssayTitle = async (customTitle: string) => {
-    if (!currentUser || !currentAnalysisId) return;
-    
-    try {
-      // Since we can't update a title field that doesn't exist,
-      // We'll inform the user with a toast message
-      toast(`Your essay is saved. Custom titles are not supported yet.`);
-      
-      // We'll still update the UI to show the custom title
-      setSavedEssays(prev => 
-        prev.map(essay => 
-          essay.id === currentAnalysisId 
-            ? { ...essay, title: customTitle } 
-            : essay
-        )
-      );
-      
-    } catch (error) {
-      console.error("Error updating essay:", error);
-    }
+  const startNewAnalysis = () => {
+    setCurrentFormValues({
+      essayType: "personal",
+      prompt: "",
+      essay: ""
+    });
+    setFeedback("");
+    setHighlightedEssay([]);
+    setRatings(undefined);
+    setCurrentAnalysisId(null);
   };
 
   const formatDate = (date: Date) => {
@@ -271,11 +278,11 @@ const EssayChecker = () => {
           >
             {/* Essay Sidebar */}
             {currentUser && (
-              <Sidebar collapsible="offcanvas" variant="floating">
+              <Sidebar collapsible="icon" variant="floating">
                 <SidebarHeader className="flex justify-between items-center">
                   <div>
-                    <h3 className="font-semibold">Saved Essays</h3>
-                    <p className="text-xs text-muted-foreground">Access your past analyses</p>
+                    <h3 className="font-semibold">Your Essays</h3>
+                    <p className="text-xs text-muted-foreground">Analyses are automatically saved</p>
                   </div>
                   <SidebarTrigger />
                 </SidebarHeader>
@@ -283,14 +290,23 @@ const EssayChecker = () => {
                 <SidebarContent>
                   <SidebarGroupLabel>Recent Analyses</SidebarGroupLabel>
                   <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton 
+                        onClick={startNewAnalysis}
+                        className="bg-accent/20 text-accent-foreground"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        <span>New Analysis</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    
                     {savedEssays.map((essay) => (
                       <SidebarMenuItem key={essay.id}>
                         <SidebarMenuButton 
                           isActive={currentAnalysisId === essay.id}
                           onClick={() => loadSavedEssay(essay)}
                         >
-                          <Folder className="h-4 w-4" />
-                          <div className="flex flex-col items-start">
+                          <div className="flex flex-col items-start w-full">
                             <span className="text-sm truncate">{essay.title}</span>
                             <span className="text-xs text-muted-foreground">
                               {formatDate(essay.createdAt)} - Score: {essay.overallScore}
@@ -301,6 +317,18 @@ const EssayChecker = () => {
                     ))}
                   </SidebarMenu>
                 </SidebarContent>
+                
+                <SidebarFooter>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full flex items-center gap-2"
+                    onClick={startNewAnalysis}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    New Analysis
+                  </Button>
+                </SidebarFooter>
               </Sidebar>
             )}
           
@@ -320,19 +348,10 @@ const EssayChecker = () => {
                   <div className="mb-4 flex justify-between items-center">
                     <h3 className="text-xl font-semibold border-b pb-2 mb-4">Essay Analysis</h3>
                     
-                    {currentUser && feedback && !isAnalyzing && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-2"
-                        onClick={() => {
-                          const title = prompt("Enter a name for this essay analysis:", savedEssays.find(e => e.id === currentAnalysisId)?.title || `${currentFormValues.essayType} essay`);
-                          if (title) updateEssayTitle(title);
-                        }}
-                      >
-                        <Save className="h-4 w-4" />
-                        Save Analysis
-                      </Button>
+                    {!feedback && !isAnalyzing && (
+                      <p className="text-sm text-muted-foreground italic">
+                        Submit your essay to see analysis results
+                      </p>
                     )}
                   </div>
                   
