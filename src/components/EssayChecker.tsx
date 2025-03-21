@@ -75,7 +75,7 @@ const EssayChecker = () => {
       if (data) {
         const essays = data.map(item => ({
           id: item.id,
-          title: `${item.essay_type} essay - ${new Date(item.created_at).toLocaleDateString()}`,
+          title: item.title || `${item.essay_type} essay - ${new Date(item.created_at).toLocaleDateString()}`,
           essayType: item.essay_type,
           prompt: item.prompt,
           essay: item.essay,
@@ -122,7 +122,8 @@ const EssayChecker = () => {
               prompt: data.prompt,
               essay: data.essay,
               feedback: result.feedback,
-              overall_score: result.ratings.overall
+              overall_score: result.ratings.overall,
+              title: `${data.essayType} essay`
             })
             .select();
             
@@ -161,18 +162,24 @@ const EssayChecker = () => {
         setHighlightedEssay(result.highlightedEssay);
         setRatings(result.ratings);
       } else {
-        setHighlightedEssay([{ text: essay.essay, comment: null }]);
+        // If we can't get the highlighted essay, create a simple fallback
+        setHighlightedEssay([{ text: essay.essay, comment: null, highlighted: false }]);
         setRatings({
           overall: essay.overallScore,
           categories: [
-            { name: "Retrieved from saved essay", score: essay.overallScore }
+            { 
+              name: "Retrieved from saved essay", 
+              score: essay.overallScore,
+              description: "This is a saved essay analysis",
+              icon: "FileText"
+            }
           ]
         });
       }
     } catch (error) {
       console.error("Error loading highlighted essay:", error);
       // Fallback to showing plain essay
-      setHighlightedEssay([{ text: essay.essay, comment: null }]);
+      setHighlightedEssay([{ text: essay.essay, comment: null, highlighted: false }]);
     }
   };
 

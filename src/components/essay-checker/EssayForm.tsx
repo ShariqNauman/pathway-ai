@@ -23,12 +23,13 @@ export type EssayFormValues = z.infer<typeof essaySchema>;
 interface EssayFormProps {
   onSubmit: (data: EssayFormValues) => void;
   isAnalyzing: boolean;
+  defaultValues?: EssayFormValues;
 }
 
-const EssayForm = ({ onSubmit, isAnalyzing }: EssayFormProps) => {
+const EssayForm = ({ onSubmit, isAnalyzing, defaultValues }: EssayFormProps) => {
   const form = useForm<EssayFormValues>({
     resolver: zodResolver(essaySchema),
-    defaultValues: {
+    defaultValues: defaultValues || {
       essayType: "",
       prompt: "",
       essay: "",
