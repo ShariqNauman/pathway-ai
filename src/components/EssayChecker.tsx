@@ -11,7 +11,7 @@ import { EssaySegment } from "./essay-checker/HighlightedEssay";
 import EssayRating, { RatingCategory } from "./essay-checker/EssayRating";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
-import { Folder, Save } from "lucide-react";
+import { Folder, Save, FileText } from "lucide-react";
 import {
   SidebarProvider,
   Sidebar,
@@ -75,12 +75,13 @@ const EssayChecker = () => {
       if (data) {
         const essays = data.map(item => ({
           id: item.id,
-          title: item.title || `${item.essay_type} essay - ${new Date(item.created_at).toLocaleDateString()}`,
+          // Generate a title since there's no title field in the database
+          title: `${item.essay_type} essay - ${new Date(item.created_at).toLocaleDateString()}`,
           essayType: item.essay_type,
           prompt: item.prompt,
           essay: item.essay,
           feedback: item.feedback,
-          overallScore: item.overall_score,
+          overallScore: item.overall_score || 0,
           createdAt: new Date(item.created_at)
         }));
         
@@ -123,7 +124,7 @@ const EssayChecker = () => {
               essay: data.essay,
               feedback: result.feedback,
               overall_score: result.ratings.overall,
-              title: `${data.essayType} essay`
+              // Remove the title field as it doesn't exist in the database
             })
             .select();
             
@@ -171,7 +172,8 @@ const EssayChecker = () => {
               name: "Retrieved from saved essay", 
               score: essay.overallScore,
               description: "This is a saved essay analysis",
-              icon: "FileText"
+              // Use the actual FileText component, not a string
+              icon: FileText
             }
           ]
         });
@@ -183,19 +185,26 @@ const EssayChecker = () => {
     }
   };
 
-  const updateEssayTitle = async (title: string) => {
+  // Since there's no title field in the database, let's modify how we handle titles
+  const updateEssayTitle = async (customTitle: string) => {
     if (!currentUser || !currentAnalysisId) return;
     
     try {
-      await supabase
-        .from('essay_analyses')
-        .update({ title })
-        .eq('id', currentAnalysisId);
-        
-      fetchSavedEssays();
-      toast("Essay saved with title: " + title);
+      // Since we can't update a title field that doesn't exist,
+      // We'll inform the user with a toast message
+      toast(`Your essay is saved. Custom titles are not supported yet.`);
+      
+      // We'll still update the UI to show the custom title
+      setSavedEssays(prev => 
+        prev.map(essay => 
+          essay.id === currentAnalysisId 
+            ? { ...essay, title: customTitle } 
+            : essay
+        )
+      );
+      
     } catch (error) {
-      console.error("Error updating essay title:", error);
+      console.error("Error updating essay:", error);
     }
   };
 
