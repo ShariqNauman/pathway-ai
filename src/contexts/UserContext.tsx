@@ -26,6 +26,7 @@ export const useUser = () => {
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLogoutInProgress, setIsLogoutInProgress] = useState(false);
 
   // Check for user session on mount
   useEffect(() => {
@@ -159,7 +160,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    // Prevent multiple logout attempts
+    if (isLogoutInProgress) return;
+    
+    setIsLogoutInProgress(true);
     setIsLoading(true);
+    
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
@@ -175,6 +181,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast("Failed to log out. Please try again.");
     } finally {
       setIsLoading(false);
+      setIsLogoutInProgress(false);
     }
   };
 
@@ -190,7 +197,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           preferred_country: preferences.preferredCountry,
           preferred_university_type: preferences.preferredUniversityType,
           study_level: preferences.studyLevel,
-          updated_at: new Date().toISOString() // Fix: Convert Date to ISO string
+          updated_at: new Date().toISOString()
         })
         .eq('id', currentUser.id);
       

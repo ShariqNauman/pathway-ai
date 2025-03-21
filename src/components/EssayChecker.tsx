@@ -1,6 +1,9 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useUser } from "@/contexts/UserContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import EssayForm, { EssayFormValues } from "./essay-checker/EssayForm";
 import FeedbackDisplay from "./essay-checker/FeedbackDisplay";
 import { analyzeEssay } from "@/utils/essayAnalysis";
@@ -9,6 +12,7 @@ import EssayRating, { RatingCategory } from "./essay-checker/EssayRating";
 import { ScrollArea } from "./ui/scroll-area";
 
 const EssayChecker = () => {
+  const { currentUser } = useUser();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [feedback, setFeedback] = useState<string>("");
   const [highlightedEssay, setHighlightedEssay] = useState<EssaySegment[]>([]);
@@ -28,6 +32,28 @@ const EssayChecker = () => {
       setHighlightedEssay(result.highlightedEssay);
       setFeedback(result.feedback);
       setRatings(result.ratings);
+      
+      // Save the analysis for logged-in users
+      if (currentUser && result.ratings) {
+        try {
+          const { error } = await supabase
+            .from('essay_analyses')
+            .insert({
+              user_id: currentUser.id,
+              essay_type: data.essayType,
+              prompt: data.prompt,
+              essay: data.essay,
+              feedback: result.feedback,
+              overall_score: result.ratings.overall
+            });
+            
+          if (error) {
+            console.error("Error saving essay analysis:", error);
+          }
+        } catch (err) {
+          console.error("Failed to save essay analysis:", err);
+        }
+      }
     } finally {
       setIsAnalyzing(false);
     }

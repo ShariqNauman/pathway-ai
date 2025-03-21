@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, RotateCcw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { useUser } from "@/contexts/UserContext";
+import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from 'uuid';
 
 interface Message {
   id: string;
@@ -26,7 +29,10 @@ const ChatConsultant = () => {
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [hasShownPreferencesReminder, setHasShownPreferencesReminder] = useState(false);
   
+  const { currentUser } = useUser();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -38,9 +44,37 @@ const ChatConsultant = () => {
     }
   };
 
-  // Only scroll to bottom when messages change
+  // Check user preferences on initial load
   useEffect(() => {
-    // Only scroll if the user is already near the bottom or if they sent the message
+    if (currentUser && !hasShownPreferencesReminder) {
+      const hasCompletePreferences = 
+        currentUser.preferences.intendedMajor && 
+        currentUser.preferences.preferredCountry && 
+        currentUser.preferences.studyLevel;
+      
+      if (!hasCompletePreferences) {
+        setTimeout(() => {
+          setMessages(prev => [...prev, {
+            id: uuidv4(),
+            content: "I noticed you haven't completed your profile preferences yet. This would help me provide more personalized university recommendations. Please visit your profile page to set your preferences.",
+            sender: "ai",
+            timestamp: new Date()
+          }]);
+          setHasShownPreferencesReminder(true);
+        }, 1000);
+      }
+    }
+  }, [currentUser, hasShownPreferencesReminder]);
+
+  // Load user conversation history or create new conversation
+  useEffect(() => {
+    if (currentUser) {
+      createOrLoadConversation();
+    }
+  }, [currentUser]);
+
+  // Only scroll if the user is already near the bottom or if they sent the message
+  useEffect(() => {
     const container = chatContainerRef.current;
     if (container) {
       const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
@@ -53,6 +87,9 @@ const ChatConsultant = () => {
 
   // Prevent page from scrolling to chat section on load
   useEffect(() => {
+    // This is critical to prevent auto-scrolling to the consultant section
+    window.history.scrollRestoration = 'manual';
+    
     // Get URL hash
     const hash = window.location.hash;
     // Clear hash if it's pointing to consultation to prevent auto-scroll
@@ -60,6 +97,11 @@ const ChatConsultant = () => {
       // Remove the hash without page jump
       history.pushState("", document.title, window.location.pathname + window.location.search);
     }
+    
+    // Cleanup
+    return () => {
+      window.history.scrollRestoration = 'auto';
+    };
   }, []);
 
   // Auto resize textarea based on content
@@ -74,6 +116,99 @@ const ChatConsultant = () => {
     autoResizeTextarea();
   }, [inputValue]);
 
+  const createOrLoadConversation = async () => {
+    if (!currentUser) return;
+    
+    try {
+      // Get the most recent conversation
+      const { data: conversations, error: fetchError } = await supabase
+        .from('chat_conversations')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('updated_at', { ascending: false })
+        .limit(1);
+      
+      if (fetchError) throw fetchError;
+      
+      if (conversations && conversations.length > 0) {
+        // Load the most recent conversation
+        const conversationId = conversations[0].id;
+        setCurrentConversationId(conversationId);
+        
+        // Load messages for this conversation
+        const { data: messageData, error: messageError } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('conversation_id', conversationId)
+          .order('created_at', { ascending: true });
+        
+        if (messageError) throw messageError;
+        
+        if (messageData && messageData.length > 0) {
+          // Transform database messages to our format
+          const loadedMessages = messageData.map(msg => ({
+            id: msg.id,
+            content: msg.content,
+            sender: msg.sender as "user" | "ai",
+            timestamp: new Date(msg.created_at)
+          }));
+          
+          setMessages(loadedMessages);
+        }
+      } else {
+        // Create a new conversation
+        const { data: newConversation, error: createError } = await supabase
+          .from('chat_conversations')
+          .insert([{ 
+            user_id: currentUser.id,
+            title: 'New Chat'
+          }])
+          .select();
+        
+        if (createError) throw createError;
+        
+        if (newConversation && newConversation.length > 0) {
+          setCurrentConversationId(newConversation[0].id);
+          
+          // Save the welcome message
+          const welcomeMessage = messages[0];
+          await supabase
+            .from('chat_messages')
+            .insert([{
+              conversation_id: newConversation[0].id,
+              content: welcomeMessage.content,
+              sender: welcomeMessage.sender
+            }]);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading conversation:", error);
+    }
+  };
+
+  const saveMessage = async (message: Message) => {
+    if (!currentUser || !currentConversationId) return;
+    
+    try {
+      await supabase
+        .from('chat_messages')
+        .insert([{
+          id: message.id,
+          conversation_id: currentConversationId,
+          content: message.content,
+          sender: message.sender
+        }]);
+      
+      // Update conversation's updated_at timestamp
+      await supabase
+        .from('chat_conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', currentConversationId);
+    } catch (error) {
+      console.error("Error saving message:", error);
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -81,7 +216,7 @@ const ChatConsultant = () => {
     
     // Add user message to chat
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: uuidv4(),
       content: inputValue,
       sender: "user",
       timestamp: new Date(),
@@ -91,9 +226,29 @@ const ChatConsultant = () => {
     setInputValue("");
     setIsLoading(true);
     
+    // Save user message if logged in
+    if (currentUser) {
+      saveMessage(userMessage);
+    }
+    
     try {
-      // Call Gemini API
-      const response = await getGeminiResponse(inputValue);
+      // Get user preferences to add context to the AI
+      let additionalContext = "";
+      if (currentUser && currentUser.preferences) {
+        const { intendedMajor, budget, preferredCountry, studyLevel } = currentUser.preferences;
+        if (intendedMajor || budget || preferredCountry || studyLevel) {
+          additionalContext = `\n\nUser profile information: ` +
+            `${intendedMajor ? `Intended major: ${intendedMajor}. ` : ''}` +
+            `${budget ? `Budget: $${budget}. ` : ''}` +
+            `${preferredCountry ? `Preferred country: ${preferredCountry}. ` : ''}` +
+            `${studyLevel ? `Study level: ${studyLevel}. ` : ''}` +
+            `\nPlease use this information to personalize your responses when appropriate.`;
+        }
+      }
+      
+      // Call Gemini API with user context if available
+      const promptWithContext = inputValue + additionalContext;
+      const response = await getGeminiResponse(promptWithContext);
       
       if (response.error) {
         console.error("Gemini API Error:", response.error);
@@ -103,13 +258,18 @@ const ChatConsultant = () => {
       }
       
       const newAiMessage: Message = {
-        id: Date.now().toString(),
+        id: uuidv4(),
         content: response.text || "I apologize, but I'm having trouble processing your request right now. Please try again later.",
         sender: "ai",
         timestamp: new Date(),
       };
       
       setMessages((prev) => [...prev, newAiMessage]);
+      
+      // Save AI message if logged in
+      if (currentUser) {
+        saveMessage(newAiMessage);
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to get response. Please try again.");
@@ -125,15 +285,63 @@ const ChatConsultant = () => {
     }
   };
 
-  const clearChat = () => {
-    setMessages([
-      {
-        id: "reset-" + Date.now().toString(),
-        content: "Hello! I'm your AI university consultant. How can I help with your educational journey today?",
-        sender: "ai",
-        timestamp: new Date(),
-      },
-    ]);
+  const clearChat = async () => {
+    if (currentUser && currentConversationId) {
+      try {
+        // Delete all messages for the current conversation
+        await supabase
+          .from('chat_messages')
+          .delete()
+          .eq('conversation_id', currentConversationId);
+        
+        // Create a new conversation
+        const { data: newConversation, error } = await supabase
+          .from('chat_conversations')
+          .insert([{ 
+            user_id: currentUser.id,
+            title: 'New Chat'
+          }])
+          .select();
+        
+        if (error) throw error;
+        
+        if (newConversation && newConversation.length > 0) {
+          setCurrentConversationId(newConversation[0].id);
+          
+          const welcomeMessage = {
+            id: uuidv4(),
+            content: "Hello! I'm your AI university consultant. How can I help with your educational journey today?",
+            sender: "ai" as const,
+            timestamp: new Date(),
+          };
+          
+          setMessages([welcomeMessage]);
+          
+          // Save the welcome message
+          await supabase
+            .from('chat_messages')
+            .insert([{
+              conversation_id: newConversation[0].id,
+              content: welcomeMessage.content,
+              sender: welcomeMessage.sender
+            }]);
+        }
+      } catch (error) {
+        console.error("Error resetting chat:", error);
+        toast.error("Failed to reset chat. Please try again.");
+      }
+    } else {
+      // For non-logged-in users, just reset the chat state
+      setMessages([
+        {
+          id: uuidv4(),
+          content: "Hello! I'm your AI university consultant. How can I help with your educational journey today?",
+          sender: "ai",
+          timestamp: new Date(),
+        },
+      ]);
+    }
+    
     toast.success("Chat has been reset");
   };
 

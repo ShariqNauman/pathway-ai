@@ -8,7 +8,7 @@ export interface RatingCategory {
   name: string;
   score: number;
   description: string;
-  icon: React.ComponentType<any>; // Updated to accept a component type instead of a ReactNode
+  icon: React.ComponentType<any>;
 }
 
 export interface EssayRatingProps {
@@ -33,13 +33,6 @@ const EssayRating = ({ ratings }: EssayRatingProps) => {
     <div className="bg-card rounded-lg p-6 border border-border shadow-sm">
       <div className="text-center mb-6">
         <h3 className="text-2xl font-bold text-primary">Your Results</h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          If you have concerns or questions, you can reach out at{" "}
-          <a href="mailto:contact@maxadmit.com" className="text-blue-600 hover:underline">
-            contact@maxadmit.com
-          </a>
-          .
-        </p>
       </div>
 
       <div className="mb-8">
