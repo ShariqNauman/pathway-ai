@@ -151,7 +151,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           preferred_country: preferences.preferredCountry,
           preferred_university_type: preferences.preferredUniversityType,
           study_level: preferences.studyLevel,
-          updated_at: new Date()
+          updated_at: new Date().toISOString() // Fix: Convert Date to ISO string
         })
         .eq('id', currentUser.id);
       
