@@ -12,7 +12,7 @@ const CallToAction = () => {
       
       <div className="max-w-7xl mx-auto relative">
         <motion.div 
-          className="glass-card rounded-2xl p-8 md:p-12 overflow-hidden relative"
+          className="rounded-2xl p-8 md:p-12 overflow-hidden relative bg-card border border-border shadow-xl"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -71,7 +71,7 @@ const CallToAction = () => {
               </Link>
               <Link 
                 to="/essay-analyzer" 
-                className="px-8 py-3 border border-border bg-white/90 backdrop-blur-sm rounded-md font-medium hover:bg-white transition-all text-center"
+                className="px-8 py-3 bg-background border border-border rounded-md font-medium hover:bg-accent/10 transition-all text-center"
               >
                 Essay Analyzer
               </Link>

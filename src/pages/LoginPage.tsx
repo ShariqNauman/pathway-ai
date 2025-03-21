@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -24,10 +24,18 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginPage = () => {
-  const { login, isLoading } = useUser();
+  const { login, isLoading, currentUser } = useUser();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [error, setError] = useState("");
+  const [formSubmitted, setFormSubmitted] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (currentUser) {
+      navigate("/dashboard");
+    }
+  }, [currentUser, navigate]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -39,6 +47,8 @@ const LoginPage = () => {
 
   const onSubmit = async (values: LoginFormValues) => {
     setError("");
+    setFormSubmitted(true);
+    
     // Since we've defined LoginFormValues to match the schema which has required fields,
     // we can safely cast this to UserCredentials which also has required fields
     const credentials: UserCredentials = {
@@ -61,6 +71,7 @@ const LoginPage = () => {
         description: "Invalid email or password",
         variant: "destructive"
       });
+      setFormSubmitted(false);
     }
   };
 
@@ -117,7 +128,11 @@ const LoginPage = () => {
 
               {error && <p className="text-destructive text-sm">{error}</p>}
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading || formSubmitted || !form.formState.isValid}
+              >
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

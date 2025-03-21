@@ -2,13 +2,14 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, UserCredentials, UserPreferences } from "@/types/user";
+import { toast } from "sonner";
 
 interface UserContextType {
   currentUser: UserProfile | null;
   isLoading: boolean;
   login: (credentials: UserCredentials) => Promise<boolean>;
   signup: (credentials: UserCredentials & { name: string }) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateUserPreferences: (preferences: UserPreferences) => void;
 }
 
@@ -28,28 +29,42 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check for user session on mount
   useEffect(() => {
+    // Immediately set isLoading to true to prevent flashing of unauthorized UI
+    setIsLoading(true);
+    
+    // Set up auth state listener FIRST
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event, session ? "User logged in" : "No session");
+      
       if (session) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-          
-        if (profileData) {
-          setCurrentUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: profileData.name || '',
-            preferences: {
-              intendedMajor: profileData.intended_major || '',
-              budget: profileData.budget || 0,
-              preferredCountry: profileData.preferred_country || '',
-              preferredUniversityType: profileData.preferred_university_type || '',
-              studyLevel: profileData.study_level || ''
-            },
-            createdAt: new Date(profileData.created_at)
-          });
+        try {
+          const { data: profileData, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (error) {
+            console.error("Error fetching profile:", error);
+            setCurrentUser(null);
+          } else if (profileData) {
+            setCurrentUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              name: profileData.name || '',
+              preferences: {
+                intendedMajor: profileData.intended_major || '',
+                budget: profileData.budget || 0,
+                preferredCountry: profileData.preferred_country || '',
+                preferredUniversityType: profileData.preferred_university_type || '',
+                studyLevel: profileData.study_level || ''
+              },
+              createdAt: new Date(profileData.created_at)
+            });
+          }
+        } catch (error) {
+          console.error("Profile fetch error:", error);
+          setCurrentUser(null);
         }
       } else {
         setCurrentUser(null);
@@ -57,7 +72,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
     });
 
-    // Initial session check
+    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         supabase
@@ -65,8 +80,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .select('*')
           .eq('id', session.user.id)
           .single()
-          .then(({ data: profileData }) => {
-            if (profileData) {
+          .then(({ data: profileData, error }) => {
+            if (error) {
+              console.error("Error fetching initial profile:", error);
+              setCurrentUser(null);
+            } else if (profileData) {
               setCurrentUser({
                 id: session.user.id,
                 email: session.user.email || '',
@@ -101,7 +119,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password: credentials.password
       });
       
-      if (error) return false;
+      if (error) {
+        console.error('Login error:', error);
+        return false;
+      }
       return true;
     } catch (error) {
       console.error('Login error:', error);
@@ -124,7 +145,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
       
-      if (error) return false;
+      if (error) {
+        console.error('Signup error:', error);
+        return false;
+      }
       return true;
     } catch (error) {
       console.error('Signup error:', error);
@@ -135,8 +159,23 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setCurrentUser(null);
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Logout error:', error);
+        toast("Failed to log out. Please try again.");
+      } else {
+        // Force clear the user state
+        setCurrentUser(null);
+        toast("Successfully logged out");
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast("Failed to log out. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updateUserPreferences = async (preferences: UserPreferences) => {

@@ -29,20 +29,44 @@ const ChatConsultant = () => {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
+  // This will handle scrolling only when a new message is added
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
+  // Only scroll to bottom when messages change
   useEffect(() => {
-    scrollToBottom();
+    // Only scroll if the user is already near the bottom or if they sent the message
+    const container = chatContainerRef.current;
+    if (container) {
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+      
+      if (isNearBottom || messages[messages.length - 1]?.sender === "user") {
+        scrollToBottom();
+      }
+    }
   }, [messages]);
+
+  // Prevent page from scrolling to chat section on load
+  useEffect(() => {
+    // Get URL hash
+    const hash = window.location.hash;
+    // Clear hash if it's pointing to consultation to prevent auto-scroll
+    if (hash === "#consultation") {
+      // Remove the hash without page jump
+      history.pushState("", document.title, window.location.pathname + window.location.search);
+    }
+  }, []);
 
   // Auto resize textarea based on content
   const autoResizeTextarea = () => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "inherit";
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`;
     }
   };
 
@@ -114,7 +138,7 @@ const ChatConsultant = () => {
   };
 
   return (
-    <section id="consultation" className="py-20 px-6 lg:px-10 bg-gradient-to-b from-background to-accent/20">
+    <section className="py-20 px-6 lg:px-10 bg-gradient-to-b from-background to-accent/20">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-16">
           <motion.span 
@@ -180,7 +204,10 @@ const ChatConsultant = () => {
           </div>
           
           {/* Chat messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-secondary/30">
+          <div 
+            ref={chatContainerRef}
+            className="flex-1 overflow-y-auto p-4 space-y-6 bg-secondary/30"
+          >
             {messages.map((message) => (
               <div
                 key={message.id}

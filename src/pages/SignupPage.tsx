@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -25,10 +25,18 @@ const signupSchema = z.object({
 });
 
 const SignupPage = () => {
-  const { signup, isLoading } = useUser();
+  const { signup, isLoading, currentUser } = useUser();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [error, setError] = useState("");
+  const [formSubmitted, setFormSubmitted] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (currentUser) {
+      navigate("/dashboard");
+    }
+  }, [currentUser, navigate]);
 
   const form = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
@@ -37,11 +45,14 @@ const SignupPage = () => {
       email: "",
       password: "",
       confirmPassword: ""
-    }
+    },
+    mode: "onChange"
   });
 
   const onSubmit = async (values: z.infer<typeof signupSchema>) => {
     setError("");
+    setFormSubmitted(true);
+    
     const { name, email, password } = values;
     
     const success = await signup({ name, email, password });
@@ -59,6 +70,7 @@ const SignupPage = () => {
         description: "An account with this email already exists",
         variant: "destructive"
       });
+      setFormSubmitted(false);
     }
   };
 
@@ -143,7 +155,11 @@ const SignupPage = () => {
 
               {error && <p className="text-destructive text-sm">{error}</p>}
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading || formSubmitted || !form.formState.isValid}
+              >
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

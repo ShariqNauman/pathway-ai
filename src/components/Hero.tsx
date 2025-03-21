@@ -1,5 +1,6 @@
 
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 const Hero = () => {
   return (
@@ -53,10 +54,10 @@ const Hero = () => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, ease: "easeOut", delay: 0.4 }}
             >
-              <a href="#consultation" className="px-8 py-3 rounded-md bg-primary text-primary-foreground font-medium shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all">
+              <Link to="/consultant" className="px-8 py-3 rounded-md bg-primary text-primary-foreground font-medium shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all w-full sm:w-auto text-center">
                 Get Started
-              </a>
-              <a href="#learn-more" className="px-8 py-3 rounded-md border border-border bg-white/50 backdrop-blur-sm hover:bg-white/80 transition-all">
+              </Link>
+              <a href="#features" className="px-8 py-3 rounded-md border border-border bg-white/50 backdrop-blur-sm hover:bg-white/80 transition-all w-full sm:w-auto text-center">
                 Learn More
               </a>
             </motion.div>
