@@ -20,7 +20,6 @@ const loginSchema = z.object({
   password: z.string().min(8, { message: "Password must be at least 8 characters" })
 });
 
-// This ensures the login form values will match the UserCredentials type
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginPage = () => {
@@ -42,15 +41,26 @@ const LoginPage = () => {
     defaultValues: {
       email: "",
       password: ""
-    }
+    },
+    mode: "onChange" // This ensures validation happens on change, not just on submit
   });
+  
+  // Track whether the form is actually valid with filled values
+  const [formIsValid, setFormIsValid] = useState(false);
+  
+  // Check if all fields are filled and valid
+  useEffect(() => {
+    const { email, password } = form.getValues();
+    const allFieldsFilled = email.trim() !== "" && password.trim() !== "";
+    const noErrors = Object.keys(form.formState.errors).length === 0;
+    
+    setFormIsValid(allFieldsFilled && noErrors && form.formState.isDirty);
+  }, [form.formState, form]);
 
   const onSubmit = async (values: LoginFormValues) => {
     setError("");
     setFormSubmitted(true);
     
-    // Since we've defined LoginFormValues to match the schema which has required fields,
-    // we can safely cast this to UserCredentials which also has required fields
     const credentials: UserCredentials = {
       email: values.email,
       password: values.password
@@ -131,7 +141,7 @@ const LoginPage = () => {
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={isLoading || formSubmitted || !form.formState.isValid}
+                disabled={isLoading || formSubmitted || !formIsValid}
               >
                 {isLoading ? (
                   <>

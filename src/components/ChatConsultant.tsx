@@ -1,9 +1,7 @@
-
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { getGeminiResponse } from "@/utils/geminiApi";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, RotateCcw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -36,8 +34,9 @@ const ChatConsultant = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const initialLoadRef = useRef(true);
 
-  // This will handle scrolling only when a new message is added
+  // This will handle manual scrolling when needed
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -73,36 +72,34 @@ const ChatConsultant = () => {
     }
   }, [currentUser]);
 
-  // Only scroll if the user is already near the bottom or if they sent the message
+  // Prevent auto-scrolling to chat section on initial page load
   useEffect(() => {
-    const container = chatContainerRef.current;
-    if (container) {
-      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    // Disable scrolling on first render
+    if (initialLoadRef.current) {
+      // This is critical to prevent auto-scrolling to the consultant section on page load
+      window.history.scrollRestoration = 'manual';
       
-      if (isNearBottom || messages[messages.length - 1]?.sender === "user") {
-        scrollToBottom();
-      }
-    }
-  }, [messages]);
-
-  // Prevent page from scrolling to chat section on load
-  useEffect(() => {
-    // This is critical to prevent auto-scrolling to the consultant section
-    window.history.scrollRestoration = 'manual';
-    
-    // Get URL hash
-    const hash = window.location.hash;
-    // Clear hash if it's pointing to consultation to prevent auto-scroll
-    if (hash === "#consultation") {
-      // Remove the hash without page jump
-      history.pushState("", document.title, window.location.pathname + window.location.search);
+      // Restore normal scrolling behavior after component is mounted
+      setTimeout(() => {
+        initialLoadRef.current = false;
+      }, 1000);
     }
     
-    // Cleanup
+    // Clean up
     return () => {
       window.history.scrollRestoration = 'auto';
     };
   }, []);
+
+  // Only scroll if the user sent the message or if it's the user's first message
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.sender === "user") {
+        scrollToBottom();
+      }
+    }
+  }, [messages]);
 
   // Auto resize textarea based on content
   const autoResizeTextarea = () => {
@@ -346,7 +343,7 @@ const ChatConsultant = () => {
   };
 
   return (
-    <section className="py-20 px-6 lg:px-10 bg-gradient-to-b from-background to-accent/20">
+    <section id="consultation" className="py-20 px-6 lg:px-10 bg-gradient-to-b from-background to-accent/20">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-16">
           <motion.span 

@@ -20,7 +20,15 @@ import DashboardPage from "./pages/DashboardPage";
 import ProfileEditPage from "./pages/ProfileEditPage";
 import { ThemeProvider } from "./components/ThemeProvider";
 
-const queryClient = new QueryClient();
+// Create a new queryClient with proper configuration for auth persistence
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 // ScrollToTop component to handle navigation behavior
 const ScrollToTop = () => {
@@ -30,7 +38,10 @@ const ScrollToTop = () => {
   useEffect(() => {
     // Only scroll to top on PUSH navigation (not on POP or REPLACE)
     if (navigationType === 'PUSH') {
-      window.scrollTo(0, 0);
+      // Don't auto-scroll to the consultant page
+      if (!pathname.includes('/consultant')) {
+        window.scrollTo(0, 0);
+      }
     }
   }, [pathname, navigationType]);
   
@@ -42,8 +53,8 @@ const App = () => (
     <UserProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          {/* Only use the Sonner toaster */}
-          <Sonner />
+          {/* Only show one toast at a time */}
+          <Sonner position="bottom-right" closeButton toastLimit={1} />
           <BrowserRouter>
             <ScrollToTop />
             <Routes>

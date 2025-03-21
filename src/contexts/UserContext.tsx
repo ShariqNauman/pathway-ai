@@ -34,7 +34,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     // Set up auth state listener FIRST
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event, session ? "User logged in" : "No session");
       
       if (session) {
@@ -74,41 +74,54 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: profileData, error }) => {
-            if (error) {
-              console.error("Error fetching initial profile:", error);
-              setCurrentUser(null);
-            } else if (profileData) {
-              setCurrentUser({
-                id: session.user.id,
-                email: session.user.email || '',
-                name: profileData.name || '',
-                preferences: {
-                  intendedMajor: profileData.intended_major || '',
-                  budget: profileData.budget || 0,
-                  preferredCountry: profileData.preferred_country || '',
-                  preferredUniversityType: profileData.preferred_university_type || '',
-                  studyLevel: profileData.study_level || ''
-                },
-                createdAt: new Date(profileData.created_at)
-              });
-            }
-            setIsLoading(false);
-          });
-      } else {
+    const checkSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error("Session fetch error:", error);
         setIsLoading(false);
+        return;
       }
-    });
+      
+      if (data.session) {
+        try {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.session.user.id)
+            .single();
+            
+          if (profileError) {
+            console.error("Error fetching initial profile:", profileError);
+            setCurrentUser(null);
+          } else if (profileData) {
+            setCurrentUser({
+              id: data.session.user.id,
+              email: data.session.user.email || '',
+              name: profileData.name || '',
+              preferences: {
+                intendedMajor: profileData.intended_major || '',
+                budget: profileData.budget || 0,
+                preferredCountry: profileData.preferred_country || '',
+                preferredUniversityType: profileData.preferred_university_type || '',
+                studyLevel: profileData.study_level || ''
+              },
+              createdAt: new Date(profileData.created_at)
+            });
+          }
+        } catch (error) {
+          console.error("Profile fetch error:", error);
+          setCurrentUser(null);
+        }
+      }
+      
+      setIsLoading(false);
+    };
+    
+    checkSession();
 
     return () => {
-      authListener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 

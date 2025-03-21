@@ -48,6 +48,22 @@ const SignupPage = () => {
     },
     mode: "onChange"
   });
+  
+  // Track whether the form is actually valid with filled values
+  const [formIsValid, setFormIsValid] = useState(false);
+  
+  // Check if all fields are filled and valid
+  useEffect(() => {
+    const { name, email, password, confirmPassword } = form.getValues();
+    const allFieldsFilled = 
+      name.trim() !== "" && 
+      email.trim() !== "" && 
+      password.trim() !== "" && 
+      confirmPassword.trim() !== "";
+    const noErrors = Object.keys(form.formState.errors).length === 0;
+    
+    setFormIsValid(allFieldsFilled && noErrors && form.formState.isDirty);
+  }, [form.formState, form]);
 
   const onSubmit = async (values: z.infer<typeof signupSchema>) => {
     setError("");
@@ -158,7 +174,7 @@ const SignupPage = () => {
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={isLoading || formSubmitted || !form.formState.isValid}
+                disabled={isLoading || formSubmitted || !formIsValid}
               >
                 {isLoading ? (
                   <>
