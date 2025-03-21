@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, UserCredentials, UserPreferences } from "@/types/user";
+import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
 
 interface UserContextType {
@@ -25,12 +26,13 @@ export const useUser = () => {
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLogoutInProgress, setIsLogoutInProgress] = useState(false);
 
-  // Check for user session on mount
+  // Set up auth state listener and check for existing session
   useEffect(() => {
-    // Immediately set isLoading to true to prevent flashing of unauthorized UI
+    // Set isLoading to true to prevent flashing of unauthorized UI
     setIsLoading(true);
     
     // Set up auth state listener FIRST
@@ -38,84 +40,36 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log("Auth state changed:", event, session ? "User logged in" : "No session");
       
       if (session) {
-        try {
-          const { data: profileData, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-            
-          if (error) {
-            console.error("Error fetching profile:", error);
-            setCurrentUser(null);
-          } else if (profileData) {
-            setCurrentUser({
-              id: session.user.id,
-              email: session.user.email || '',
-              name: profileData.name || '',
-              preferences: {
-                intendedMajor: profileData.intended_major || '',
-                budget: profileData.budget || 0,
-                preferredCountry: profileData.preferred_country || '',
-                preferredUniversityType: profileData.preferred_university_type || '',
-                studyLevel: profileData.study_level || ''
-              },
-              createdAt: new Date(profileData.created_at)
-            });
-          }
-        } catch (error) {
-          console.error("Profile fetch error:", error);
-          setCurrentUser(null);
-        }
+        setCurrentSession(session);
+        fetchUserProfile(session.user.id);
       } else {
         setCurrentUser(null);
+        setCurrentSession(null);
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
     // THEN check for existing session
     const checkSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error("Session fetch error:", error);
-        setIsLoading(false);
-        return;
-      }
-      
-      if (data.session) {
-        try {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', data.session.user.id)
-            .single();
-            
-          if (profileError) {
-            console.error("Error fetching initial profile:", profileError);
-            setCurrentUser(null);
-          } else if (profileData) {
-            setCurrentUser({
-              id: data.session.user.id,
-              email: data.session.user.email || '',
-              name: profileData.name || '',
-              preferences: {
-                intendedMajor: profileData.intended_major || '',
-                budget: profileData.budget || 0,
-                preferredCountry: profileData.preferred_country || '',
-                preferredUniversityType: profileData.preferred_university_type || '',
-                studyLevel: profileData.study_level || ''
-              },
-              createdAt: new Date(profileData.created_at)
-            });
-          }
-        } catch (error) {
-          console.error("Profile fetch error:", error);
-          setCurrentUser(null);
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Session fetch error:", error);
+          setIsLoading(false);
+          return;
         }
+        
+        if (data.session) {
+          setCurrentSession(data.session);
+          fetchUserProfile(data.session.user.id);
+        } else {
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error("Error checking session:", err);
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
     
     checkSession();
@@ -125,10 +79,49 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // Fetch user profile data
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+        
+      if (error) {
+        console.error("Error fetching profile:", error);
+        setCurrentUser(null);
+        setIsLoading(false);
+        return;
+      }
+      
+      if (profileData) {
+        setCurrentUser({
+          id: userId,
+          email: currentSession?.user.email || '',
+          name: profileData.name || '',
+          preferences: {
+            intendedMajor: profileData.intended_major || '',
+            budget: profileData.budget || 0,
+            preferredCountry: profileData.preferred_country || '',
+            preferredUniversityType: profileData.preferred_university_type || '',
+            studyLevel: profileData.study_level || ''
+          },
+          createdAt: new Date(profileData.created_at)
+        });
+      }
+    } catch (error) {
+      console.error("Profile fetch error:", error);
+      setCurrentUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const login = async (credentials: UserCredentials): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password
       });
@@ -137,6 +130,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Login error:', error);
         return false;
       }
+      
+      // We don't need to set the user here as onAuthStateChange will handle it
       return true;
     } catch (error) {
       console.error('Login error:', error);
@@ -149,7 +144,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (userData: UserCredentials & { name: string }): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
         options: {
@@ -163,6 +158,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Signup error:', error);
         return false;
       }
+      
+      // We don't need to set the user here as onAuthStateChange will handle it
       return true;
     } catch (error) {
       console.error('Signup error:', error);
@@ -177,7 +174,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (isLogoutInProgress) return;
     
     setIsLogoutInProgress(true);
-    setIsLoading(true);
     
     try {
       const { error } = await supabase.auth.signOut();
@@ -185,8 +181,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Logout error:', error);
         toast("Failed to log out. Please try again.");
       } else {
-        // Force clear the user state
+        // Force clear the user state to ensure immediate UI update
         setCurrentUser(null);
+        setCurrentSession(null);
         toast("Successfully logged out");
       }
     } catch (error) {

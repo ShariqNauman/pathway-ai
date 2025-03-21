@@ -3,14 +3,14 @@ import { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
 import { UserCredentials } from "@/types/user";
@@ -25,7 +25,6 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 const LoginPage = () => {
   const { login, isLoading, currentUser } = useUser();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [error, setError] = useState("");
   const [formSubmitted, setFormSubmitted] = useState(false);
 
@@ -42,20 +41,27 @@ const LoginPage = () => {
       email: "",
       password: ""
     },
-    mode: "onChange" // This ensures validation happens on change, not just on submit
+    mode: "onChange"
   });
+  
+  // Use useWatch to actively monitor form values
+  const email = useWatch({ control: form.control, name: "email" });
+  const password = useWatch({ control: form.control, name: "password" });
   
   // Track whether the form is actually valid with filled values
   const [formIsValid, setFormIsValid] = useState(false);
   
   // Check if all fields are filled and valid
   useEffect(() => {
-    const { email, password } = form.getValues();
-    const allFieldsFilled = email.trim() !== "" && password.trim() !== "";
+    const allFieldsFilled = 
+      email?.trim() !== "" && 
+      password?.trim() !== "";
+    
     const noErrors = Object.keys(form.formState.errors).length === 0;
     
+    // Only enable the button when all fields are filled, no errors, and user has interacted with the form
     setFormIsValid(allFieldsFilled && noErrors && form.formState.isDirty);
-  }, [form.formState, form]);
+  }, [email, password, form.formState]);
 
   const onSubmit = async (values: LoginFormValues) => {
     setError("");
@@ -66,21 +72,21 @@ const LoginPage = () => {
       password: values.password
     };
     
-    const success = await login(credentials);
-    
-    if (success) {
-      toast({
-        title: "Login successful",
-        description: "You have been logged in successfully",
-      });
-      navigate("/dashboard");
-    } else {
-      setError("Invalid email or password");
-      toast({
-        title: "Login failed",
-        description: "Invalid email or password",
-        variant: "destructive"
-      });
+    try {
+      const success = await login(credentials);
+      
+      if (success) {
+        toast("Login successful");
+        navigate("/dashboard");
+      } else {
+        setError("Invalid email or password");
+        toast("Login failed: Invalid email or password");
+        setFormSubmitted(false);
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      setError("An error occurred during login");
+      toast("Login failed: An error occurred");
       setFormSubmitted(false);
     }
   };
@@ -115,7 +121,14 @@ const LoginPage = () => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="you@example.com" {...field} />
+                      <Input 
+                        placeholder="you@example.com" 
+                        {...field} 
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setFormSubmitted(false);
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -129,7 +142,15 @@ const LoginPage = () => {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="********" {...field} />
+                      <Input 
+                        type="password" 
+                        placeholder="********" 
+                        {...field} 
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setFormSubmitted(false);
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

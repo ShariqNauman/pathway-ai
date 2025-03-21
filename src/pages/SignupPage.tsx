@@ -3,14 +3,14 @@ import { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
 
@@ -27,7 +27,6 @@ const signupSchema = z.object({
 const SignupPage = () => {
   const { signup, isLoading, currentUser } = useUser();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [error, setError] = useState("");
   const [formSubmitted, setFormSubmitted] = useState(false);
 
@@ -49,21 +48,28 @@ const SignupPage = () => {
     mode: "onChange"
   });
   
+  // Use useWatch to actively monitor form values
+  const name = useWatch({ control: form.control, name: "name" });
+  const email = useWatch({ control: form.control, name: "email" });
+  const password = useWatch({ control: form.control, name: "password" });
+  const confirmPassword = useWatch({ control: form.control, name: "confirmPassword" });
+  
   // Track whether the form is actually valid with filled values
   const [formIsValid, setFormIsValid] = useState(false);
   
   // Check if all fields are filled and valid
   useEffect(() => {
-    const { name, email, password, confirmPassword } = form.getValues();
     const allFieldsFilled = 
-      name.trim() !== "" && 
-      email.trim() !== "" && 
-      password.trim() !== "" && 
-      confirmPassword.trim() !== "";
+      name?.trim() !== "" && 
+      email?.trim() !== "" && 
+      password?.trim() !== "" && 
+      confirmPassword?.trim() !== "";
+    
     const noErrors = Object.keys(form.formState.errors).length === 0;
     
+    // Only enable the button when all fields are filled, no errors, and user has interacted with the form
     setFormIsValid(allFieldsFilled && noErrors && form.formState.isDirty);
-  }, [form.formState, form]);
+  }, [name, email, password, confirmPassword, form.formState]);
 
   const onSubmit = async (values: z.infer<typeof signupSchema>) => {
     setError("");
@@ -71,21 +77,21 @@ const SignupPage = () => {
     
     const { name, email, password } = values;
     
-    const success = await signup({ name, email, password });
-    
-    if (success) {
-      toast({
-        title: "Account created",
-        description: "Your account has been created successfully",
-      });
-      navigate("/onboarding");
-    } else {
-      setError("An account with this email already exists");
-      toast({
-        title: "Signup failed",
-        description: "An account with this email already exists",
-        variant: "destructive"
-      });
+    try {
+      const success = await signup({ name, email, password });
+      
+      if (success) {
+        toast("Account created successfully");
+        navigate("/onboarding");
+      } else {
+        setError("An account with this email already exists");
+        toast("Signup failed: An account with this email already exists");
+        setFormSubmitted(false);
+      }
+    } catch (error) {
+      console.error("Signup error:", error);
+      setError("An error occurred during signup");
+      toast("Signup failed: An error occurred");
       setFormSubmitted(false);
     }
   };
@@ -120,7 +126,14 @@ const SignupPage = () => {
                   <FormItem>
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="John Doe" {...field} />
+                      <Input 
+                        placeholder="John Doe" 
+                        {...field} 
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setFormSubmitted(false);
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -134,7 +147,14 @@ const SignupPage = () => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="you@example.com" {...field} />
+                      <Input 
+                        placeholder="you@example.com" 
+                        {...field} 
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setFormSubmitted(false);
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -148,7 +168,15 @@ const SignupPage = () => {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="********" {...field} />
+                      <Input 
+                        type="password" 
+                        placeholder="********" 
+                        {...field} 
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setFormSubmitted(false);
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -162,7 +190,15 @@ const SignupPage = () => {
                   <FormItem>
                     <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="********" {...field} />
+                      <Input 
+                        type="password" 
+                        placeholder="********" 
+                        {...field} 
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setFormSubmitted(false);
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

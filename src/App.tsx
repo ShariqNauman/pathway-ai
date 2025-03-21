@@ -1,5 +1,5 @@
 
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from "react-router-dom";
@@ -54,7 +54,7 @@ const App = () => (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           {/* Show toast notifications */}
-          <Sonner position="bottom-right" closeButton={true} />
+          <Toaster position="bottom-right" closeButton={true} />
           <BrowserRouter>
             <ScrollToTop />
             <Routes>
