@@ -53,8 +53,8 @@ const App = () => (
     <UserProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          {/* Only show one toast at a time */}
-          <Sonner position="bottom-right" closeButton toastLimit={1} />
+          {/* Show toast notifications */}
+          <Sonner position="bottom-right" closeButton={true} />
           <BrowserRouter>
             <ScrollToTop />
             <Routes>
