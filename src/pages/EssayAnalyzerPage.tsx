@@ -14,7 +14,7 @@ const EssayAnalyzerPage = () => {
       className="min-h-screen flex flex-col bg-accent/10"
     >
       <Header />
-      <main className="flex-grow container max-w-6xl mx-auto px-4">
+      <main className="flex-grow container mx-auto px-0 md:px-4 overflow-hidden">
         <EssayChecker />
       </main>
       <Footer />

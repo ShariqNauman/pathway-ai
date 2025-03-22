@@ -15,13 +15,14 @@ import { FileText, RotateCcw, PanelLeft, Menu } from "lucide-react";
 
 interface SavedEssay {
   id: string;
-  title: string;
   essayType: string;
   prompt: string;
   essay: string;
   feedback: string;
   overallScore: number;
   createdAt: Date;
+  // Store generated title separately since it's not in the database
+  displayTitle: string;
 }
 
 const EssayChecker = () => {
@@ -35,7 +36,7 @@ const EssayChecker = () => {
   } | undefined>(undefined);
   const [savedEssays, setSavedEssays] = useState<SavedEssay[]>([]);
   const [currentFormValues, setCurrentFormValues] = useState<EssayFormValues>({
-    essayType: "personal",
+    essayType: "Personal Statement/Essay",
     prompt: "",
     essay: ""
   });
@@ -65,13 +66,14 @@ const EssayChecker = () => {
       if (data) {
         const essays = data.map(item => ({
           id: item.id,
-          title: item.title || generateEssayTitle(item.essay_type, item.prompt, new Date(item.created_at)),
           essayType: item.essay_type,
           prompt: item.prompt,
           essay: item.essay,
           feedback: item.feedback,
           overallScore: item.overall_score || 0,
-          createdAt: new Date(item.created_at)
+          createdAt: new Date(item.created_at),
+          // Generate a display title since there's no title field in the database
+          displayTitle: generateEssayTitle(item.essay_type, item.prompt, item.essay, new Date(item.created_at))
         }));
         
         setSavedEssays(essays);
@@ -82,7 +84,7 @@ const EssayChecker = () => {
   };
   
   // Generate a title for the essay
-  const generateEssayTitle = (essayType: string, prompt: string, date: Date): string => {
+  const generateEssayTitle = (essayType: string, prompt: string, essay: string, date: Date): string => {
     if (prompt && prompt.length > 0) {
       // Extract first few words from the prompt
       const words = prompt.split(' ');
@@ -93,9 +95,25 @@ const EssayChecker = () => {
       }
       
       return `${essayType}: ${shortPrompt}${words.length > 4 ? '...' : ''}`;
+    } else if (essay && essay.length > 0) {
+      // If no prompt, try to extract title from essay first lines
+      const firstLine = essay.split('\n')[0].trim();
+      if (firstLine.length > 5 && firstLine.length < 60) {
+        return firstLine;
+      }
+      
+      // Extract first few words
+      const words = essay.split(' ');
+      const shortEssay = words.slice(0, 5).join(' ');
+      
+      if (shortEssay.length > 30) {
+        return shortEssay.substring(0, 27) + '...';
+      }
+      
+      return `${shortEssay}${words.length > 5 ? '...' : ''}`;
     }
     
-    // Fallback if no prompt
+    // Fallback if no prompt or essay content
     return `${essayType} essay - ${date.toLocaleDateString()}`;
   };
   
@@ -123,9 +141,6 @@ const EssayChecker = () => {
       // Save the analysis for logged-in users
       if (currentUser && result.ratings) {
         try {
-          // Generate an appropriate title by analyzing the prompt and essay
-          let essayTitle = generateEssayTitle(data.essayType, data.prompt, new Date());
-          
           const { data: savedData, error } = await supabase
             .from('essay_analyses')
             .insert({
@@ -134,8 +149,7 @@ const EssayChecker = () => {
               prompt: data.prompt,
               essay: data.essay,
               feedback: result.feedback,
-              overall_score: result.ratings.overall,
-              title: essayTitle
+              overall_score: result.ratings.overall
             })
             .select();
             
@@ -198,7 +212,7 @@ const EssayChecker = () => {
 
   const startNewAnalysis = () => {
     setCurrentFormValues({
-      essayType: "personal",
+      essayType: "Personal Statement/Essay",
       prompt: "",
       essay: ""
     });
@@ -228,9 +242,9 @@ const EssayChecker = () => {
   };
 
   return (
-    <section id="essay-checker" className="py-12">
+    <section id="essay-checker" className="py-8 px-4 md:px-0 w-full max-w-full">
       <div className="max-w-full">
-        <div className="text-center mb-10">
+        <div className="text-center mb-8">
           <motion.span 
             className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-accent text-accent-foreground mb-4"
             initial={{ opacity: 0 }}
@@ -263,7 +277,7 @@ const EssayChecker = () => {
         </div>
         
         <motion.div 
-          className="flex"
+          className="flex flex-1"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -272,90 +286,104 @@ const EssayChecker = () => {
           <div className="w-full flex relative">
             {/* Essay Sidebar */}
             {currentUser && (
-              <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block fixed md:relative z-20 h-[600px] w-64 md:w-64 bg-card border-r border-border shadow-lg md:shadow-none transition-all duration-300`}>
-                <div className="flex flex-col h-full">
-                  <div className="p-4 border-b border-border flex justify-between items-center">
-                    <div>
-                      <h3 className="font-semibold">Your Essays</h3>
-                      <p className="text-xs text-muted-foreground">Analyses are automatically saved</p>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="md:hidden" 
-                      onClick={() => setSidebarOpen(false)}
-                    >
-                      <PanelLeft className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  <div className="overflow-auto flex-1 p-2">
-                    <div className="mb-2 text-xs font-medium text-muted-foreground px-2">
-                      Recent Analyses
+              <>
+                <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} fixed md:relative z-30 h-[calc(100vh-6rem)] md:h-auto md:translate-x-0 w-72 bg-card border-r border-border shadow-lg md:shadow-none transition-all duration-300 top-16 md:top-0 left-0`}>
+                  <div className="flex flex-col h-full">
+                    <div className="p-4 border-b border-border flex justify-between items-center">
+                      <div>
+                        <h3 className="font-semibold">Your Essays</h3>
+                        <p className="text-xs text-muted-foreground">Analyses are automatically saved</p>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="md:hidden" 
+                        onClick={() => setSidebarOpen(false)}
+                      >
+                        <PanelLeft className="h-4 w-4" />
+                      </Button>
                     </div>
                     
-                    <div className="space-y-1">
+                    <div className="overflow-auto flex-1 p-2">
+                      <div className="mb-2 text-xs font-medium text-muted-foreground px-2">
+                        Recent Analyses
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="w-full justify-start gap-2 bg-accent/20 text-accent-foreground"
+                          onClick={startNewAnalysis}
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          <span>New Analysis</span>
+                        </Button>
+                        
+                        {savedEssays.map((essay) => (
+                          <Button 
+                            key={essay.id}
+                            variant={currentAnalysisId === essay.id ? "secondary" : "ghost"}
+                            size="sm"
+                            className="w-full justify-start text-left h-auto py-2"
+                            onClick={() => loadSavedEssay(essay)}
+                          >
+                            <div className="flex flex-col items-start w-full truncate">
+                              <span className="text-sm truncate w-full">{essay.displayTitle}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDate(essay.createdAt)} - Score: {essay.overallScore}
+                              </span>
+                            </div>
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="p-2 border-t border-border">
                       <Button 
                         variant="outline" 
-                        size="sm"
-                        className="w-full justify-start gap-2 bg-accent/20 text-accent-foreground"
+                        size="sm" 
+                        className="w-full flex items-center gap-2"
                         onClick={startNewAnalysis}
                       >
                         <RotateCcw className="h-4 w-4" />
-                        <span>New Analysis</span>
+                        New Analysis
                       </Button>
-                      
-                      {savedEssays.map((essay) => (
-                        <Button 
-                          key={essay.id}
-                          variant={currentAnalysisId === essay.id ? "secondary" : "ghost"}
-                          size="sm"
-                          className="w-full justify-start text-left h-auto py-2"
-                          onClick={() => loadSavedEssay(essay)}
-                        >
-                          <div className="flex flex-col items-start w-full truncate">
-                            <span className="text-sm truncate w-full">{essay.title}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDate(essay.createdAt)} - Score: {essay.overallScore}
-                            </span>
-                          </div>
-                        </Button>
-                      ))}
                     </div>
                   </div>
-                  
-                  <div className="p-2 border-t border-border">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full flex items-center gap-2"
-                      onClick={startNewAnalysis}
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                      New Analysis
-                    </Button>
-                  </div>
                 </div>
-              </div>
+                
+                {/* Overlay for mobile sidebar */}
+                {sidebarOpen && (
+                  <div 
+                    className="fixed inset-0 bg-black/30 z-20 md:hidden"
+                    onClick={() => setSidebarOpen(false)}
+                  />
+                )}
+              </>
             )}
           
             {/* Main Content */}
             <div className={`flex-1 ${currentUser ? 'md:ml-4' : ''}`}>
+              {currentUser && (
+                <div className="flex justify-between items-center mb-4 md:hidden">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="flex items-center gap-2"
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                  >
+                    <Menu className="h-4 w-4" />
+                    <span>{sidebarOpen ? 'Hide' : 'Show'} Saved Essays</span>
+                  </Button>
+                </div>
+              )}
+              
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Essay Input Form */}
                 <div className="bg-card shadow-md rounded-xl p-6 border border-border">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-semibold">Essay Input</h3>
-                    {currentUser && (
-                      <Button 
-                        variant="ghost"
-                        size="icon"
-                        className="md:hidden"
-                        onClick={() => setSidebarOpen(!sidebarOpen)}
-                      >
-                        <Menu className="h-5 w-5" />
-                      </Button>
-                    )}
                   </div>
                   <EssayForm 
                     onSubmit={handleAnalyzeEssay}
