@@ -65,14 +65,12 @@ const ChatConsultant = () => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const initialLoadRef = useRef(true);
 
-  // Manual scroll function for chat container only
   const scrollChatToBottom = () => {
     if (messagesEndRef.current && chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   };
 
-  // Check user preferences on initial load
   useEffect(() => {
     if (currentUser && !hasShownPreferencesReminder) {
       const hasCompletePreferences = 
@@ -94,34 +92,28 @@ const ChatConsultant = () => {
     }
   }, [currentUser, hasShownPreferencesReminder]);
 
-  // Load saved chats when user logs in
   useEffect(() => {
     if (currentUser) {
       fetchSavedChats();
     }
   }, [currentUser]);
 
-  // Prevent auto-scrolling to chat section on initial page load
   useEffect(() => {
-    // This is critical to prevent auto-scrolling to the consultant section on page load
     if (initialLoadRef.current) {
       window.history.scrollRestoration = 'manual';
       
-      // Restore normal scrolling behavior after component is mounted
       setTimeout(() => {
         initialLoadRef.current = false;
       }, 1000);
     }
   }, []);
 
-  // Only scroll chat container when new messages are added
   useEffect(() => {
     if (messages.length > 0) {
       scrollChatToBottom();
     }
   }, [messages]);
 
-  // Auto resize textarea based on content
   const autoResizeTextarea = () => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "inherit";
@@ -139,16 +131,13 @@ const ChatConsultant = () => {
     try {
       setIsChatSavingInProgress(true);
       
-      // Generate title from user message
       let title = "New Conversation";
       const userContent = userMessage.content;
       
       if (userContent.length > 5) {
-        // Extract first few words (maximum 6 words)
         const words = userContent.split(' ');
         title = words.slice(0, 6).join(' ');
         
-        // Truncate if too long
         if (title.length > 40) {
           title = title.substring(0, 37) + '...';
         } else if (words.length > 6) {
@@ -156,7 +145,6 @@ const ChatConsultant = () => {
         }
       }
       
-      // Create a new conversation
       const { data: newConversation, error: createError } = await supabase
         .from('chat_conversations')
         .insert([{ 
@@ -170,7 +158,6 @@ const ChatConsultant = () => {
       if (newConversation && newConversation.length > 0) {
         setCurrentConversationId(newConversation[0].id);
         
-        // First save the AI welcome message
         const welcomeMsg = messages.find(msg => msg.id === "1");
         if (welcomeMsg) {
           await supabase
@@ -183,7 +170,6 @@ const ChatConsultant = () => {
             }]);
         }
         
-        // Then save the user message
         await supabase
           .from('chat_messages')
           .insert([{
@@ -193,7 +179,6 @@ const ChatConsultant = () => {
             id: userMessage.id
           }]);
         
-        // Lastly save the AI response if available
         if (aiMessage) {
           await supabase
             .from('chat_messages')
@@ -247,13 +232,11 @@ const ChatConsultant = () => {
     if (!currentUser) return;
     
     try {
-      // If this is a user message and we don't have a conversation yet, create one
       if (!currentConversationId && message.sender === "user" && !isNewChat) {
         await createNewConversation(message);
         return;
       }
       
-      // Otherwise, if we already have a conversation ID, just save the message
       if (currentConversationId) {
         await supabase
           .from('chat_messages')
@@ -264,7 +247,6 @@ const ChatConsultant = () => {
             sender: message.sender
           }]);
         
-        // Update conversation timestamp
         await supabase
           .from('chat_conversations')
           .update({ updated_at: new Date().toISOString() })
@@ -280,7 +262,6 @@ const ChatConsultant = () => {
     
     if (!inputValue.trim()) return;
     
-    // Add user message to chat
     const userMessage: Message = {
       id: uuidv4(),
       content: inputValue,
@@ -294,23 +275,22 @@ const ChatConsultant = () => {
     setHasUserSentMessage(true);
     
     try {
-      // Get user preferences to add context to the AI
-      let additionalContext = "";
+      let systemInstructions = "";
       if (currentUser && currentUser.preferences) {
         const { intendedMajor, budget, preferredCountry, studyLevel } = currentUser.preferences;
         if (intendedMajor || budget || preferredCountry || studyLevel) {
-          additionalContext = `\n\nUser profile information: ` +
+          systemInstructions = 
+            "You are a helpful AI university consultant. " +
+            "When responding to the user's query, consider their profile information: " +
             `${intendedMajor ? `Intended major: ${intendedMajor}. ` : ''}` +
             `${budget ? `Budget: $${budget}. ` : ''}` +
             `${preferredCountry ? `Preferred country: ${preferredCountry}. ` : ''}` +
             `${studyLevel ? `Study level: ${studyLevel}. ` : ''}` +
-            `\nPlease use this information to personalize your responses when appropriate.`;
+            "\nUse this information to personalize your responses when appropriate, but DO NOT explicitly mention these preferences in your response unless directly relevant to answering the question. Respond in a natural, conversational way.";
         }
       }
       
-      // Call Gemini API with user context if available
-      const promptWithContext = inputValue + additionalContext;
-      const response = await getGeminiResponse(promptWithContext);
+      const response = await getGeminiResponse(inputValue, systemInstructions);
       
       if (response.error) {
         console.error("Gemini API Error:", response.error);
@@ -328,7 +308,6 @@ const ChatConsultant = () => {
       
       setMessages((prev) => [...prev, newAiMessage]);
       
-      // Save user message and AI response if logged in
       if (currentUser) {
         if (!currentConversationId) {
           await createNewConversation(userMessage, newAiMessage);
@@ -418,9 +397,8 @@ const ChatConsultant = () => {
 
   return (
     <>
-      {/* Sidebar */}
       {currentUser && (
-        <Sidebar collapsible="offcanvas">
+        <Sidebar collapsible="offcanvas" variant="floating">
           <SidebarHeader className="border-b">
             <div className="flex flex-col gap-2 px-3 py-2">
               <h3 className="font-semibold">Your Consultations</h3>
@@ -477,9 +455,7 @@ const ChatConsultant = () => {
         </Sidebar>
       )}
 
-      {/* Main Chat Content */}
       <div className="flex-1 flex flex-col h-[calc(100vh-9rem)]">
-        {/* Chat header */}
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-3">
             {currentUser && <SidebarTrigger className="md:flex" />}
@@ -507,7 +483,6 @@ const ChatConsultant = () => {
           </Button>
         </div>
 
-        {/* Chat messages */}
         <div 
           ref={chatContainerRef}
           className="flex-1 overflow-y-auto p-4 space-y-6"
@@ -552,7 +527,6 @@ const ChatConsultant = () => {
           <div ref={messagesEndRef} />
         </div>
         
-        {/* Chat input */}
         <form onSubmit={handleSendMessage} className="border-t border-border p-4">
           <div className="flex items-end space-x-2 relative">
             <Textarea

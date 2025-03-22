@@ -8,11 +8,17 @@ interface GeminiResponse {
 const GEMINI_API_KEY = "AIzaSyAaEYKy6P3WkHBArYGoxc1s0QW2fm3rTOI";
 
 export async function getGeminiResponse(
-  prompt: string
+  prompt: string,
+  systemInstructions: string = ""
 ): Promise<GeminiResponse> {
   try {
     // Using gemini-2.0-flash model as specified
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+    
+    // Add system instructions if provided
+    const systemPrompt = systemInstructions ? 
+      `${systemInstructions}\n\nUser message: ${prompt}` : 
+      prompt;
     
     const response = await fetch(url, {
       method: 'POST',
@@ -24,7 +30,7 @@ export async function getGeminiResponse(
           {
             parts: [
               {
-                text: prompt,
+                text: systemPrompt,
               },
             ],
           },
@@ -35,6 +41,16 @@ export async function getGeminiResponse(
           topP: 0.95,
           maxOutputTokens: 1024,
         },
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          }
+        ]
       }),
     });
 
