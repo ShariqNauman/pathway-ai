@@ -15,9 +15,18 @@ export async function getGeminiResponse(
     // Using gemini-2.0-flash model as specified
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
     
-    // Add system instructions if provided
-    const systemPrompt = systemInstructions ? 
-      `${systemInstructions}\n\nUser message: ${prompt}` : 
+    // Add system instructions that guide the model to use preferences without restating them
+    let enhancedSystemInstructions = systemInstructions;
+    
+    if (systemInstructions) {
+      enhancedSystemInstructions = `${systemInstructions}
+      
+IMPORTANT INSTRUCTION: Use the information provided to personalize your responses but DO NOT explicitly list or repeat the user's preferences in your responses. Simply incorporate them naturally into your advice without mentioning them directly. Address the user's query directly and concisely.`;
+    }
+    
+    // Prepare the system prompt with instructions
+    const systemPrompt = enhancedSystemInstructions ? 
+      `${enhancedSystemInstructions}\n\nUser message: ${prompt}` : 
       prompt;
     
     const response = await fetch(url, {
