@@ -11,19 +11,7 @@ import { EssaySegment } from "./essay-checker/HighlightedEssay";
 import EssayRating, { RatingCategory } from "./essay-checker/EssayRating";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
-import { Folder, RotateCcw, FileText } from "lucide-react";
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarTrigger,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarGroupLabel,
-} from "@/components/ui/sidebar";
+import { FileText, RotateCcw, PanelLeft, Menu } from "lucide-react";
 
 interface SavedEssay {
   id: string;
@@ -52,6 +40,8 @@ const EssayChecker = () => {
     essay: ""
   });
   const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hasAnalyzedOnce, setHasAnalyzedOnce] = useState(false);
   
   // Fetch saved essays when user logs in
   useEffect(() => {
@@ -75,8 +65,7 @@ const EssayChecker = () => {
       if (data) {
         const essays = data.map(item => ({
           id: item.id,
-          // Generate a title since there's no title field in the database
-          title: generateEssayTitle(item.essay_type, item.prompt, new Date(item.created_at)),
+          title: item.title || generateEssayTitle(item.essay_type, item.prompt, new Date(item.created_at)),
           essayType: item.essay_type,
           prompt: item.prompt,
           essay: item.essay,
@@ -116,6 +105,7 @@ const EssayChecker = () => {
     setHighlightedEssay([]);
     setRatings(undefined);
     setCurrentFormValues(data);
+    setHasAnalyzedOnce(true);
     
     try {
       const result = await analyzeEssay(data.essayType, data.prompt, data.essay);
@@ -133,6 +123,9 @@ const EssayChecker = () => {
       // Save the analysis for logged-in users
       if (currentUser && result.ratings) {
         try {
+          // Generate an appropriate title by analyzing the prompt and essay
+          let essayTitle = generateEssayTitle(data.essayType, data.prompt, new Date());
+          
           const { data: savedData, error } = await supabase
             .from('essay_analyses')
             .insert({
@@ -142,7 +135,7 @@ const EssayChecker = () => {
               essay: data.essay,
               feedback: result.feedback,
               overall_score: result.ratings.overall,
-              // Remove the title field as it doesn't exist in the database
+              title: essayTitle
             })
             .select();
             
@@ -172,6 +165,7 @@ const EssayChecker = () => {
     });
     setFeedback(essay.feedback);
     setCurrentAnalysisId(essay.id);
+    setHasAnalyzedOnce(true);
     
     try {
       // Convert feedback back to highlighted essay format
@@ -190,7 +184,6 @@ const EssayChecker = () => {
               name: "Retrieved from saved essay", 
               score: essay.overallScore,
               description: "This is a saved essay analysis",
-              // Use the actual FileText component, not a string
               icon: FileText
             }
           ]
@@ -213,6 +206,7 @@ const EssayChecker = () => {
     setHighlightedEssay([]);
     setRatings(undefined);
     setCurrentAnalysisId(null);
+    setHasAnalyzedOnce(false);
   };
 
   const formatDate = (date: Date) => {
@@ -234,108 +228,135 @@ const EssayChecker = () => {
   };
 
   return (
-    <SidebarProvider defaultOpen={false}>
-      <section id="essay-checker" className="py-20 px-6 lg:px-10 bg-accent/30">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <motion.span 
-              className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-accent text-accent-foreground mb-6"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4 }}
-            >
-              Essay Analyzer
-            </motion.span>
-            
-            <motion.h2 
-              className="text-3xl md:text-4xl font-display font-bold mb-6"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              Perfect Your Application Essays
-            </motion.h2>
-            
-            <motion.p 
-              className="text-muted-foreground max-w-2xl mx-auto"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              Get detailed, line-by-line feedback on your essays from our AI admissions expert. We'll highlight areas for improvement and provide actionable suggestions.
-            </motion.p>
-          </div>
+    <section id="essay-checker" className="py-12">
+      <div className="max-w-full">
+        <div className="text-center mb-10">
+          <motion.span 
+            className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-accent text-accent-foreground mb-4"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4 }}
+          >
+            Essay Analyzer
+          </motion.span>
           
-          <motion.div 
-            className="flex gap-4"
+          <motion.h2 
+            className="text-3xl md:text-4xl font-display font-bold mb-4"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.3 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
           >
+            Perfect Your Application Essays
+          </motion.h2>
+          
+          <motion.p 
+            className="text-muted-foreground max-w-2xl mx-auto"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            Get detailed, line-by-line feedback on your essays from our AI admissions expert. We'll highlight areas for improvement and provide actionable suggestions.
+          </motion.p>
+        </div>
+        
+        <motion.div 
+          className="flex"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <div className="w-full flex relative">
             {/* Essay Sidebar */}
             {currentUser && (
-              <Sidebar collapsible="icon" variant="floating">
-                <SidebarHeader className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-semibold">Your Essays</h3>
-                    <p className="text-xs text-muted-foreground">Analyses are automatically saved</p>
+              <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block fixed md:relative z-20 h-[600px] w-64 md:w-64 bg-card border-r border-border shadow-lg md:shadow-none transition-all duration-300`}>
+                <div className="flex flex-col h-full">
+                  <div className="p-4 border-b border-border flex justify-between items-center">
+                    <div>
+                      <h3 className="font-semibold">Your Essays</h3>
+                      <p className="text-xs text-muted-foreground">Analyses are automatically saved</p>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="md:hidden" 
+                      onClick={() => setSidebarOpen(false)}
+                    >
+                      <PanelLeft className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <SidebarTrigger />
-                </SidebarHeader>
-                
-                <SidebarContent>
-                  <SidebarGroupLabel>Recent Analyses</SidebarGroupLabel>
-                  <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
+                  
+                  <div className="overflow-auto flex-1 p-2">
+                    <div className="mb-2 text-xs font-medium text-muted-foreground px-2">
+                      Recent Analyses
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full justify-start gap-2 bg-accent/20 text-accent-foreground"
                         onClick={startNewAnalysis}
-                        className="bg-accent/20 text-accent-foreground"
                       >
                         <RotateCcw className="h-4 w-4" />
                         <span>New Analysis</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    
-                    {savedEssays.map((essay) => (
-                      <SidebarMenuItem key={essay.id}>
-                        <SidebarMenuButton 
-                          isActive={currentAnalysisId === essay.id}
+                      </Button>
+                      
+                      {savedEssays.map((essay) => (
+                        <Button 
+                          key={essay.id}
+                          variant={currentAnalysisId === essay.id ? "secondary" : "ghost"}
+                          size="sm"
+                          className="w-full justify-start text-left h-auto py-2"
                           onClick={() => loadSavedEssay(essay)}
                         >
-                          <div className="flex flex-col items-start w-full">
-                            <span className="text-sm truncate">{essay.title}</span>
+                          <div className="flex flex-col items-start w-full truncate">
+                            <span className="text-sm truncate w-full">{essay.title}</span>
                             <span className="text-xs text-muted-foreground">
                               {formatDate(essay.createdAt)} - Score: {essay.overallScore}
                             </span>
                           </div>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarContent>
-                
-                <SidebarFooter>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full flex items-center gap-2"
-                    onClick={startNewAnalysis}
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    New Analysis
-                  </Button>
-                </SidebarFooter>
-              </Sidebar>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="p-2 border-t border-border">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full flex items-center gap-2"
+                      onClick={startNewAnalysis}
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      New Analysis
+                    </Button>
+                  </div>
+                </div>
+              </div>
             )}
           
-            <div className="flex-1">
-              <div className="grid lg:grid-cols-2 gap-8">
+            {/* Main Content */}
+            <div className={`flex-1 ${currentUser ? 'md:ml-4' : ''}`}>
+              <div className="grid md:grid-cols-2 gap-6">
                 {/* Essay Input Form */}
                 <div className="bg-card shadow-md rounded-xl p-6 border border-border">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-semibold">Essay Input</h3>
+                    {currentUser && (
+                      <Button 
+                        variant="ghost"
+                        size="icon"
+                        className="md:hidden"
+                        onClick={() => setSidebarOpen(!sidebarOpen)}
+                      >
+                        <Menu className="h-5 w-5" />
+                      </Button>
+                    )}
+                  </div>
                   <EssayForm 
                     onSubmit={handleAnalyzeEssay}
                     isAnalyzing={isAnalyzing}
@@ -346,9 +367,9 @@ const EssayChecker = () => {
                 {/* Feedback Display */}
                 <div className="bg-card shadow-md rounded-xl p-6 border border-border">
                   <div className="mb-4 flex justify-between items-center">
-                    <h3 className="text-xl font-semibold border-b pb-2 mb-4">Essay Analysis</h3>
+                    <h3 className="text-xl font-semibold">Essay Analysis</h3>
                     
-                    {!feedback && !isAnalyzing && (
+                    {!feedback && !isAnalyzing && !hasAnalyzedOnce && (
                       <p className="text-sm text-muted-foreground italic">
                         Submit your essay to see analysis results
                       </p>
@@ -369,7 +390,7 @@ const EssayChecker = () => {
               {/* Ratings Display - Separate Container */}
               {ratings && !isAnalyzing && (
                 <motion.div
-                  className="mt-8 max-w-4xl mx-auto"
+                  className="mt-8 mx-auto"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5 }}
@@ -378,10 +399,10 @@ const EssayChecker = () => {
                 </motion.div>
               )}
             </div>
-          </motion.div>
-        </div>
-      </section>
-    </SidebarProvider>
+          </div>
+        </motion.div>
+      </div>
+    </section>
   );
 };
 

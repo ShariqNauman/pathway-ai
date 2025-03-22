@@ -5,23 +5,11 @@ import { toast } from "sonner";
 import { getGeminiResponse } from "@/utils/geminiApi";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, RotateCcw, Menu } from "lucide-react";
+import { Send, RotateCcw, Menu, PanelLeft } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarTrigger,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarGroupLabel,
-} from "@/components/ui/sidebar";
 
 interface Message {
   id: string;
@@ -51,6 +39,7 @@ const ChatConsultant = () => {
   const [hasShownPreferencesReminder, setHasShownPreferencesReminder] = useState(false);
   const [savedChats, setSavedChats] = useState<SavedChat[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
   
   const { currentUser } = useUser();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -87,10 +76,9 @@ const ChatConsultant = () => {
     }
   }, [currentUser, hasShownPreferencesReminder]);
 
-  // Load user conversation history or create new conversation
+  // Load saved chats when user logs in
   useEffect(() => {
     if (currentUser) {
-      createOrLoadConversation();
       fetchSavedChats();
     }
   }, [currentUser]);
@@ -127,16 +115,16 @@ const ChatConsultant = () => {
     autoResizeTextarea();
   }, [inputValue]);
 
-  const createOrLoadConversation = async () => {
-    if (!currentUser) return;
+  const createNewConversation = async () => {
+    if (!currentUser || !hasUserSentMessage) return null;
     
     try {
-      // Create a new conversation by default
+      // Create a new conversation
       const { data: newConversation, error: createError } = await supabase
         .from('chat_conversations')
         .insert([{ 
           user_id: currentUser.id,
-          title: generateConversationTitle(messages)
+          title: "New Conversation" // Temporary title, will be updated after more user messages
         }])
         .select();
       
@@ -145,17 +133,24 @@ const ChatConsultant = () => {
       if (newConversation && newConversation.length > 0) {
         setCurrentConversationId(newConversation[0].id);
         
-        const welcomeMessage = messages[0];
+        // Save all existing messages to the new conversation
+        const messagesToSave = messages.map(msg => ({
+          conversation_id: newConversation[0].id,
+          content: msg.content,
+          sender: msg.sender,
+          id: msg.id
+        }));
+        
         await supabase
           .from('chat_messages')
-          .insert([{
-            conversation_id: newConversation[0].id,
-            content: welcomeMessage.content,
-            sender: welcomeMessage.sender
-          }]);
+          .insert(messagesToSave);
+          
+        return newConversation[0].id;
       }
+      return null;
     } catch (error) {
       console.error("Error creating conversation:", error);
+      return null;
     }
   };
 
@@ -186,53 +181,68 @@ const ChatConsultant = () => {
   };
 
   const saveMessage = async (message: Message) => {
-    if (!currentUser || !currentConversationId) return;
+    if (!currentUser) return;
+    
+    // If no conversation exists yet and this is a user message, create one
+    let conversationId = currentConversationId;
+    if (!conversationId) {
+      conversationId = await createNewConversation();
+      if (!conversationId) return;
+    }
     
     try {
       await supabase
         .from('chat_messages')
         .insert([{
           id: message.id,
-          conversation_id: currentConversationId,
+          conversation_id: conversationId,
           content: message.content,
           sender: message.sender
         }]);
       
-      // Update conversation's updated_at timestamp and title
-      await supabase
-        .from('chat_conversations')
-        .update({ 
-          updated_at: new Date().toISOString(),
-          title: generateConversationTitle([...messages, message])
-        })
-        .eq('id', currentConversationId);
+      // If we have enough messages, generate a more meaningful title
+      if (hasUserSentMessage) {
+        // Find user messages to generate a title from
+        const userMessages = messages.filter(m => m.sender === "user");
+        let newTitle = "New Conversation";
         
-      // Refresh list of saved chats
-      fetchSavedChats();
+        // Only update title if we have at least one user message with substance
+        if (userMessages.length > 0) {
+          // Analyze content to create a meaningful title
+          const firstUserMessage = userMessages[0].content;
+          
+          // Extract first few words or relevant keywords
+          if (firstUserMessage.length > 10) {
+            // Extract first few words (maximum 6 words)
+            const words = firstUserMessage.split(' ');
+            newTitle = words.slice(0, 6).join(' ');
+            
+            // Truncate if too long
+            if (newTitle.length > 40) {
+              newTitle = newTitle.substring(0, 37) + '...';
+            } else if (words.length > 6) {
+              newTitle += '...';
+            }
+          } else {
+            newTitle = firstUserMessage;
+          }
+        }
+        
+        // Update conversation title
+        await supabase
+          .from('chat_conversations')
+          .update({ 
+            updated_at: new Date().toISOString(),
+            title: newTitle
+          })
+          .eq('id', conversationId);
+          
+        // Refresh list of saved chats
+        fetchSavedChats();
+      }
     } catch (error) {
       console.error("Error saving message:", error);
     }
-  };
-
-  // Generate a title for the conversation based on the first few messages
-  const generateConversationTitle = (messageList: Message[]): string => {
-    // Find the first user message
-    const firstUserMessage = messageList.find(m => m.sender === "user");
-    
-    if (firstUserMessage) {
-      // Extract first 5 words or 40 characters, whichever is shorter
-      const words = firstUserMessage.content.split(' ');
-      const shortTitle = words.slice(0, 4).join(' ');
-      
-      if (shortTitle.length > 40) {
-        return shortTitle.substring(0, 37) + '...';
-      }
-      
-      return shortTitle + (words.length > 4 ? '...' : '');
-    }
-    
-    // Fallback to timestamp if no user message
-    return `Chat - ${new Date().toLocaleDateString()}`;
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -251,14 +261,10 @@ const ChatConsultant = () => {
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
-    
-    // Check if we need to create a new conversation
-    if (currentUser && !currentConversationId) {
-      await createOrLoadConversation();
-    }
+    setHasUserSentMessage(true);
     
     // Save user message if logged in
-    if (currentUser && currentConversationId) {
+    if (currentUser) {
       saveMessage(userMessage);
     }
     
@@ -298,7 +304,7 @@ const ChatConsultant = () => {
       setMessages((prev) => [...prev, newAiMessage]);
       
       // Save AI message if logged in
-      if (currentUser && currentConversationId) {
+      if (currentUser) {
         saveMessage(newAiMessage);
       }
     } catch (error) {
@@ -339,6 +345,9 @@ const ChatConsultant = () => {
         }));
         
         setMessages(loadedMessages);
+        
+        // Reset hasUserSentMessage flag since we're loading an existing conversation
+        setHasUserSentMessage(true);
       }
     } catch (error) {
       console.error("Error loading conversation:", error);
@@ -356,10 +365,7 @@ const ChatConsultant = () => {
       },
     ]);
     setCurrentConversationId(null);
-    
-    if (currentUser) {
-      await createOrLoadConversation();
-    }
+    setHasUserSentMessage(false);
     
     toast("New chat started");
   };
@@ -383,93 +389,105 @@ const ChatConsultant = () => {
   };
 
   return (
-    <div className="relative">
-      <SidebarProvider defaultOpen={false}>
-        <section id="consultation" className="py-20 px-6 lg:px-10 bg-gradient-to-b from-background to-accent/20">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-16">
-              <motion.span 
-                className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-accent text-accent-foreground mb-6"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4 }}
-              >
-                AI Consultation
-              </motion.span>
-              
-              <motion.h2 
-                className="text-3xl md:text-4xl font-display font-bold mb-6"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-              >
-                Pathway AI Education Consultant
-              </motion.h2>
-              
-              <motion.p 
-                className="text-muted-foreground max-w-2xl mx-auto"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                Ask questions about universities, programs, application processes, scholarships, or career paths.
-                Our AI consultant is here to provide personalized guidance.
-              </motion.p>
-            </div>
-            
-            <motion.div 
-              className="flex gap-4"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              {/* Chat Sidebar */}
-              {currentUser && (
-                <Sidebar collapsible="icon" variant="floating">
-                  <SidebarHeader className="flex justify-between items-center">
+    <section id="consultation" className="py-12">
+      <div className="max-w-full">
+        <div className="text-center mb-10">
+          <motion.span 
+            className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-accent text-accent-foreground mb-4"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4 }}
+          >
+            AI Consultation
+          </motion.span>
+          
+          <motion.h2 
+            className="text-3xl md:text-4xl font-display font-bold mb-4"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            Pathway AI Education Consultant
+          </motion.h2>
+          
+          <motion.p 
+            className="text-muted-foreground max-w-2xl mx-auto"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            Ask questions about universities, programs, application processes, scholarships, or career paths.
+            Our AI consultant is here to provide personalized guidance.
+          </motion.p>
+        </div>
+        
+        <motion.div 
+          className="flex"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          {/* Chat Main Container with Sidebar */}
+          <div className="w-full flex relative">
+            {/* Sidebar */}
+            {currentUser && (
+              <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block fixed md:relative z-20 h-[600px] w-64 md:w-64 bg-card border-r border-border shadow-lg md:shadow-none transition-all duration-300`}>
+                <div className="flex flex-col h-full">
+                  <div className="p-4 border-b border-border flex justify-between items-center">
                     <div>
                       <h3 className="font-semibold">Your Conversations</h3>
-                      <p className="text-xs text-muted-foreground">Past chats are automatically saved</p>
+                      <p className="text-xs text-muted-foreground">Chats are automatically saved</p>
                     </div>
-                    <SidebarTrigger />
-                  </SidebarHeader>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="md:hidden" 
+                      onClick={() => setSidebarOpen(false)}
+                    >
+                      <PanelLeft className="h-4 w-4" />
+                    </Button>
+                  </div>
                   
-                  <SidebarContent>
-                    <SidebarGroupLabel>Recent Conversations</SidebarGroupLabel>
-                    <SidebarMenu>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton 
-                          onClick={startNewChat}
-                          className="bg-accent/20 text-accent-foreground"
-                        >
-                          <RotateCcw className="h-4 w-4" />
-                          <span>New Chat</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
+                  <div className="overflow-auto flex-1 p-2">
+                    <div className="mb-2 text-xs font-medium text-muted-foreground px-2">
+                      Recent Conversations
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full justify-start gap-2 bg-accent/20 text-accent-foreground"
+                        onClick={startNewChat}
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        <span>New Chat</span>
+                      </Button>
                       
                       {savedChats.map((chat) => (
-                        <SidebarMenuItem key={chat.id}>
-                          <SidebarMenuButton 
-                            isActive={currentConversationId === chat.id}
-                            onClick={() => loadConversation(chat.id)}
-                          >
-                            <div className="flex flex-col items-start w-full">
-                              <span className="text-sm truncate">{chat.title}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {formatDate(chat.lastMessageDate)}
-                              </span>
-                            </div>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
+                        <Button 
+                          key={chat.id}
+                          variant={currentConversationId === chat.id ? "secondary" : "ghost"}
+                          size="sm"
+                          className="w-full justify-start text-left h-auto py-2"
+                          onClick={() => loadConversation(chat.id)}
+                        >
+                          <div className="flex flex-col items-start w-full truncate">
+                            <span className="text-sm truncate w-full">{chat.title}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDate(chat.lastMessageDate)}
+                            </span>
+                          </div>
+                        </Button>
                       ))}
-                    </SidebarMenu>
-                  </SidebarContent>
+                    </div>
+                  </div>
                   
-                  <SidebarFooter>
+                  <div className="p-2 border-t border-border">
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -479,12 +497,14 @@ const ChatConsultant = () => {
                       <RotateCcw className="h-4 w-4" />
                       New Chat
                     </Button>
-                  </SidebarFooter>
-                </Sidebar>
-              )}
-              
-              {/* Chat Main Container */}
-              <div className="bg-card rounded-xl overflow-hidden shadow-xl border border-border flex-1 flex flex-col h-[600px]">
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Chat Main Content */}
+            <div className={`flex-1 ${currentUser ? 'md:ml-4' : ''}`}>
+              <div className="bg-card rounded-xl overflow-hidden shadow-xl border border-border flex flex-col h-[600px]">
                 {/* Chat header */}
                 <div className="bg-primary/95 text-primary-foreground p-4 flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -591,11 +611,11 @@ const ChatConsultant = () => {
                   </p>
                 </form>
               </div>
-            </motion.div>
+            </div>
           </div>
-        </section>
-      </SidebarProvider>
-    </div>
+        </motion.div>
+      </div>
+    </section>
   );
 };
 

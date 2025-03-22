@@ -11,10 +11,10 @@ const EssayAnalyzerPage = () => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
-      className="min-h-screen flex flex-col"
+      className="min-h-screen flex flex-col bg-accent/10"
     >
       <Header />
-      <main className="flex-grow">
+      <main className="flex-grow container max-w-6xl mx-auto px-4">
         <EssayChecker />
       </main>
       <Footer />
