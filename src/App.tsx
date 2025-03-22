@@ -38,8 +38,8 @@ const ScrollToTop = () => {
   useEffect(() => {
     // Only scroll to top on PUSH navigation (not on POP or REPLACE)
     if (navigationType === 'PUSH') {
-      // Don't auto-scroll to the consultant page
-      if (!pathname.includes('/consultant')) {
+      // Don't auto-scroll on certain pages
+      if (!pathname.includes('/consultant') && !pathname.includes('/essay-analyzer')) {
         window.scrollTo(0, 0);
       }
     }
