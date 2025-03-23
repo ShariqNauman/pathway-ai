@@ -21,7 +21,6 @@ interface SavedEssay {
   feedback: string;
   overallScore: number;
   createdAt: Date;
-  // Store generated title separately since it's not in the database
   displayTitle: string;
 }
 
@@ -243,7 +242,7 @@ const EssayChecker = ({ initialSidebarOpen = true }: EssayCheckerProps) => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] overflow-hidden">
+    <div className="flex h-full overflow-hidden">
       {currentUser && (
         <div 
           className={cn(

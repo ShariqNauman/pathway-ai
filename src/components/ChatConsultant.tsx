@@ -405,7 +405,7 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] overflow-hidden">
+    <div className="flex h-full overflow-hidden">
       {currentUser && (
         <div 
           className={cn(
