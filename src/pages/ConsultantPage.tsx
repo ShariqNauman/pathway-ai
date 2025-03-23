@@ -11,9 +11,9 @@ const ConsultantPage = () => {
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
       
-      {/* Add top padding to push content below the header */}
-      <main className="flex-1 pt-20">
-        <div className="h-[calc(100vh-8rem-5rem)] overflow-hidden">
+      {/* Main content with padding to avoid navbar overlap */}
+      <main className="flex-1 flex flex-col pt-16 pb-0">
+        <div className="flex-1 flex flex-col h-[calc(100vh-8rem)]">
           <ChatConsultant initialSidebarOpen={sidebarOpen} />
         </div>
       </main>
