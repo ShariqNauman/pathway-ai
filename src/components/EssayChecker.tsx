@@ -10,19 +10,8 @@ import { EssaySegment } from "./essay-checker/HighlightedEssay";
 import EssayRating, { RatingCategory } from "./essay-checker/EssayRating";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
-import { FileText, RotateCcw, Menu, Plus } from "lucide-react";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarTrigger,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarGroup,
-  SidebarGroupLabel,
-} from "@/components/ui/sidebar";
+import { FileText, RotateCcw, Plus, ChevronLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SavedEssay {
   id: string;
@@ -36,7 +25,11 @@ interface SavedEssay {
   displayTitle: string;
 }
 
-const EssayChecker = () => {
+interface EssayCheckerProps {
+  initialSidebarOpen?: boolean;
+}
+
+const EssayChecker = ({ initialSidebarOpen = true }: EssayCheckerProps) => {
   const { currentUser } = useUser();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [feedback, setFeedback] = useState<string>("");
@@ -52,8 +45,12 @@ const EssayChecker = () => {
     essay: ""
   });
   const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(initialSidebarOpen);
   const [hasAnalyzedOnce, setHasAnalyzedOnce] = useState(false);
+  
+  useEffect(() => {
+    setSidebarOpen(initialSidebarOpen);
+  }, [initialSidebarOpen]);
   
   useEffect(() => {
     if (currentUser) {
@@ -241,67 +238,127 @@ const EssayChecker = () => {
     }
   };
 
+  const toggleSidebar = () => {
+    setSidebarOpen(prev => !prev);
+  };
+
   return (
-    <>
+    <div className="flex h-[calc(100vh-8rem)] overflow-hidden">
       {currentUser && (
-        <Sidebar collapsible="offcanvas" variant="floating">
-          <SidebarHeader className="border-b">
-            <div className="flex flex-col gap-2 px-3 py-2">
-              <h3 className="font-semibold">Your Essays</h3>
-              <p className="text-xs text-muted-foreground">Analyses are automatically saved</p>
-            </div>
-          </SidebarHeader>
+        <div 
+          className={cn(
+            "h-full bg-card border-r border-border transition-all duration-300 flex flex-col",
+            sidebarOpen ? "w-[250px]" : "w-0 md:w-[60px]"
+          )}
+        >
+          <div className="border-b p-3 flex items-center justify-between">
+            <h3 className={cn("font-semibold truncate", !sidebarOpen && "md:hidden")}>
+              Your Essays
+            </h3>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0 flex-shrink-0"
+              onClick={toggleSidebar}
+            >
+              <ChevronLeft className={cn(
+                "h-4 w-4 transition-transform duration-300",
+                !sidebarOpen && "rotate-180"
+              )} />
+            </Button>
+          </div>
           
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Recent Analyses</SidebarGroupLabel>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={startNewAnalysis}
-                    className="flex items-center gap-2"
-                  >
-                    <Plus size={18} />
-                    <span>New Analysis</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+          <div className={cn(
+            "flex-1 overflow-y-auto",
+            !sidebarOpen && "md:hidden"
+          )}>
+            <div className="p-2">
+              <p className="text-xs text-muted-foreground mb-4">Analyses are automatically saved</p>
+              
+              <div className="space-y-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full justify-start gap-2"
+                  onClick={startNewAnalysis}
+                >
+                  <Plus size={16} />
+                  <span>New Analysis</span>
+                </Button>
                 
                 {savedEssays.map((essay) => (
-                  <SidebarMenuItem key={essay.id}>
-                    <SidebarMenuButton
-                      onClick={() => loadSavedEssay(essay)}
-                      isActive={currentAnalysisId === essay.id}
-                      className="flex flex-col items-start min-h-[3rem] py-2"
-                    >
-                      <div className="flex items-center gap-2 w-full">
-                        <FileText size={16} className="shrink-0" />
-                        <span className="truncate font-medium text-left">{essay.displayTitle}</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground pl-6">
+                  <Button
+                    key={essay.id}
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "w-full justify-start text-left gap-2",
+                      currentAnalysisId === essay.id && "bg-accent"
+                    )}
+                    onClick={() => loadSavedEssay(essay)}
+                  >
+                    <FileText size={16} className="shrink-0" />
+                    <div className="truncate text-left">
+                      <div className="truncate font-medium">{essay.displayTitle}</div>
+                      <span className="text-xs text-muted-foreground">
                         {formatDate(essay.createdAt)} - Score: {essay.overallScore}
                       </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                    </div>
+                  </Button>
                 ))}
-              </SidebarMenu>
-            </SidebarGroup>
-          </SidebarContent>
+              </div>
+            </div>
+          </div>
           
-          <SidebarFooter>
+          <div className={cn(
+            "hidden md:flex flex-col items-center py-4 space-y-4",
+            sidebarOpen && "md:hidden"
+          )}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-9 w-9"
+              onClick={startNewAnalysis}
+              title="New Analysis"
+            >
+              <Plus size={18} />
+            </Button>
+            
+            {savedEssays.slice(0, 5).map((essay) => (
+              <Button
+                key={essay.id}
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-9 w-9",
+                  currentAnalysisId === essay.id && "bg-accent"
+                )}
+                onClick={() => loadSavedEssay(essay)}
+                title={essay.displayTitle}
+              >
+                <FileText size={18} />
+              </Button>
+            ))}
+          </div>
+          
+          <div className={cn(
+            "border-t p-2",
+            !sidebarOpen && "md:hidden"
+          )}>
             <Button 
               variant="outline" 
               size="sm" 
-              className="w-full flex items-center gap-2 m-2"
+              className="w-full flex items-center gap-2"
               onClick={startNewAnalysis}
             >
               <RotateCcw className="h-4 w-4" />
               New Analysis
             </Button>
-          </SidebarFooter>
-        </Sidebar>
+          </div>
+        </div>
       )}
 
-      <section id="essay-checker" className="flex-1 py-8 px-4 md:px-6 w-full max-w-full">
+      <section id="essay-checker" className="flex-1 py-8 px-4 md:px-6 overflow-y-auto">
         <div className="max-w-full">
           <div className="text-center mb-8">
             <motion.span 
@@ -343,12 +400,6 @@ const EssayChecker = () => {
             transition={{ duration: 0.5, delay: 0.3 }}
           >
             <div className="w-full flex relative">
-              {currentUser && (
-                <div className="mb-4 md:hidden">
-                  <SidebarTrigger />
-                </div>
-              )}
-              
               <div className="flex-1">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="bg-card shadow-md rounded-xl p-6 border border-border">
@@ -399,7 +450,7 @@ const EssayChecker = () => {
           </motion.div>
         </div>
       </section>
-    </>
+    </div>
   );
 };
 

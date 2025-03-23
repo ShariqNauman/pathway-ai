@@ -7,27 +7,16 @@ import { Button } from "@/components/ui/button";
 import { 
   Send, 
   RotateCcw, 
-  Menu, 
-  PanelLeft,
+  Plus,
   MessageSquare,
-  Plus 
+  PanelLeft,
+  ChevronLeft
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarTrigger,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarGroup,
-  SidebarGroupLabel,
-} from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 interface Message {
   id: string;
@@ -42,7 +31,11 @@ interface SavedChat {
   lastMessageDate: Date;
 }
 
-const ChatConsultant = () => {
+interface ChatConsultantProps {
+  initialSidebarOpen?: boolean;
+}
+
+const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -58,12 +51,17 @@ const ChatConsultant = () => {
   const [savedChats, setSavedChats] = useState<SavedChat[]>([]);
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
   const [isChatSavingInProgress, setIsChatSavingInProgress] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(initialSidebarOpen);
   
   const { currentUser } = useUser();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const initialLoadRef = useRef(true);
+
+  useEffect(() => {
+    setSidebarOpen(initialSidebarOpen);
+  }, [initialSidebarOpen]);
 
   const scrollChatToBottom = () => {
     if (messagesEndRef.current && chatContainerRef.current) {
@@ -402,81 +400,138 @@ const ChatConsultant = () => {
     }
   };
 
+  const toggleSidebar = () => {
+    setSidebarOpen(prev => !prev);
+  };
+
   return (
-    <div className="flex flex-1 h-[calc(100vh-9rem)]">
+    <div className="flex h-[calc(100vh-8rem)] overflow-hidden">
       {currentUser && (
-        <Sidebar collapsible="offcanvas" variant="floating">
-          <SidebarHeader className="border-b">
-            <div className="flex flex-col gap-2 px-3 py-2">
-              <h3 className="font-semibold">Your Consultations</h3>
-              <p className="text-xs text-muted-foreground">Past educational consultations</p>
-            </div>
-          </SidebarHeader>
+        <div 
+          className={cn(
+            "h-full bg-card border-r border-border transition-all duration-300 flex flex-col",
+            sidebarOpen ? "w-[250px]" : "w-0 md:w-[60px]"
+          )}
+        >
+          <div className="border-b p-3 flex items-center justify-between">
+            <h3 className={cn("font-semibold truncate", !sidebarOpen && "md:hidden")}>
+              Your Consultations
+            </h3>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0 flex-shrink-0"
+              onClick={toggleSidebar}
+            >
+              <ChevronLeft className={cn(
+                "h-4 w-4 transition-transform duration-300",
+                !sidebarOpen && "rotate-180"
+              )} />
+            </Button>
+          </div>
           
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>History</SidebarGroupLabel>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={startNewChat}
-                    className="flex items-center gap-2"
-                  >
-                    <Plus size={18} />
-                    <span>New Chat</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+          <div className={cn(
+            "flex-1 overflow-y-auto",
+            !sidebarOpen && "md:hidden"
+          )}>
+            <div className="p-2">
+              <p className="text-xs text-muted-foreground mb-4">Past educational consultations</p>
+              
+              <div className="space-y-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full justify-start gap-2"
+                  onClick={startNewChat}
+                >
+                  <Plus size={16} />
+                  <span>New Chat</span>
+                </Button>
                 
                 {savedChats.map((chat) => (
-                  <SidebarMenuItem key={chat.id}>
-                    <SidebarMenuButton
-                      onClick={() => loadConversation(chat.id)}
-                      isActive={currentConversationId === chat.id}
-                      className="flex flex-col items-start min-h-[3rem] py-2"
-                    >
-                      <div className="flex items-center gap-2 w-full">
-                        <MessageSquare size={16} className="shrink-0" />
-                        <span className="truncate font-medium text-left">{chat.title}</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground pl-6">
+                  <Button
+                    key={chat.id}
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "w-full justify-start text-left gap-2",
+                      currentConversationId === chat.id && "bg-accent"
+                    )}
+                    onClick={() => loadConversation(chat.id)}
+                  >
+                    <MessageSquare size={16} className="shrink-0" />
+                    <div className="truncate text-left">
+                      <div className="truncate font-medium">{chat.title}</div>
+                      <span className="text-xs text-muted-foreground">
                         {formatDate(chat.lastMessageDate)}
                       </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                    </div>
+                  </Button>
                 ))}
-              </SidebarMenu>
-            </SidebarGroup>
-          </SidebarContent>
+              </div>
+            </div>
+          </div>
           
-          <SidebarFooter>
+          <div className={cn(
+            "hidden md:flex flex-col items-center py-4 space-y-4",
+            sidebarOpen && "md:hidden"
+          )}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-9 w-9"
+              onClick={startNewChat}
+              title="New Chat"
+            >
+              <Plus size={18} />
+            </Button>
+            
+            {savedChats.slice(0, 5).map((chat) => (
+              <Button
+                key={chat.id}
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-9 w-9",
+                  currentConversationId === chat.id && "bg-accent"
+                )}
+                onClick={() => loadConversation(chat.id)}
+                title={chat.title}
+              >
+                <MessageSquare size={18} />
+              </Button>
+            ))}
+          </div>
+          
+          <div className={cn(
+            "border-t p-2",
+            !sidebarOpen && "md:hidden"
+          )}>
             <Button 
               variant="outline" 
               size="sm" 
-              className="w-full flex items-center gap-2 m-2"
+              className="w-full flex items-center gap-2"
               onClick={startNewChat}
             >
-              <Plus size={16} />
-              New Consultation
+              <RotateCcw className="h-4 w-4" />
+              New Chat
             </Button>
-          </SidebarFooter>
-        </Sidebar>
+          </div>
+        </div>
       )}
 
       <div className="flex-1 flex flex-col h-full">
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-3">
-            {currentUser && <SidebarTrigger className="md:hidden" />}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                  <path d="M16.5 7.5h-9v9h9v-9z" />
-                  <path fillRule="evenodd" d="M8.25 2.25A.75.75 0 019 3v.75h2.25V3a.75.75 0 011.5 0v.75H15V3a.75.75 0 011.5 0v.75h.75a3 3 0 013 3v.75H21A.75.75 0 0121 9h-.75v2.25H21a.75.75 0 010 1.5h-.75V15H21a.75.75 0 010 1.5h-.75v.75a3 3 0 01-3 3h-.75V21a.75.75 0 01-1.5 0v-.75h-2.25V21a.75.75 0 01-1.5 0v-.75H9V21a.75.75 0 01-1.5 0v-.75h-.75a3 3 0 01-3-3v-.75H3A.75.75 0 013 15h.75v-2.25H3a.75.75 0 010-1.5h.75V9H3a.75.75 0 010-1.5h.75v-.75a3 3 0 013-3h.75V3a.75.75 0 01.75-.75zM6 6.75A.75.75 0 016.75 6h10.5a.75.75 0 01.75.75v10.5a.75.75 0 01-.75.75H6.75a.75.75 0 01-.75-.75V6.75z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold">Pathway AI</h3>
-                <p className="text-xs text-muted-foreground">University & Education Consultant</p>
-              </div>
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                <path d="M16.5 7.5h-9v9h9v-9z" />
+                <path fillRule="evenodd" d="M8.25 2.25A.75.75 0 019 3v.75h2.25V3a.75.75 0 011.5 0v.75H15V3a.75.75 0 011.5 0v.75h.75a3 3 0 013 3v.75H21A.75.75 0 0121 9h-.75v2.25H21a.75.75 0 010 1.5h-.75V15H21a.75.75 0 010 1.5h-.75v.75a3 3 0 01-3 3h-.75V21a.75.75 0 01-1.5 0v-.75h-2.25V21a.75.75 0 01-1.5 0v-.75H9V21a.75.75 0 01-1.5 0v-.75h-.75a3 3 0 01-3-3v-.75H3A.75.75 0 013 15h.75v-2.25H3a.75.75 0 010-1.5h.75V9H3a.75.75 0 010-1.5h.75v-.75a3 3 0 013-3h.75V3a.75.75 0 01.75-.75zM6 6.75A.75.75 0 016.75 6h10.5a.75.75 0 01.75.75v10.5a.75.75 0 01-.75.75H6.75a.75.75 0 01-.75-.75V6.75z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-semibold">Pathway AI</h3>
+              <p className="text-xs text-muted-foreground">University & Education Consultant</p>
             </div>
           </div>
           <Button 
