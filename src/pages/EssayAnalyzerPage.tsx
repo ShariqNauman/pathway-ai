@@ -9,12 +9,12 @@ const EssayAnalyzerPage = () => {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
-      <div className="flex flex-1 w-full pt-16"> {/* Changed from fixed margin to pt-16 padding-top */}
-        <SidebarProvider>
-          <div className="flex flex-1 w-full">
+      <div className="flex flex-1 w-full">
+        <div className="flex-1 pt-16 pb-16"> {/* Added padding for header and footer space */}
+          <SidebarProvider>
             <EssayChecker />
-          </div>
-        </SidebarProvider>
+          </SidebarProvider>
+        </div>
       </div>
       <Footer />
     </div>

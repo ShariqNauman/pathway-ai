@@ -9,7 +9,8 @@ const GEMINI_API_KEY = "AIzaSyAaEYKy6P3WkHBArYGoxc1s0QW2fm3rTOI";
 
 export async function getGeminiResponse(
   prompt: string,
-  systemInstructions: string = ""
+  systemInstructions: string = "",
+  previousMessages: {content: string, role: "user" | "model"}[] = []
 ): Promise<GeminiResponse> {
   try {
     // Using gemini-2.0-flash model as specified
@@ -21,46 +22,76 @@ export async function getGeminiResponse(
     if (systemInstructions) {
       enhancedSystemInstructions = `${systemInstructions}
       
-IMPORTANT INSTRUCTION: Use the information provided to personalize your responses but DO NOT explicitly list or repeat the user's preferences in your responses. Simply incorporate them naturally into your advice without mentioning them directly. Address the user's query directly and concisely.`;
+IMPORTANT INSTRUCTION: Use the information provided to personalize your responses but DO NOT explicitly list or repeat the user's preferences in your responses. Simply incorporate them naturally into your advice without mentioning them directly. Address the user's query directly and concisely. Remember the context of our ongoing conversation and respond accordingly.`;
     }
     
-    // Prepare the system prompt with instructions
-    const systemPrompt = enhancedSystemInstructions ? 
-      `${enhancedSystemInstructions}\n\nUser message: ${prompt}` : 
-      prompt;
+    // Prepare the request body with conversation history
+    let requestBody: any = {
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 1024,
+      },
+      safetySettings: [
+        {
+          category: "HARM_CATEGORY_HARASSMENT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        }
+      ]
+    };
+    
+    // If we have previous messages, construct a conversation
+    if (previousMessages && previousMessages.length > 0) {
+      // Add the system instructions to the first user message
+      const contents = previousMessages.map((msg, index) => {
+        if (index === 0 && msg.role === "user" && enhancedSystemInstructions) {
+          return {
+            role: msg.role === "user" ? "user" : "model",
+            parts: [{ text: `${enhancedSystemInstructions}\n\n${msg.content}` }]
+          };
+        } else {
+          return {
+            role: msg.role === "user" ? "user" : "model",
+            parts: [{ text: msg.content }]
+          };
+        }
+      });
+      
+      // Add the current prompt as the latest user message
+      contents.push({
+        role: "user",
+        parts: [{ text: prompt }]
+      });
+      
+      requestBody.contents = contents;
+    } else {
+      // If no previous messages, use the simple format
+      const systemPrompt = enhancedSystemInstructions ? 
+        `${enhancedSystemInstructions}\n\nUser message: ${prompt}` : 
+        prompt;
+      
+      requestBody.contents = [
+        {
+          parts: [
+            {
+              text: systemPrompt,
+            },
+          ],
+        },
+      ];
+    }
     
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: systemPrompt,
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        },
-        safetySettings: [
-          {
-            category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_HATE_SPEECH",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          }
-        ]
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     const data = await response.json();

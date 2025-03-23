@@ -290,7 +290,14 @@ const ChatConsultant = () => {
         }
       }
       
-      const response = await getGeminiResponse(inputValue, systemInstructions);
+      const previousMessages = messages
+        .filter(msg => msg.id !== "1")
+        .map(msg => ({
+          content: msg.content,
+          role: msg.sender === "user" ? "user" : "model" as "user" | "model"
+        }));
+      
+      const response = await getGeminiResponse(inputValue, systemInstructions, previousMessages);
       
       if (response.error) {
         console.error("Gemini API Error:", response.error);
@@ -396,7 +403,7 @@ const ChatConsultant = () => {
   };
 
   return (
-    <>
+    <div className="flex flex-1 h-[calc(100vh-9rem)]">
       {currentUser && (
         <Sidebar collapsible="offcanvas" variant="floating">
           <SidebarHeader className="border-b">
@@ -455,10 +462,10 @@ const ChatConsultant = () => {
         </Sidebar>
       )}
 
-      <div className="flex-1 flex flex-col h-[calc(100vh-9rem)]">
+      <div className="flex-1 flex flex-col h-full">
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-3">
-            {currentUser && <SidebarTrigger className="md:flex" />}
+            {currentUser && <SidebarTrigger className="md:hidden" />}
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
@@ -552,7 +559,7 @@ const ChatConsultant = () => {
           </p>
         </form>
       </div>
-    </>
+    </div>
   );
 };
 
