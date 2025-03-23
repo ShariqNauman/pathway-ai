@@ -12,8 +12,8 @@ const ConsultantPage = () => {
       <Header />
       
       {/* Main content with padding to avoid navbar overlap */}
-      <main className="flex-1 flex flex-col pt-16 pb-0">
-        <div className="flex-1 flex flex-col h-[calc(100vh-8rem)]">
+      <main className="flex-1 flex flex-col pt-16">
+        <div className="flex-1 flex flex-col h-[calc(100vh-9rem)]">
           <ChatConsultant initialSidebarOpen={sidebarOpen} />
         </div>
       </main>
