@@ -413,14 +413,25 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
         className="h-full bg-muted/50 border-r border-border overflow-hidden"
       >
         <div className="h-full flex flex-col">
-          <div className="p-4 border-b border-border">
+          <div className="p-4 border-b border-border flex items-center justify-between">
             <Button
               variant="ghost"
-              className="w-full justify-start gap-2"
+              className="flex-1 justify-start gap-2"
               onClick={startNewChat}
             >
               <Plus className="h-4 w-4" />
               New Chat
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-2"
+              onClick={toggleSidebar}
+            >
+              <ChevronLeft className={cn(
+                "h-4 w-4 transition-transform duration-200",
+                !sidebarOpen && "rotate-180"
+              )} />
             </Button>
           </div>
           <div className="flex-1 overflow-y-auto">
@@ -451,7 +462,10 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
         {/* Chat container */}
         <div 
           ref={chatContainerRef}
-          className="absolute inset-0 overflow-y-auto px-4 py-6 pb-32"
+          className={cn(
+            "absolute inset-0 overflow-y-auto py-6 pb-32",
+            sidebarOpen ? "px-4" : "pl-16 pr-4"
+          )}
         >
           {messages.map((message) => (
             <div
@@ -479,6 +493,18 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Sidebar toggle button when sidebar is closed */}
+        {!sidebarOpen && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute left-4 top-6 z-10"
+            onClick={toggleSidebar}
+          >
+            <ChevronLeft className="h-4 w-4 rotate-180" />
+          </Button>
+        )}
+
         {/* Input area */}
         <div className="absolute bottom-0 left-0 right-0 border-t border-border p-4 bg-background">
           <form onSubmit={handleSendMessage} className="flex gap-2">
@@ -501,16 +527,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
           </form>
         </div>
       </div>
-
-      {/* Sidebar toggle button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed left-4 top-20 z-50"
-        onClick={toggleSidebar}
-      >
-        <PanelLeft className="h-4 w-4" />
-      </Button>
     </div>
   );
 };
