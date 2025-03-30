@@ -293,11 +293,12 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
 
+    const now = new Date();
     const userMessage: Message = {
       id: uuidv4(),
       content: inputValue.trim(),
       sender: "user",
-      timestamp: new Date(),
+      timestamp: now,
     };
 
     const aiMessageId = uuidv4();
@@ -305,13 +306,12 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
       id: aiMessageId,
       content: "",
       sender: "ai",
-      timestamp: new Date(),
+      timestamp: new Date(now.getTime() + 100), // Ensure AI message appears after user message
       isStreaming: true,
     };
 
     // Keep track of current messages and add new ones
-    const updatedMessages = [...messages, userMessage, aiMessage];
-    setMessages(updatedMessages);
+    setMessages(prev => [...prev, userMessage, aiMessage]);
     setInputValue("");
     setIsLoading(true);
     setHasUserSentMessage(true);
@@ -378,9 +378,7 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
       };
 
       // Update messages with the final AI response
-      const finalMessages = updatedMessages.map(msg =>
-        msg.id === aiMessageId ? finalAiMessage : msg
-      );
+      const finalMessages = [...messages, userMessage, finalAiMessage];
       setMessages(finalMessages);
 
       // Save messages if user is logged in
@@ -487,33 +485,8 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
           sender: msg.sender as "user" | "ai",
           timestamp: new Date(msg.created_at)
         }));
-        
-        // If there's no welcome message, add it at the beginning
-        if (!loadedMessages.some(msg => msg.id === welcomeMessageId)) {
-          const welcomeMessage = {
-            id: welcomeMessageId,
-            content: getWelcomeMessage(currentUser),
-            sender: "ai" as const,
-            timestamp: new Date(Math.min(...loadedMessages.map(m => m.timestamp.getTime())) - 1000)
-          };
-          
-          // Save the welcome message
-          await supabase
-            .from('chat_messages')
-            .insert([{
-              conversation_id: conversationId,
-              content: welcomeMessage.content,
-              sender: welcomeMessage.sender,
-              id: welcomeMessage.id,
-              created_at: welcomeMessage.timestamp.toISOString()
-            }]);
-          
-          loadedMessages.unshift(welcomeMessage);
-        }
-        
-        // Sort messages by timestamp to ensure correct order
-        loadedMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-        
+
+        // Only set the loaded messages without adding a welcome message
         setMessages(loadedMessages);
         setHasUserSentMessage(true);
       }
