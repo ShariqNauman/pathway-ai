@@ -37,6 +37,101 @@ interface ChatConsultantProps {
   initialSidebarOpen?: boolean;
 }
 
+const DEFAULT_CHAT_TITLE = "New Chat";
+const MIN_USER_MESSAGES_FOR_TITLE = 5; // Changed to count user messages only
+
+const analyzeConversationTitle = (messages: Message[]): string => {
+  // Count user messages only
+  const userMessages = messages.filter(msg => msg.sender === "user");
+  if (userMessages.length < MIN_USER_MESSAGES_FOR_TITLE) {
+    return DEFAULT_CHAT_TITLE;
+  }
+
+  // Get all messages to analyze the context
+  const combinedText = messages
+    .map(msg => msg.content)
+    .join(" ")
+    .toLowerCase();
+
+  // Common abbreviations for education terms
+  const abbreviations: { [key: string]: string } = {
+    "computer science": "CS",
+    "artificial intelligence": "AI",
+    "information technology": "IT",
+    "business administration": "BBA",
+    "masters": "MS",
+    "bachelor": "BS",
+    "engineering": "Eng",
+    "university": "Uni",
+    "united states": "US",
+    "undergraduate": "UG",
+    "graduate": "Grad",
+    "international": "Intl",
+    "management": "Mgmt",
+    "technology": "Tech",
+    "science": "Sci",
+    "mathematics": "Math"
+  };
+
+  // Extract key topics and themes
+  const topics = new Set<string>();
+  
+  // Look for specific fields of study first
+  const studyFields = [
+    "computer science", "artificial intelligence", "engineering", 
+    "business administration", "information technology", "mathematics",
+    "science", "management", "technology"
+  ];
+  studyFields.forEach(field => {
+    if (combinedText.includes(field)) {
+      // Use abbreviation if available
+      topics.add(abbreviations[field] || field);
+    }
+  });
+
+  // Look for education level
+  const educationLevels = ["masters", "bachelor", "undergraduate", "graduate"];
+  educationLevels.forEach(level => {
+    if (combinedText.includes(level)) {
+      topics.add(abbreviations[level] || level);
+    }
+  });
+
+  // Look for location references
+  const locations = ["united states", "international"];
+  locations.forEach(location => {
+    if (combinedText.includes(location)) {
+      topics.add(abbreviations[location] || location);
+    }
+  });
+
+  // Generate a concise title based on the topics found
+  if (topics.size > 0) {
+    const topicArray = Array.from(topics);
+    if (topicArray.length >= 2) {
+      // Combine two most relevant topics with a separator
+      return `${topicArray[0]} | ${topicArray[1]}`;
+    } else {
+      return topicArray[0];
+    }
+  }
+
+  // If no specific topics found, use the first few words of the first user message
+  if (userMessages.length > 0) {
+    const firstUserMessage = userMessages[0].content;
+    const words = firstUserMessage.split(" ").map(word => {
+      // Try to use abbreviation if available
+      return abbreviations[word.toLowerCase()] || word;
+    });
+    if (words.length > 3) {
+      return words.slice(0, 3).join(" ") + "...";
+    }
+    return words.join(" ");
+  }
+
+  return DEFAULT_CHAT_TITLE;
+};
+
 const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
   const { currentUser } = useUser();
   
@@ -150,25 +245,12 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
     try {
       setIsChatSavingInProgress(true);
       
-      let title = "New Conversation";
-      const userContent = userMessage.content;
-      
-      if (userContent.length > 5) {
-        const words = userContent.split(' ');
-        title = words.slice(0, 6).join(' ');
-        
-        if (title.length > 40) {
-          title = title.substring(0, 37) + '...';
-        } else if (words.length > 6) {
-          title += '...';
-        }
-      }
-      
+      // Always start with default title
       const { data: newConversation, error: createError } = await supabase
         .from('chat_conversations')
         .insert([{ 
           user_id: currentUser.id,
-          title: title
+          title: DEFAULT_CHAT_TITLE
         }])
         .select();
       
@@ -230,6 +312,34 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
       return null;
     } finally {
       setIsChatSavingInProgress(false);
+    }
+  };
+
+  // Add function to update conversation title
+  const updateConversationTitle = async (conversationId: string, messages: Message[]) => {
+    if (!currentUser) return;
+    
+    try {
+      // Count user messages only
+      const userMessageCount = messages.filter(msg => msg.sender === "user").length;
+      
+      // Only update title once when we reach the minimum user messages
+      if (userMessageCount === MIN_USER_MESSAGES_FOR_TITLE) {
+        const newTitle = analyzeConversationTitle(messages);
+        
+        // Update the title in the database
+        const { error } = await supabase
+          .from('chat_conversations')
+          .update({ title: newTitle })
+          .eq('id', conversationId);
+          
+        if (error) throw error;
+        
+        // Refresh the saved chats to show the new title
+        await fetchSavedChats();
+      }
+    } catch (error) {
+      console.error("Error updating conversation title:", error);
     }
   };
 
@@ -306,11 +416,10 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
       id: aiMessageId,
       content: "",
       sender: "ai",
-      timestamp: new Date(now.getTime() + 100), // Ensure AI message appears after user message
+      timestamp: new Date(now.getTime() + 100),
       isStreaming: true,
     };
 
-    // Keep track of current messages and add new ones
     setMessages(prev => [...prev, userMessage, aiMessage]);
     setInputValue("");
     setIsLoading(true);
@@ -320,21 +429,24 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
     try {
       let systemInstructions = "";
       if (currentUser) {
-        // Include user's name and preferences in system instructions
-        systemInstructions = "You are a helpful AI university consultant. ";
-        
-        if (currentUser.name) {
-          systemInstructions += `You are talking to ${currentUser.name}. Address them by their name occasionally in a natural way. `;
-        }
+        // Make the AI behave more like a human university consultant with concise responses
+        systemInstructions = `You are a friendly and experienced university consultant having a natural conversation.
+          Keep your responses concise, clear, and to the point - typically 1-2 short paragraphs maximum.
+          Ask one focused question at a time instead of multiple questions.
+          When asking questions, keep them brief and specific.
+          Avoid long explanations unless specifically requested by the user.
+          Make it easy for users to respond by being direct and clear.
+          Address ${currentUser.name || 'them'} in a natural way.`;
 
+        // Silently pass user preferences to inform responses without explicitly mentioning them
         if (currentUser.preferences) {
           const { intendedMajor, budget, preferredCountry, studyLevel } = currentUser.preferences;
           if (intendedMajor || budget || preferredCountry || studyLevel) {
-            systemInstructions += "Consider their profile information: " +
-              `${intendedMajor ? `Intended major: ${intendedMajor}. ` : ''}` +
-              `${budget ? `Budget: $${budget}. ` : ''}` +
-              `${preferredCountry ? `Preferred country: ${preferredCountry}. ` : ''}` +
-              `${studyLevel ? `Study level: ${studyLevel}. ` : ''}`;
+            systemInstructions += `\nContext (use naturally without explicitly mentioning): ` +
+              `${intendedMajor ? `They're interested in ${intendedMajor}. ` : ''}` +
+              `${budget ? `Their budget is around $${budget}. ` : ''}` +
+              `${preferredCountry ? `They're considering ${preferredCountry}. ` : ''}` +
+              `${studyLevel ? `Looking for ${studyLevel} programs. ` : ''}`;
           }
         }
       }
@@ -389,7 +501,7 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
             .from('chat_conversations')
             .insert([{ 
               user_id: currentUser.id,
-              title: userMessage.content.slice(0, 40) + (userMessage.content.length > 40 ? '...' : '')
+              title: DEFAULT_CHAT_TITLE // Always start with default title
             }])
             .select();
           
@@ -434,6 +546,11 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
               throw insertError;
             }
             
+            // Only update title if we have enough messages
+            if (finalMessages.length >= MIN_USER_MESSAGES_FOR_TITLE) {
+              await updateConversationTitle(newConvId, finalMessages);
+            }
+            
             // Only fetch the list of chats, don't reload messages
             await fetchSavedChats();
           }
@@ -443,6 +560,11 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
             saveMessage(userMessage),
             saveMessage(finalAiMessage)
           ]);
+          
+          // Only update title if we have enough messages
+          if (finalMessages.length >= MIN_USER_MESSAGES_FOR_TITLE) {
+            await updateConversationTitle(currentConversationId, finalMessages);
+          }
         }
       }
     } catch (error) {
