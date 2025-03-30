@@ -162,27 +162,29 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
       if (newConversation && newConversation.length > 0) {
         setCurrentConversationId(newConversation[0].id);
         
-        const welcomeMsg = messages.find(msg => msg.id === "1");
-        if (welcomeMsg) {
-          await supabase
-            .from('chat_messages')
-            .insert([{
-              conversation_id: newConversation[0].id,
-              content: welcomeMsg.content,
-              sender: welcomeMsg.sender,
-              id: welcomeMsg.id
-            }]);
-        }
+        // Always save the welcome message first
+        await supabase
+          .from('chat_messages')
+          .insert([{
+            conversation_id: newConversation[0].id,
+            content: "Hello! I'm your AI university consultant. How can I help with your educational journey today?",
+            sender: "ai",
+            id: "1",
+            created_at: new Date().toISOString()
+          }]);
         
+        // Save the user message
         await supabase
           .from('chat_messages')
           .insert([{
             conversation_id: newConversation[0].id,
             content: userMessage.content,
             sender: userMessage.sender,
-            id: userMessage.id
+            id: userMessage.id,
+            created_at: userMessage.timestamp.toISOString()
           }]);
         
+        // Save the AI response if provided
         if (aiMessage) {
           await supabase
             .from('chat_messages')
@@ -190,7 +192,8 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
               conversation_id: newConversation[0].id,
               content: aiMessage.content,
               sender: aiMessage.sender,
-              id: aiMessage.id
+              id: aiMessage.id,
+              created_at: aiMessage.timestamp.toISOString()
             }]);
         }
           
@@ -248,7 +251,8 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
             id: message.id,
             conversation_id: currentConversationId,
             content: message.content,
-            sender: message.sender
+            sender: message.sender,
+            created_at: message.timestamp.toISOString()
           }]);
         
         await supabase
@@ -316,13 +320,58 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
 
       setMessages(prev => [...prev, aiMessage]);
 
-      // Only save conversation if user is logged in
+      // Save messages if user is logged in
       if (currentUser) {
         if (!currentConversationId) {
-          await createNewConversation(userMessage, aiMessage);
+          // For new conversations, create it with all messages at once
+          const welcomeMessage = messages[0]; // Get the welcome message
+          const { data: newConversation, error: createError } = await supabase
+            .from('chat_conversations')
+            .insert([{ 
+              user_id: currentUser.id,
+              title: userMessage.content.slice(0, 40) + (userMessage.content.length > 40 ? '...' : '')
+            }])
+            .select();
+          
+          if (createError) throw createError;
+          
+          if (newConversation && newConversation.length > 0) {
+            const newConvId = newConversation[0].id;
+            setCurrentConversationId(newConvId);
+            
+            // Insert all messages in order
+            await supabase.from('chat_messages').insert([
+              {
+                id: welcomeMessage.id,
+                conversation_id: newConvId,
+                content: welcomeMessage.content,
+                sender: welcomeMessage.sender,
+                created_at: welcomeMessage.timestamp.toISOString()
+              },
+              {
+                id: userMessage.id,
+                conversation_id: newConvId,
+                content: userMessage.content,
+                sender: userMessage.sender,
+                created_at: userMessage.timestamp.toISOString()
+              },
+              {
+                id: aiMessage.id,
+                conversation_id: newConvId,
+                content: aiMessage.content,
+                sender: aiMessage.sender,
+                created_at: aiMessage.timestamp.toISOString()
+              }
+            ]);
+            
+            await fetchSavedChats();
+          }
         } else {
-          await saveMessage(userMessage);
-          await saveMessage(aiMessage);
+          // For existing conversations, just save the new messages
+          await Promise.all([
+            saveMessage(userMessage),
+            saveMessage(aiMessage)
+          ]);
         }
       }
     } catch (error) {
@@ -346,16 +395,18 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
     try {
       setCurrentConversationId(conversationId);
       
-      const { data, error } = await supabase
+      // Get all messages
+      const { data: messagesData, error: msgError } = await supabase
         .from('chat_messages')
         .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
         
-      if (error) throw error;
+      if (msgError) throw msgError;
       
-      if (data) {
-        const loadedMessages = data.map(msg => ({
+      if (messagesData) {
+        // Convert all messages from the database
+        const loadedMessages = messagesData.map(msg => ({
           id: msg.id,
           content: msg.content,
           sender: msg.sender as "user" | "ai",
@@ -367,7 +418,7 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
       }
     } catch (error) {
       console.error("Error loading conversation:", error);
-      toast("Failed to load conversation. Please try again.");
+      toast.error("Failed to load conversation. Please try again.");
     }
   };
 
