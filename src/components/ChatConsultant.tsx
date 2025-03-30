@@ -36,6 +36,7 @@ interface ChatConsultantProps {
 }
 
 const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
+  const { currentUser } = useUser();
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -46,22 +47,27 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Only initialize these states if user is logged in
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [hasShownPreferencesReminder, setHasShownPreferencesReminder] = useState(false);
   const [savedChats, setSavedChats] = useState<SavedChat[]>([]);
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
   const [isChatSavingInProgress, setIsChatSavingInProgress] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(initialSidebarOpen);
+  const [sidebarOpen, setSidebarOpen] = useState(currentUser ? initialSidebarOpen : false);
   
-  const { currentUser } = useUser();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const initialLoadRef = useRef(true);
 
   useEffect(() => {
-    setSidebarOpen(initialSidebarOpen);
-  }, [initialSidebarOpen]);
+    if (currentUser) {
+      setSidebarOpen(initialSidebarOpen);
+    } else {
+      setSidebarOpen(false);
+    }
+  }, [initialSidebarOpen, currentUser]);
 
   const scrollChatToBottom = () => {
     if (messagesEndRef.current && chatContainerRef.current) {
@@ -257,21 +263,20 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!inputValue.trim()) return;
-    
+    if (!inputValue.trim() || isLoading) return;
+
     const userMessage: Message = {
       id: uuidv4(),
-      content: inputValue,
+      content: inputValue.trim(),
       sender: "user",
       timestamp: new Date(),
     };
-    
-    setMessages((prev) => [...prev, userMessage]);
+
+    setMessages(prev => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
     setHasUserSentMessage(true);
-    
+
     try {
       let systemInstructions = "";
       if (currentUser && currentUser.preferences) {
@@ -283,47 +288,46 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
             `${intendedMajor ? `Intended major: ${intendedMajor}. ` : ''}` +
             `${budget ? `Budget: $${budget}. ` : ''}` +
             `${preferredCountry ? `Preferred country: ${preferredCountry}. ` : ''}` +
-            `${studyLevel ? `Study level: ${studyLevel}. ` : ''}` +
-            "\nUse this information to personalize your responses when appropriate, but DO NOT explicitly mention these preferences in your response unless directly relevant to answering the question. Respond in a natural, conversational way.";
+            `${studyLevel ? `Study level: ${studyLevel}. ` : ''}`;
         }
       }
-      
+
       const previousMessages = messages
         .filter(msg => msg.id !== "1")
         .map(msg => ({
           content: msg.content,
           role: msg.sender === "user" ? "user" : "model" as "user" | "model"
         }));
-      
-      const response = await getGeminiResponse(inputValue, systemInstructions, previousMessages);
+
+      const response = await getGeminiResponse(userMessage.content, systemInstructions, previousMessages);
       
       if (response.error) {
         console.error("Gemini API Error:", response.error);
-        toast(`Error: ${response.error}`);
-        setIsLoading(false);
+        toast.error(response.error);
         return;
       }
       
-      const newAiMessage: Message = {
+      const aiMessage: Message = {
         id: uuidv4(),
-        content: response.text || "I apologize, but I'm having trouble processing your request right now. Please try again later.",
+        content: response.text,
         sender: "ai",
         timestamp: new Date(),
       };
-      
-      setMessages((prev) => [...prev, newAiMessage]);
-      
+
+      setMessages(prev => [...prev, aiMessage]);
+
+      // Only save conversation if user is logged in
       if (currentUser) {
         if (!currentConversationId) {
-          await createNewConversation(userMessage, newAiMessage);
+          await createNewConversation(userMessage, aiMessage);
         } else {
           await saveMessage(userMessage);
-          await saveMessage(newAiMessage);
+          await saveMessage(aiMessage);
         }
       }
     } catch (error) {
-      console.error("Error sending message:", error);
-      toast("Failed to get response. Please try again.");
+      console.error("Error getting AI response:", error);
+      toast.error("Failed to get response. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -406,65 +410,79 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
-      {/* Sidebar */}
-      <motion.div
-        initial={false}
-        animate={{ width: sidebarOpen ? "260px" : "0px" }}
-        className="h-full bg-muted/50 border-r border-border overflow-hidden"
-      >
-        <div className="h-full flex flex-col">
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <Button
-              variant="ghost"
-              className="flex-1 justify-start gap-2"
-              onClick={startNewChat}
-            >
-              <Plus className="h-4 w-4" />
-              New Chat
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="ml-2"
-              onClick={toggleSidebar}
-            >
-              <ChevronLeft className={cn(
-                "h-4 w-4 transition-transform duration-200",
-                !sidebarOpen && "rotate-180"
-              )} />
-            </Button>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {savedChats.map((chat) => (
-              <button
-                key={chat.id}
-                onClick={() => loadConversation(chat.id)}
-                className={cn(
-                  "w-full text-left px-4 py-2 hover:bg-muted/80 transition-colors",
-                  currentConversationId === chat.id && "bg-muted"
-                )}
+      {/* Sidebar - only show for logged in users */}
+      {currentUser && (
+        <motion.div
+          initial={false}
+          animate={{ width: sidebarOpen ? "260px" : "0px" }}
+          className="h-full bg-muted/50 border-r border-border overflow-hidden"
+        >
+          <div className="h-full flex flex-col">
+            <div className="p-4 border-b border-border flex items-center justify-between">
+              <Button
+                variant="ghost"
+                className="flex-1 justify-start gap-2"
+                onClick={startNewChat}
               >
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  <span className="truncate">{chat.title}</span>
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {formatDate(chat.lastMessageDate)}
-                </div>
-              </button>
-            ))}
+                <Plus className="h-4 w-4" />
+                New Chat
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="ml-2"
+                onClick={toggleSidebar}
+              >
+                <ChevronLeft className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                  !sidebarOpen && "rotate-180"
+                )} />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {savedChats.map((chat) => (
+                <button
+                  key={chat.id}
+                  onClick={() => loadConversation(chat.id)}
+                  className={cn(
+                    "w-full text-left px-4 py-2 hover:bg-muted/80 transition-colors",
+                    currentConversationId === chat.id && "bg-muted"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    <span className="truncate">{chat.title}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {formatDate(chat.lastMessageDate)}
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      )}
 
       {/* Main chat area */}
       <div className="flex-1 flex flex-col h-full relative">
+        {/* Sidebar toggle button - only show for logged in users */}
+        {currentUser && !sidebarOpen && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute left-4 top-6 z-10"
+            onClick={toggleSidebar}
+          >
+            <ChevronLeft className="h-4 w-4 rotate-180" />
+          </Button>
+        )}
+
         {/* Chat container */}
         <div 
           ref={chatContainerRef}
           className={cn(
             "absolute inset-0 overflow-y-auto py-6 pb-32",
-            sidebarOpen ? "px-4" : "pl-16 pr-4"
+            currentUser ? (sidebarOpen ? "px-4" : "pl-16 pr-4") : "px-4"
           )}
         >
           {messages.map((message) => (
@@ -492,18 +510,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
           ))}
           <div ref={messagesEndRef} />
         </div>
-
-        {/* Sidebar toggle button when sidebar is closed */}
-        {!sidebarOpen && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute left-4 top-6 z-10"
-            onClick={toggleSidebar}
-          >
-            <ChevronLeft className="h-4 w-4 rotate-180" />
-          </Button>
-        )}
 
         {/* Input area */}
         <div className="absolute bottom-0 left-0 right-0 border-t border-border p-4 bg-background">
