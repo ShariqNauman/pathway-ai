@@ -405,215 +405,112 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
   };
 
   return (
-    <div className="flex h-full overflow-hidden">
-      {currentUser && (
-        <div 
-          className={cn(
-            "h-full bg-card border-r border-border transition-all duration-300 flex flex-col",
-            sidebarOpen ? "w-[250px]" : "w-0 md:w-[60px]"
-          )}
-        >
-          <div className="border-b p-3 flex items-center justify-between">
-            <h3 className={cn("font-semibold truncate", !sidebarOpen && "md:hidden")}>
-              Your Consultations
-            </h3>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0 flex-shrink-0"
-              onClick={toggleSidebar}
-            >
-              <ChevronLeft className={cn(
-                "h-4 w-4 transition-transform duration-300",
-                !sidebarOpen && "rotate-180"
-              )} />
-            </Button>
-          </div>
-          
-          <div className={cn(
-            "flex-1 overflow-y-auto",
-            !sidebarOpen && "md:hidden"
-          )}>
-            <div className="p-2">
-              <p className="text-xs text-muted-foreground mb-4">Past educational consultations</p>
-              
-              <div className="space-y-1">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="w-full justify-start gap-2"
-                  onClick={startNewChat}
-                >
-                  <Plus size={16} />
-                  <span>New Chat</span>
-                </Button>
-                
-                {savedChats.map((chat) => (
-                  <Button
-                    key={chat.id}
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                      "w-full justify-start text-left gap-2",
-                      currentConversationId === chat.id && "bg-accent"
-                    )}
-                    onClick={() => loadConversation(chat.id)}
-                  >
-                    <MessageSquare size={16} className="shrink-0" />
-                    <div className="truncate text-left">
-                      <div className="truncate font-medium">{chat.title}</div>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(chat.lastMessageDate)}
-                      </span>
-                    </div>
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
-          
-          <div className={cn(
-            "hidden md:flex flex-col items-center py-4 space-y-4",
-            sidebarOpen && "md:hidden"
-          )}>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-9 w-9"
-              onClick={startNewChat}
-              title="New Chat"
-            >
-              <Plus size={18} />
-            </Button>
-            
-            {savedChats.slice(0, 5).map((chat) => (
-              <Button
-                key={chat.id}
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "h-9 w-9",
-                  currentConversationId === chat.id && "bg-accent"
-                )}
-                onClick={() => loadConversation(chat.id)}
-                title={chat.title}
-              >
-                <MessageSquare size={18} />
-              </Button>
-            ))}
-          </div>
-          
-          <div className={cn(
-            "border-t p-2",
-            !sidebarOpen && "md:hidden"
-          )}>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full flex items-center gap-2"
+    <div className="flex h-[calc(100vh-4rem)]">
+      {/* Sidebar */}
+      <motion.div
+        initial={false}
+        animate={{ width: sidebarOpen ? "260px" : "0px" }}
+        className="h-full bg-muted/50 border-r border-border overflow-hidden"
+      >
+        <div className="h-full flex flex-col">
+          <div className="p-4 border-b border-border">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2"
               onClick={startNewChat}
             >
-              <RotateCcw className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
               New Chat
             </Button>
           </div>
-        </div>
-      )}
-
-      <div className="flex-1 flex flex-col h-full">
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                <path d="M16.5 7.5h-9v9h9v-9z" />
-                <path fillRule="evenodd" d="M8.25 2.25A.75.75 0 019 3v.75h2.25V3a.75.75 0 011.5 0v.75H15V3a.75.75 0 011.5 0v.75h.75a3 3 0 013 3v.75H21A.75.75 0 0121 9h-.75v2.25H21a.75.75 0 010 1.5h-.75V15H21a.75.75 0 010 1.5h-.75v.75a3 3 0 01-3 3h-.75V21a.75.75 0 01-1.5 0v-.75h-2.25V21a.75.75 0 01-1.5 0v-.75H9V21a.75.75 0 01-1.5 0v-.75h-.75a3 3 0 01-3-3v-.75H3A.75.75 0 013 15h.75v-2.25H3a.75.75 0 010-1.5h.75V9H3a.75.75 0 010-1.5h.75v-.75a3 3 0 013-3h.75V3a.75.75 0 01.75-.75zM6 6.75A.75.75 0 016.75 6h10.5a.75.75 0 01.75.75v10.5a.75.75 0 01-.75.75H6.75a.75.75 0 01-.75-.75V6.75z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-semibold">Pathway AI</h3>
-              <p className="text-xs text-muted-foreground">University & Education Consultant</p>
-            </div>
+          <div className="flex-1 overflow-y-auto">
+            {savedChats.map((chat) => (
+              <button
+                key={chat.id}
+                onClick={() => loadConversation(chat.id)}
+                className={cn(
+                  "w-full text-left px-4 py-2 hover:bg-muted/80 transition-colors",
+                  currentConversationId === chat.id && "bg-muted"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="truncate">{chat.title}</span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {formatDate(chat.lastMessageDate)}
+                </div>
+              </button>
+            ))}
           </div>
-          <Button 
-            variant="outline"
-            size="sm"
-            className="text-xs px-3 py-2 rounded-md transition-colors flex items-center gap-2"
-            onClick={startNewChat}
-          >
-            <RotateCcw size={14} />
-            New Chat
-          </Button>
         </div>
+      </motion.div>
 
+      {/* Main chat area */}
+      <div className="flex-1 flex flex-col h-full relative">
+        {/* Chat container */}
         <div 
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto p-4 space-y-6"
+          className="absolute inset-0 overflow-y-auto px-4 py-6 pb-32"
         >
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
+              className={cn(
+                "mb-6 flex gap-4",
+                message.sender === "user" ? "justify-end" : "justify-start"
+              )}
             >
-              <div 
-                className={`max-w-3xl rounded-lg p-4 ${
-                  message.sender === "user" 
-                    ? "bg-primary text-primary-foreground ml-12" 
-                    : "bg-secondary border border-border mr-12"
-                }`}
-              >
-                {message.sender === "ai" ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <ReactMarkdown>
-                      {message.content}
-                    </ReactMarkdown>
-                  </div>
-                ) : (
-                  <p>{message.content}</p>
+              <div
+                className={cn(
+                  "max-w-[80%] rounded-lg p-4",
+                  message.sender === "user"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted"
                 )}
-              </div>
-            </div>
-          ))}
-          
-          {isLoading && (
-            <div className="flex justify-start animate-fade-in">
-              <div className="bg-secondary border border-border rounded-lg p-4 mr-12">
-                <div className="flex space-x-2">
-                  <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse"></div>
-                  <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse animation-delay-200"></div>
-                  <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse animation-delay-400"></div>
+              >
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+                <div className="text-xs mt-2 opacity-70">
+                  {formatDate(message.timestamp)}
                 </div>
               </div>
             </div>
-          )}
-          
+          ))}
           <div ref={messagesEndRef} />
         </div>
-        
-        <form onSubmit={handleSendMessage} className="border-t border-border p-4">
-          <div className="flex items-end space-x-2 relative">
+
+        {/* Input area */}
+        <div className="absolute bottom-0 left-0 right-0 border-t border-border p-4 bg-background">
+          <form onSubmit={handleSendMessage} className="flex gap-2">
             <Textarea
               ref={textareaRef}
-              className="flex-1 resize-none rounded-lg border border-input bg-background p-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 max-h-32"
-              placeholder="Ask about universities, programs, admissions..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              rows={1}
+              placeholder="Type your message..."
+              className="min-h-[44px] max-h-[150px] resize-none"
               disabled={isLoading}
             />
-            <button
-              type="submit"
-              className="absolute right-3 bottom-3 text-primary hover:text-primary/80 disabled:text-muted-foreground"
-              disabled={isLoading || !inputValue.trim()}
-            >
-              <Send size={18} />
-            </button>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2 px-2">
-            Press Enter to send, Shift+Enter for a new line
-          </p>
-        </form>
+            <Button type="submit" disabled={isLoading || !inputValue.trim()}>
+              {isLoading ? (
+                <RotateCcw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </form>
+        </div>
       </div>
+
+      {/* Sidebar toggle button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="fixed left-4 top-20 z-50"
+        onClick={toggleSidebar}
+      >
+        <PanelLeft className="h-4 w-4" />
+      </Button>
     </div>
   );
 };
