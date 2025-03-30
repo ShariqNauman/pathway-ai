@@ -17,12 +17,14 @@ import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from "@/lib/utils";
+import { UserProfile } from "@/types/user";
 
 interface Message {
   id: string;
   content: string;
   sender: "user" | "ai";
   timestamp: Date;
+  isStreaming?: boolean;
 }
 
 interface SavedChat {
@@ -37,11 +39,19 @@ interface ChatConsultantProps {
 
 const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
   const { currentUser } = useUser();
+  
+  const getWelcomeMessage = (user: UserProfile | null) => {
+    if (user?.name) {
+      return `Hello ${user.name}! I'm your AI university consultant. How can I help with your educational journey today?`;
+    }
+    return "Hello! I'm your AI university consultant. How can I help with your educational journey today?";
+  };
+
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hello! I'm your AI university consultant. How can I help with your educational journey today?",
+      content: getWelcomeMessage(currentUser),
       sender: "ai",
       timestamp: new Date(),
     },
@@ -60,6 +70,8 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const initialLoadRef = useRef(true);
+
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -276,23 +288,40 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const aiMessageId = uuidv4();
+    const aiMessage: Message = {
+      id: aiMessageId,
+      content: "",
+      sender: "ai",
+      timestamp: new Date(),
+      isStreaming: true,
+    };
+
+    setMessages(prev => [...prev, userMessage, aiMessage]);
     setInputValue("");
     setIsLoading(true);
     setHasUserSentMessage(true);
+    setStreamingMessageId(aiMessageId);
 
     try {
       let systemInstructions = "";
-      if (currentUser && currentUser.preferences) {
-        const { intendedMajor, budget, preferredCountry, studyLevel } = currentUser.preferences;
-        if (intendedMajor || budget || preferredCountry || studyLevel) {
-          systemInstructions = 
-            "You are a helpful AI university consultant. " +
-            "When responding to the user's query, consider their profile information: " +
-            `${intendedMajor ? `Intended major: ${intendedMajor}. ` : ''}` +
-            `${budget ? `Budget: $${budget}. ` : ''}` +
-            `${preferredCountry ? `Preferred country: ${preferredCountry}. ` : ''}` +
-            `${studyLevel ? `Study level: ${studyLevel}. ` : ''}`;
+      if (currentUser) {
+        // Include user's name and preferences in system instructions
+        systemInstructions = "You are a helpful AI university consultant. ";
+        
+        if (currentUser.name) {
+          systemInstructions += `You are talking to ${currentUser.name}. Address them by their name occasionally in a natural way. `;
+        }
+
+        if (currentUser.preferences) {
+          const { intendedMajor, budget, preferredCountry, studyLevel } = currentUser.preferences;
+          if (intendedMajor || budget || preferredCountry || studyLevel) {
+            systemInstructions += "Consider their profile information: " +
+              `${intendedMajor ? `Intended major: ${intendedMajor}. ` : ''}` +
+              `${budget ? `Budget: $${budget}. ` : ''}` +
+              `${preferredCountry ? `Preferred country: ${preferredCountry}. ` : ''}` +
+              `${studyLevel ? `Study level: ${studyLevel}. ` : ''}`;
+          }
         }
       }
 
@@ -303,22 +332,39 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
           role: msg.sender === "user" ? "user" : "model" as "user" | "model"
         }));
 
-      const response = await getGeminiResponse(userMessage.content, systemInstructions, previousMessages);
+      const response = await getGeminiResponse(
+        userMessage.content, 
+        systemInstructions, 
+        previousMessages,
+        {
+          onTextUpdate: (text) => {
+            setMessages(prev => 
+              prev.map(msg => 
+                msg.id === aiMessageId 
+                  ? { ...msg, content: text }
+                  : msg
+              )
+            );
+          }
+        }
+      );
       
       if (response.error) {
         console.error("Gemini API Error:", response.error);
         toast.error(response.error);
+        // Remove the streaming message if there was an error
+        setMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
         return;
       }
-      
-      const aiMessage: Message = {
-        id: uuidv4(),
-        content: response.text,
-        sender: "ai",
-        timestamp: new Date(),
-      };
 
-      setMessages(prev => [...prev, aiMessage]);
+      // Update the final message
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === aiMessageId
+            ? { ...msg, content: response.text, isStreaming: false }
+            : msg
+        )
+      );
 
       // Save messages if user is logged in
       if (currentUser) {
@@ -370,15 +416,18 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
           // For existing conversations, just save the new messages
           await Promise.all([
             saveMessage(userMessage),
-            saveMessage(aiMessage)
+            saveMessage({ ...aiMessage, content: response.text, isStreaming: false })
           ]);
         }
       }
     } catch (error) {
       console.error("Error getting AI response:", error);
       toast.error("Failed to get response. Please try again.");
+      // Remove the streaming message if there was an error
+      setMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
     } finally {
       setIsLoading(false);
+      setStreamingMessageId(null);
     }
   };
 
@@ -423,18 +472,16 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
   };
 
   const startNewChat = async () => {
-    setMessages([
-      {
-        id: uuidv4(),
-        content: "Hello! I'm your AI university consultant. How can I help with your educational journey today?",
-        sender: "ai",
-        timestamp: new Date(),
-      },
-    ]);
+    const welcomeMessage = {
+      id: "1",
+      content: getWelcomeMessage(currentUser),
+      sender: "ai" as const,
+      timestamp: new Date(),
+    };
+
+    setMessages([welcomeMessage]);
     setCurrentConversationId(null);
     setHasUserSentMessage(false);
-    
-    toast("New chat started");
   };
 
   const formatDate = (date: Date) => {
@@ -553,8 +600,11 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
                 )}
               >
                 <ReactMarkdown>{message.content}</ReactMarkdown>
-                <div className="text-xs mt-2 opacity-70">
+                <div className="text-xs mt-2 opacity-70 flex items-center gap-2">
                   {formatDate(message.timestamp)}
+                  {message.isStreaming && (
+                    <span className="inline-block w-3 h-3 bg-primary rounded-full animate-pulse" />
+                  )}
                 </div>
               </div>
             </div>
