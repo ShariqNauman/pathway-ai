@@ -20,17 +20,20 @@ export async function getGeminiResponse(
     // Using gemini-2.0-flash model as it's supported for this API version
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
     
-    // Add system instructions that guide the model to use preferences without restating them
-    let enhancedSystemInstructions = systemInstructions;
-    
-    if (systemInstructions) {
-      enhancedSystemInstructions = `${systemInstructions}
-      
-IMPORTANT INSTRUCTION: Use the information provided to personalize your responses but DO NOT explicitly list or repeat the user's preferences in your responses. Simply incorporate them naturally into your advice without mentioning them directly. Address the user's query directly and concisely. Remember the context of our ongoing conversation and respond accordingly.`;
-    }
-    
-    // Prepare the request body with conversation history
-    let requestBody: any = {
+    // Prepare the request body
+    const requestBody = {
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: systemInstructions ? 
+                `${systemInstructions}\n\n${prompt}` : 
+                prompt
+            }
+          ]
+        }
+      ],
       generationConfig: {
         temperature: 0.7,
         topK: 40,
@@ -48,47 +51,26 @@ IMPORTANT INSTRUCTION: Use the information provided to personalize your response
         }
       ]
     };
-    
-    // If we have previous messages, construct a conversation
+
+    // Add previous messages if they exist
     if (previousMessages && previousMessages.length > 0) {
-      // Add the system instructions to the first user message
-      const contents = previousMessages.map((msg, index) => {
-        if (index === 0 && msg.role === "user" && enhancedSystemInstructions) {
-          return {
-            role: msg.role === "user" ? "user" : "model",
-            parts: [{ text: `${enhancedSystemInstructions}\n\n${msg.content}` }]
-          };
-        } else {
-          return {
-            role: msg.role === "user" ? "user" : "model",
-            parts: [{ text: msg.content }]
-          };
-        }
-      });
+      requestBody.contents = previousMessages.map(msg => ({
+        role: msg.role === "user" ? "user" : "model",
+        parts: [{ text: msg.content }]
+      }));
       
-      // Add the current prompt as the latest user message
-      contents.push({
+      // Add the current message at the end
+      requestBody.contents.push({
         role: "user",
-        parts: [{ text: prompt }]
+        parts: [{ 
+          text: systemInstructions ? 
+            `${systemInstructions}\n\n${prompt}` : 
+            prompt 
+        }]
       });
-      
-      requestBody.contents = contents;
-    } else {
-      // If no previous messages, use the simple format
-      const systemPrompt = enhancedSystemInstructions ? 
-        `${enhancedSystemInstructions}\n\nUser message: ${prompt}` : 
-        prompt;
-      
-      requestBody.contents = [
-        {
-          parts: [
-            {
-              text: systemPrompt,
-            },
-          ],
-        },
-      ];
     }
+
+    console.log('Gemini API Request:', JSON.stringify(requestBody, null, 2));
     
     const response = await fetch(url, {
       method: 'POST',
@@ -108,6 +90,7 @@ IMPORTANT INSTRUCTION: Use the information provided to personalize your response
     }
 
     const data = await response.json();
+    console.log('Gemini API Response:', JSON.stringify(data, null, 2));
     
     if (data.error) {
       console.error("Gemini API Response Error:", data.error);

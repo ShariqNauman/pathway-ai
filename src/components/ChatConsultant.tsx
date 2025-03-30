@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { getGeminiResponse } from "@/utils/geminiApi";
@@ -47,10 +47,13 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
     return "Hello! I'm your AI university consultant. How can I help with your educational journey today?";
   };
 
+  // Generate a UUID for the welcome message that will remain constant
+  const welcomeMessageId = useMemo(() => uuidv4(), []);
+
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: "1",
+      id: welcomeMessageId,
       content: getWelcomeMessage(currentUser),
       sender: "ai",
       timestamp: new Date(),
@@ -172,45 +175,54 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
       if (createError) throw createError;
       
       if (newConversation && newConversation.length > 0) {
-        setCurrentConversationId(newConversation[0].id);
+        const newConvId = newConversation[0].id;
+        setCurrentConversationId(newConvId);
         
-        // Always save the welcome message first
-        await supabase
-          .from('chat_messages')
-          .insert([{
-            conversation_id: newConversation[0].id,
-            content: "Hello! I'm your AI university consultant. How can I help with your educational journey today?",
-            sender: "ai",
-            id: "1",
-            created_at: new Date().toISOString()
-          }]);
+        // Get the welcome message with the correct personalization
+        const welcomeMessage = {
+          id: welcomeMessageId,
+          content: getWelcomeMessage(currentUser),
+          sender: "ai" as const,
+          timestamp: new Date(Date.now() - 2000), // 2 seconds before user message
+          created_at: new Date(Date.now() - 2000).toISOString()
+        };
         
-        // Save the user message
-        await supabase
-          .from('chat_messages')
-          .insert([{
-            conversation_id: newConversation[0].id,
+        // Prepare all messages to save
+        const messagesToSave = [
+          {
+            conversation_id: newConvId,
+            content: welcomeMessage.content,
+            sender: welcomeMessage.sender,
+            id: welcomeMessage.id,
+            created_at: welcomeMessage.created_at
+          },
+          {
+            conversation_id: newConvId,
             content: userMessage.content,
             sender: userMessage.sender,
             id: userMessage.id,
             created_at: userMessage.timestamp.toISOString()
-          }]);
-        
-        // Save the AI response if provided
+          }
+        ];
+
+        // Add AI response if provided
         if (aiMessage) {
-          await supabase
-            .from('chat_messages')
-            .insert([{
-              conversation_id: newConversation[0].id,
-              content: aiMessage.content,
-              sender: aiMessage.sender,
-              id: aiMessage.id,
-              created_at: aiMessage.timestamp.toISOString()
-            }]);
+          messagesToSave.push({
+            conversation_id: newConvId,
+            content: aiMessage.content,
+            sender: aiMessage.sender,
+            id: aiMessage.id,
+            created_at: aiMessage.timestamp.toISOString()
+          });
         }
+
+        // Save all messages in one batch
+        await supabase
+          .from('chat_messages')
+          .insert(messagesToSave);
           
         await fetchSavedChats();
-        return newConversation[0].id;
+        return newConvId;
       }
       return null;
     } catch (error) {
@@ -297,7 +309,9 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
       isStreaming: true,
     };
 
-    setMessages(prev => [...prev, userMessage, aiMessage]);
+    // Keep track of current messages and add new ones
+    const updatedMessages = [...messages, userMessage, aiMessage];
+    setMessages(updatedMessages);
     setInputValue("");
     setIsLoading(true);
     setHasUserSentMessage(true);
@@ -326,7 +340,7 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
       }
 
       const previousMessages = messages
-        .filter(msg => msg.id !== "1")
+        .filter(msg => msg.id !== welcomeMessageId)
         .map(msg => ({
           content: msg.content,
           role: msg.sender === "user" ? "user" : "model" as "user" | "model"
@@ -352,25 +366,27 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
       if (response.error) {
         console.error("Gemini API Error:", response.error);
         toast.error(response.error);
-        // Remove the streaming message if there was an error
         setMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
         return;
       }
 
       // Update the final message
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === aiMessageId
-            ? { ...msg, content: response.text, isStreaming: false }
-            : msg
-        )
+      const finalAiMessage = {
+        ...aiMessage,
+        content: response.text,
+        isStreaming: false
+      };
+
+      // Update messages with the final AI response
+      const finalMessages = updatedMessages.map(msg =>
+        msg.id === aiMessageId ? finalAiMessage : msg
       );
+      setMessages(finalMessages);
 
       // Save messages if user is logged in
       if (currentUser) {
         if (!currentConversationId) {
           // For new conversations, create it with all messages at once
-          const welcomeMessage = messages[0]; // Get the welcome message
           const { data: newConversation, error: createError } = await supabase
             .from('chat_conversations')
             .insert([{ 
@@ -385,45 +401,55 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
             const newConvId = newConversation[0].id;
             setCurrentConversationId(newConvId);
             
-            // Insert all messages in order
-            await supabase.from('chat_messages').insert([
+            // Save all messages in the correct order
+            const messagesToSave = [
               {
-                id: welcomeMessage.id,
                 conversation_id: newConvId,
-                content: welcomeMessage.content,
-                sender: welcomeMessage.sender,
-                created_at: welcomeMessage.timestamp.toISOString()
+                content: messages[0].content,
+                sender: messages[0].sender,
+                id: messages[0].id,
+                created_at: messages[0].timestamp.toISOString()
               },
               {
-                id: userMessage.id,
                 conversation_id: newConvId,
                 content: userMessage.content,
                 sender: userMessage.sender,
+                id: userMessage.id,
                 created_at: userMessage.timestamp.toISOString()
               },
               {
-                id: aiMessage.id,
                 conversation_id: newConvId,
-                content: aiMessage.content,
-                sender: aiMessage.sender,
-                created_at: aiMessage.timestamp.toISOString()
+                content: finalAiMessage.content,
+                sender: finalAiMessage.sender,
+                id: finalAiMessage.id,
+                created_at: finalAiMessage.timestamp.toISOString()
               }
-            ]);
+            ];
+
+            // Insert all messages in one batch
+            const { error: insertError } = await supabase
+              .from('chat_messages')
+              .insert(messagesToSave);
+
+            if (insertError) {
+              console.error("Error saving messages:", insertError);
+              throw insertError;
+            }
             
+            // Only fetch the list of chats, don't reload messages
             await fetchSavedChats();
           }
         } else {
-          // For existing conversations, just save the new messages
+          // For existing conversations, save both messages
           await Promise.all([
             saveMessage(userMessage),
-            saveMessage({ ...aiMessage, content: response.text, isStreaming: false })
+            saveMessage(finalAiMessage)
           ]);
         }
       }
     } catch (error) {
       console.error("Error getting AI response:", error);
       toast.error("Failed to get response. Please try again.");
-      // Remove the streaming message if there was an error
       setMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
     } finally {
       setIsLoading(false);
@@ -444,7 +470,7 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
     try {
       setCurrentConversationId(conversationId);
       
-      // Get all messages
+      // Get all messages and order by created_at to ensure correct sequence
       const { data: messagesData, error: msgError } = await supabase
         .from('chat_messages')
         .select('*')
@@ -462,6 +488,32 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
           timestamp: new Date(msg.created_at)
         }));
         
+        // If there's no welcome message, add it at the beginning
+        if (!loadedMessages.some(msg => msg.id === welcomeMessageId)) {
+          const welcomeMessage = {
+            id: welcomeMessageId,
+            content: getWelcomeMessage(currentUser),
+            sender: "ai" as const,
+            timestamp: new Date(Math.min(...loadedMessages.map(m => m.timestamp.getTime())) - 1000)
+          };
+          
+          // Save the welcome message
+          await supabase
+            .from('chat_messages')
+            .insert([{
+              conversation_id: conversationId,
+              content: welcomeMessage.content,
+              sender: welcomeMessage.sender,
+              id: welcomeMessage.id,
+              created_at: welcomeMessage.timestamp.toISOString()
+            }]);
+          
+          loadedMessages.unshift(welcomeMessage);
+        }
+        
+        // Sort messages by timestamp to ensure correct order
+        loadedMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        
         setMessages(loadedMessages);
         setHasUserSentMessage(true);
       }
@@ -473,7 +525,7 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
 
   const startNewChat = async () => {
     const welcomeMessage = {
-      id: "1",
+      id: welcomeMessageId,
       content: getWelcomeMessage(currentUser),
       sender: "ai" as const,
       timestamp: new Date(),
@@ -504,6 +556,30 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
 
   const toggleSidebar = () => {
     setSidebarOpen(prev => !prev);
+  };
+
+  const loadConversationMessages = async (conversationId: string) => {
+    try {
+      const { data: messages, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      if (messages) {
+        setMessages(messages.map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          sender: msg.sender as "user" | "ai",
+          timestamp: new Date(msg.created_at)
+        })));
+      }
+    } catch (error) {
+      console.error("Error loading conversation messages:", error);
+      toast.error("Failed to load conversation messages");
+    }
   };
 
   return (
