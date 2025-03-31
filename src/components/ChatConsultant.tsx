@@ -38,7 +38,54 @@ interface ChatConsultantProps {
 }
 
 const DEFAULT_CHAT_TITLE = "New Chat";
-const MIN_USER_MESSAGES_FOR_TITLE = 5; // Changed to count user messages only
+const MIN_USER_MESSAGES_FOR_TITLE = 5;
+
+// Add abbreviations map
+const ABBREVIATIONS = {
+  // Degrees and Levels
+  "computer science": "CS",
+  "information technology": "IT",
+  "artificial intelligence": "AI",
+  "data science": "DS",
+  "business administration": "BBA",
+  "software engineering": "SE",
+  "electrical engineering": "EE",
+  "mechanical engineering": "ME",
+  "civil engineering": "CE",
+  "undergraduate": "UG",
+  "graduate": "Grad",
+  "bachelor": "BS",
+  "master": "MS",
+  "masters": "MS",
+  "doctorate": "PhD",
+  "engineering": "Eng",
+  "mathematics": "Math",
+  "technology": "Tech",
+  "management": "Mgmt",
+  "science": "Sci",
+
+  // Locations
+  "united states": "USA",
+  "united kingdom": "UK",
+  "european union": "EU",
+  "australia": "AUS",
+  "canada": "CAN",
+  "international": "Intl",
+
+  // Common Terms
+  "university": "Uni",
+  "requirements": "Reqs",
+  "application": "App",
+  "recommendation": "Rec",
+  "statement": "Stmt",
+  "scholarship": "Scholar",
+  "admission": "Adm",
+  "research": "Research",
+  "program": "Prog",
+  "career": "Career",
+  "finance": "Finance",
+  "cost": "Cost"
+};
 
 const analyzeConversationTitle = (messages: Message[]): string => {
   // Count user messages only
@@ -53,83 +100,116 @@ const analyzeConversationTitle = (messages: Message[]): string => {
     .join(" ")
     .toLowerCase();
 
-  // Common abbreviations for education terms
-  const abbreviations: { [key: string]: string } = {
-    "computer science": "CS",
-    "artificial intelligence": "AI",
-    "information technology": "IT",
-    "business administration": "BBA",
-    "masters": "MS",
-    "bachelor": "BS",
-    "engineering": "Eng",
-    "university": "Uni",
-    "united states": "US",
-    "undergraduate": "UG",
-    "graduate": "Grad",
-    "international": "Intl",
-    "management": "Mgmt",
-    "technology": "Tech",
-    "science": "Sci",
-    "mathematics": "Math"
-  };
-
-  // Extract key topics and themes
-  const topics = new Set<string>();
-  
-  // Look for specific fields of study first
-  const studyFields = [
-    "computer science", "artificial intelligence", "engineering", 
-    "business administration", "information technology", "mathematics",
-    "science", "management", "technology"
+  // Common phrases and patterns for titles
+  const titlePatterns = [
+    // Study Programs
+    {
+      match: (text: string) => {
+        const programs = ["computer science", "engineering", "business", "data science", "ai"];
+        const levels = ["undergraduate", "masters", "phd", "graduate"];
+        
+        for (const program of programs) {
+          for (const level of levels) {
+            if (text.includes(program) && text.includes(level)) {
+              // Use abbreviations for shorter titles
+              const levelAbbr = ABBREVIATIONS[level] || level;
+              const programAbbr = ABBREVIATIONS[program] || program;
+              return `${levelAbbr} in ${programAbbr}`;
+            }
+          }
+          if (text.includes(program)) {
+            const programAbbr = ABBREVIATIONS[program] || program;
+            return `About ${programAbbr}`;
+          }
+        }
+        return null;
+      }
+    },
+    // Application Process
+    {
+      match: (text: string) => {
+        const topics = ["application", "apply", "admission", "requirements"];
+        const schools = ["university", "college", "school", "program"];
+        
+        for (const topic of topics) {
+          for (const school of schools) {
+            if (text.includes(topic) && text.includes(school)) {
+              return "Application Help";
+            }
+          }
+        }
+        return null;
+      }
+    },
+    // Career and Future Planning
+    {
+      match: (text: string) => {
+        if (text.includes("career") || text.includes("job") || text.includes("work")) {
+          return "Career Planning";
+        }
+        if (text.includes("future") || text.includes("plan")) {
+          return "Study Planning";
+        }
+        return null;
+      }
+    },
+    // Financial Topics
+    {
+      match: (text: string) => {
+        if (text.includes("scholarship") || text.includes("financial aid")) {
+          return "Scholarships";
+        }
+        if (text.includes("cost") || text.includes("tuition") || text.includes("expense")) {
+          return "Tuition & Costs";
+        }
+        return null;
+      }
+    },
+    // Location Based
+    {
+      match: (text: string) => {
+        const locations = ["usa", "uk", "canada", "australia", "europe"];
+        for (const location of locations) {
+          if (text.includes(location)) {
+            return `Study in ${location.toUpperCase()}`;
+          }
+        }
+        if (text.includes("abroad") || text.includes("international")) {
+          return "Study Abroad";
+        }
+        return null;
+      }
+    },
+    // Documents and Tests
+    {
+      match: (text: string) => {
+        if (text.includes("personal statement") || text.includes("essay")) {
+          return "Personal Statement";
+        }
+        if (text.includes("recommendation") || text.includes("letter")) {
+          return "Recommendation";
+        }
+        if (text.includes("gre") || text.includes("gmat") || text.includes("test")) {
+          return "Test Prep";
+        }
+        return null;
+      }
+    }
   ];
-  studyFields.forEach(field => {
-    if (combinedText.includes(field)) {
-      // Use abbreviation if available
-      topics.add(abbreviations[field] || field);
-    }
-  });
 
-  // Look for education level
-  const educationLevels = ["masters", "bachelor", "undergraduate", "graduate"];
-  educationLevels.forEach(level => {
-    if (combinedText.includes(level)) {
-      topics.add(abbreviations[level] || level);
-    }
-  });
-
-  // Look for location references
-  const locations = ["united states", "international"];
-  locations.forEach(location => {
-    if (combinedText.includes(location)) {
-      topics.add(abbreviations[location] || location);
-    }
-  });
-
-  // Generate a concise title based on the topics found
-  if (topics.size > 0) {
-    const topicArray = Array.from(topics);
-    if (topicArray.length >= 2) {
-      // Combine two most relevant topics with a separator
-      return `${topicArray[0]} | ${topicArray[1]}`;
-    } else {
-      return topicArray[0];
+  // Try each pattern in order
+  for (const pattern of titlePatterns) {
+    const title = pattern.match(combinedText);
+    if (title) {
+      return title;
     }
   }
 
-  // If no specific topics found, use the first few words of the first user message
-  if (userMessages.length > 0) {
-    const firstUserMessage = userMessages[0].content;
-    const words = firstUserMessage.split(" ").map(word => {
-      // Try to use abbreviation if available
-      return abbreviations[word.toLowerCase()] || word;
-    });
-    if (words.length > 3) {
-      return words.slice(0, 3).join(" ") + "...";
-    }
-    return words.join(" ");
-  }
-
-  return DEFAULT_CHAT_TITLE;
+  // If no patterns match, create a shorter title from the first user message
+  const firstMessage = userMessages[0].content.toLowerCase();
+  const words = firstMessage.split(" ").slice(0, 3);
+  const title = words.join(" ");
+  return title.charAt(0).toUpperCase() + title.slice(1);
 };
 
 const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
