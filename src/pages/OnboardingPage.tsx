@@ -31,7 +31,9 @@ const OnboardingPage = () => {
     budget: 0,
     preferredCountry: "",
     preferredUniversityType: "",
-    studyLevel: ""
+    studyLevel: "",
+    curriculumGrades: {}, // Add the required field
+    curriculumSubjects: [] // Initialize with empty array
   });
 
   const handleNextStep = () => {

@@ -103,6 +103,8 @@ export type Database = {
           act_score: number | null
           budget: number | null
           created_at: string
+          curriculum_grades: Json | null
+          curriculum_subjects: string[] | null
           email: string | null
           english_test_score: number | null
           english_test_type: string | null
@@ -120,6 +122,8 @@ export type Database = {
           act_score?: number | null
           budget?: number | null
           created_at?: string
+          curriculum_grades?: Json | null
+          curriculum_subjects?: string[] | null
           email?: string | null
           english_test_score?: number | null
           english_test_type?: string | null
@@ -137,6 +141,8 @@ export type Database = {
           act_score?: number | null
           budget?: number | null
           created_at?: string
+          curriculum_grades?: Json | null
+          curriculum_subjects?: string[] | null
           email?: string | null
           english_test_score?: number | null
           english_test_type?: string | null

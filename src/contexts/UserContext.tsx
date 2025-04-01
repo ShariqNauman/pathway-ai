@@ -105,8 +105,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             englishTestType: profileData.english_test_type || undefined,
             englishTestScore: profileData.english_test_score || undefined,
             highSchoolCurriculum: profileData.high_school_curriculum || undefined,
-            // Ensure these properties are properly mapped from the database
-            curriculumGrades: profileData.curriculum_grades || {},
+            curriculumGrades: profileData.curriculum_grades ? 
+              Object.entries(profileData.curriculum_grades).reduce((acc, [key, value]) => {
+                acc[key] = String(value);
+                return acc;
+              }, {} as Record<string, string>) : 
+              {},
             curriculumSubjects: profileData.curriculum_subjects || []
           },
           createdAt: new Date(profileData.created_at)
@@ -210,7 +214,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           english_test_type: preferences.englishTestType,
           english_test_score: preferences.englishTestScore,
           high_school_curriculum: preferences.highSchoolCurriculum,
-          // Add these fields to the profiles table update
           curriculum_grades: preferences.curriculumGrades,
           curriculum_subjects: preferences.curriculumSubjects,
           updated_at: new Date().toISOString()

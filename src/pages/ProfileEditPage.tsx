@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -35,7 +36,9 @@ const ProfileEditPage = () => {
     actScore: undefined,
     englishTestType: undefined,
     englishTestScore: undefined,
-    highSchoolCurriculum: undefined
+    highSchoolCurriculum: undefined,
+    curriculumGrades: {}, // Add the required field
+    curriculumSubjects: [] // Initialize with empty array
   });
 
   useEffect(() => {
