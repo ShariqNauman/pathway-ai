@@ -18,4 +18,10 @@ export interface UserPreferences {
   preferredCountry: string;
   preferredUniversityType: string;
   studyLevel: string;
+  satScore?: number;
+  actScore?: number;
+  englishTestType?: string;
+  englishTestScore?: number;
+  highSchoolCurriculum?: string;
 }
+

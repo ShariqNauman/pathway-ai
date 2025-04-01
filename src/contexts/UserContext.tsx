@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, UserCredentials, UserPreferences } from "@/types/user";
@@ -30,12 +29,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [isLogoutInProgress, setIsLogoutInProgress] = useState(false);
 
-  // Set up auth state listener and check for existing session
   useEffect(() => {
-    // Set isLoading to true to prevent flashing of unauthorized UI
     setIsLoading(true);
     
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event, session ? "User logged in" : "No session");
       
@@ -49,7 +45,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    // THEN check for existing session
     const checkSession = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
@@ -79,7 +74,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Fetch user profile data
   const fetchUserProfile = async (userId: string) => {
     try {
       const { data: profileData, error } = await supabase
@@ -105,7 +99,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             budget: profileData.budget || 0,
             preferredCountry: profileData.preferred_country || '',
             preferredUniversityType: profileData.preferred_university_type || '',
-            studyLevel: profileData.study_level || ''
+            studyLevel: profileData.study_level || '',
+            satScore: profileData.sat_score || undefined,
+            actScore: profileData.act_score || undefined,
+            englishTestType: profileData.english_test_type || undefined,
+            englishTestScore: profileData.english_test_score || undefined,
+            highSchoolCurriculum: profileData.high_school_curriculum || undefined
           },
           createdAt: new Date(profileData.created_at)
         });
@@ -131,7 +130,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      // We don't need to set the user here as onAuthStateChange will handle it
       return true;
     } catch (error) {
       console.error('Login error:', error);
@@ -159,7 +157,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      // We don't need to set the user here as onAuthStateChange will handle it
       return true;
     } catch (error) {
       console.error('Signup error:', error);
@@ -170,7 +167,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    // Prevent multiple logout attempts
     if (isLogoutInProgress) return;
     
     setIsLogoutInProgress(true);
@@ -181,7 +177,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Logout error:', error);
         toast("Failed to log out. Please try again.");
       } else {
-        // Force clear the user state to ensure immediate UI update
         setCurrentUser(null);
         setCurrentSession(null);
         toast("Successfully logged out");
@@ -207,6 +202,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           preferred_country: preferences.preferredCountry,
           preferred_university_type: preferences.preferredUniversityType,
           study_level: preferences.studyLevel,
+          sat_score: preferences.satScore,
+          act_score: preferences.actScore,
+          english_test_type: preferences.englishTestType,
+          english_test_score: preferences.englishTestScore,
+          high_school_curriculum: preferences.highSchoolCurriculum,
           updated_at: new Date().toISOString()
         })
         .eq('id', currentUser.id);

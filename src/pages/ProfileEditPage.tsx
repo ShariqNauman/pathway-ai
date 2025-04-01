@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Award, BookOpen } from "lucide-react";
 import { UserPreferences } from "@/types/user";
 
 const ProfileEditPage = () => {
@@ -30,7 +30,12 @@ const ProfileEditPage = () => {
     budget: 0,
     preferredCountry: "",
     preferredUniversityType: "",
-    studyLevel: ""
+    studyLevel: "",
+    satScore: undefined,
+    actScore: undefined,
+    englishTestType: undefined,
+    englishTestScore: undefined,
+    highSchoolCurriculum: undefined
   });
 
   useEffect(() => {
@@ -66,6 +71,39 @@ const ProfileEditPage = () => {
   const countryOptions = [
     "United States", "United Kingdom", "Canada", "Australia", 
     "Germany", "France", "Japan", "South Korea", "China", "Other"
+  ];
+
+  const curriculumOptions = [
+    "US High School Diploma",
+    "International Baccalaureate (IB)",
+    "A-Levels (UK)",
+    "European Baccalaureate",
+    "French Baccalauréat",
+    "German Abitur",
+    "Indian CBSE/ISC",
+    "Australian HSC",
+    "Canadian High School",
+    "Chinese Gaokao",
+    "Japanese High School",
+    "South Korean High School",
+    "Brazilian Vestibular",
+    "Russian Certificate of Secondary Education",
+    "Italian Maturità",
+    "Spanish Bachillerato",
+    "NCEA (New Zealand)",
+    "Singapore A-Levels",
+    "Hong Kong DSE",
+    "South African NSC",
+    "Other"
+  ];
+
+  const englishTestOptions = [
+    "TOEFL",
+    "IELTS",
+    "Duolingo English Test",
+    "Cambridge English",
+    "PTE Academic",
+    "Other"
   ];
 
   if (isLoading) {
@@ -105,6 +143,7 @@ const ProfileEditPage = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Academic Preferences Card */}
             <Card>
               <CardHeader>
                 <CardTitle>Academic Preferences</CardTitle>
@@ -151,9 +190,102 @@ const ProfileEditPage = () => {
                     </div>
                   </RadioGroup>
                 </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="curriculum">High School Curriculum</Label>
+                  <Select 
+                    onValueChange={(value) => updatePreference("highSchoolCurriculum", value)}
+                    value={preferences.highSchoolCurriculum || ""}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your curriculum" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {curriculumOptions.map((curriculum) => (
+                        <SelectItem key={curriculum} value={curriculum}>
+                          {curriculum}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardContent>
             </Card>
 
+            {/* Test Scores Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5" />
+                  Test Scores
+                </CardTitle>
+                <CardDescription>Add your standardized test scores</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="satScore">SAT Score (out of 1600)</Label>
+                    <Input
+                      id="satScore"
+                      type="number"
+                      min="400"
+                      max="1600"
+                      placeholder="Enter your SAT score"
+                      value={preferences.satScore || ""}
+                      onChange={(e) => updatePreference("satScore", e.target.value ? parseInt(e.target.value) : undefined)}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label htmlFor="actScore">ACT Score (out of 36)</Label>
+                    <Input
+                      id="actScore"
+                      type="number"
+                      min="1"
+                      max="36"
+                      placeholder="Enter your ACT score"
+                      value={preferences.actScore || ""}
+                      onChange={(e) => updatePreference("actScore", e.target.value ? parseInt(e.target.value) : undefined)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="englishTest">English Proficiency Test</Label>
+                  <Select 
+                    onValueChange={(value) => updatePreference("englishTestType", value)}
+                    value={preferences.englishTestType || ""}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a test type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {englishTestOptions.map((test) => (
+                        <SelectItem key={test} value={test}>
+                          {test}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {preferences.englishTestType && (
+                  <div className="space-y-3">
+                    <Label htmlFor="englishScore">English Test Score</Label>
+                    <Input
+                      id="englishScore"
+                      type="number"
+                      min="0"
+                      placeholder={`Enter your ${preferences.englishTestType} score`}
+                      value={preferences.englishTestScore || ""}
+                      onChange={(e) => updatePreference("englishTestScore", e.target.value ? parseInt(e.target.value) : undefined)}
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Financial Information Card */}
             <Card>
               <CardHeader>
                 <CardTitle>Financial Information</CardTitle>
@@ -196,6 +328,7 @@ const ProfileEditPage = () => {
               </CardContent>
             </Card>
 
+            {/* Location Preferences Card */}
             <Card>
               <CardHeader>
                 <CardTitle>Location Preferences</CardTitle>
