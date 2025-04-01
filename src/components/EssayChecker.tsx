@@ -13,7 +13,7 @@ interface EssayCheckerProps {
   initialSidebarOpen?: boolean;
 }
 
-const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen }) => {
+const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen = false }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [feedback, setFeedback] = useState<string>("");
   const [highlightedEssay, setHighlightedEssay] = useState<EssaySegment[]>([]);
