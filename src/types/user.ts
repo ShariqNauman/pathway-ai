@@ -12,6 +12,17 @@ export interface UserProfile {
   createdAt: Date;
 }
 
+export interface ExtracurricularActivity {
+  id: string;
+  name: string;
+  position: string;
+  organization: string;
+  description: string;
+  yearsInvolved: string;
+  hoursPerWeek: number;
+  weeksPerYear: number;
+}
+
 export interface UserPreferences {
   intendedMajor: string;
   budget: number;
@@ -25,4 +36,5 @@ export interface UserPreferences {
   highSchoolCurriculum?: string;
   curriculumGrades: Record<string, string>; // Changed to Record<string, string> for consistency
   curriculumSubjects?: string[]; // List of selected subjects
+  extracurricularActivities?: ExtracurricularActivity[]; // Added extracurricular activities
 }

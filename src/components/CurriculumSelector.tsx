@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Book, Info } from "lucide-react";
+import { Book, Info, Search } from "lucide-react";
 import { curriculumData } from "@/data/curriculumData";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
@@ -31,11 +31,8 @@ const CurriculumSelector: React.FC<CurriculumSelectorProps> = ({ onUpdate }) => 
   const { currentUser, updateUserPreferences } = useUser();
   const { toast } = useToast();
   const [selectedCurriculum, setSelectedCurriculum] = useState(currentUser?.preferences.highSchoolCurriculum || "");
-  // Fix the type here to match the expected type in UserPreferences
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(currentUser?.preferences.curriculumSubjects || []);
-  // Change Record<string, string | number> to Record<string, string> to match the type constraint
   const [grades, setGrades] = useState<Record<string, string>>(
-    // Convert any numbers to strings when initializing
     currentUser?.preferences.curriculumGrades 
       ? Object.entries(currentUser.preferences.curriculumGrades).reduce((acc, [key, value]) => {
           acc[key] = String(value);
@@ -43,12 +40,13 @@ const CurriculumSelector: React.FC<CurriculumSelectorProps> = ({ onUpdate }) => 
         }, {} as Record<string, string>)
       : {}
   );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     if (currentUser?.preferences.highSchoolCurriculum) {
       setSelectedCurriculum(currentUser.preferences.highSchoolCurriculum);
       setSelectedSubjects(currentUser.preferences.curriculumSubjects || []);
-      // Convert any numbers to strings when updating from currentUser
       if (currentUser.preferences.curriculumGrades) {
         const stringGrades = Object.entries(currentUser.preferences.curriculumGrades).reduce((acc, [key, value]) => {
           acc[key] = String(value);
@@ -107,6 +105,11 @@ const CurriculumSelector: React.FC<CurriculumSelectorProps> = ({ onUpdate }) => 
       onUpdate();
     }
   };
+
+  const filteredSubjects = selectedCurriculum ? 
+    curriculumData[selectedCurriculum][showAll ? 'allPossibleSubjects' : 'commonSubjects']
+      .filter(subject => subject.toLowerCase().includes(searchQuery.toLowerCase()))
+    : [];
 
   return (
     <Card className="w-full">
@@ -167,23 +170,53 @@ const CurriculumSelector: React.FC<CurriculumSelectorProps> = ({ onUpdate }) => 
             </Accordion>
 
             <div className="space-y-3">
-              <Label>Subjects</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {curriculumData[selectedCurriculum].commonSubjects.map((subject) => (
-                  <div key={subject} className="flex items-start space-x-2">
-                    <Checkbox 
-                      id={`subject-${subject}`} 
-                      checked={selectedSubjects.includes(subject)}
-                      onCheckedChange={() => handleSubjectToggle(subject)}
-                    />
-                    <Label 
-                      htmlFor={`subject-${subject}`}
-                      className="font-normal cursor-pointer"
-                    >
-                      {subject}
-                    </Label>
-                  </div>
-                ))}
+              <div className="flex justify-between items-center">
+                <Label>Subjects</Label>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowAll(!showAll)}
+                >
+                  {showAll ? "Show Common Subjects" : "Show All Subjects"}
+                </Button>
+              </div>
+              
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search subjects..."
+                  className="pl-9"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              
+              <div className="h-[300px] overflow-y-auto border rounded-md p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {filteredSubjects.length > 0 ? (
+                    filteredSubjects.map((subject) => (
+                      <div key={subject} className="flex items-start space-x-2">
+                        <Checkbox 
+                          id={`subject-${subject}`} 
+                          checked={selectedSubjects.includes(subject)}
+                          onCheckedChange={() => handleSubjectToggle(subject)}
+                        />
+                        <Label 
+                          htmlFor={`subject-${subject}`}
+                          className="font-normal cursor-pointer"
+                        >
+                          {subject}
+                        </Label>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-2 text-center py-4 text-muted-foreground">
+                      {searchQuery 
+                        ? "No subjects found matching your search" 
+                        : "No subjects available for this curriculum"}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

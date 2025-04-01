@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { UserProfile, UserCredentials, UserPreferences } from "@/types/user";
+import { UserProfile, UserCredentials, UserPreferences, ExtracurricularActivity } from "@/types/user";
 import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
 
@@ -108,6 +108,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           high_school_curriculum?: string;
           curriculum_grades?: Record<string, any>;
           curriculum_subjects?: string[];
+          extracurricular_activities?: ExtracurricularActivity[];
           created_at: string;
         };
         
@@ -135,7 +136,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return acc;
               }, {} as Record<string, string>) : 
               {},
-            curriculumSubjects: typedProfileData.curriculum_subjects || []
+            curriculumSubjects: typedProfileData.curriculum_subjects || [],
+            extracurricularActivities: typedProfileData.extracurricular_activities || []
           },
           createdAt: new Date(typedProfileData.created_at)
         });
@@ -240,6 +242,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           high_school_curriculum: preferences.highSchoolCurriculum,
           curriculum_grades: preferences.curriculumGrades,
           curriculum_subjects: preferences.curriculumSubjects,
+          extracurricular_activities: preferences.extracurricularActivities,
           updated_at: new Date().toISOString()
         })
         .eq('id', currentUser.id);

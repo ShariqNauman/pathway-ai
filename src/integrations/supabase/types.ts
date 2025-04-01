@@ -108,6 +108,7 @@ export type Database = {
           email: string | null
           english_test_score: number | null
           english_test_type: string | null
+          extracurricular_activities: Json[] | null
           high_school_curriculum: string | null
           id: string
           intended_major: string | null
@@ -127,6 +128,7 @@ export type Database = {
           email?: string | null
           english_test_score?: number | null
           english_test_type?: string | null
+          extracurricular_activities?: Json[] | null
           high_school_curriculum?: string | null
           id: string
           intended_major?: string | null
@@ -146,6 +148,7 @@ export type Database = {
           email?: string | null
           english_test_score?: number | null
           english_test_type?: string | null
+          extracurricular_activities?: Json[] | null
           high_school_curriculum?: string | null
           id?: string
           intended_major?: string | null

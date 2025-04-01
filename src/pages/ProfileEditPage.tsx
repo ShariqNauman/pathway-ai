@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -7,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CurriculumSelector from "@/components/CurriculumSelector";
+import ExtracurricularActivities from "@/components/ExtracurricularActivities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,8 +37,8 @@ const ProfileEditPage = () => {
     englishTestType: undefined,
     englishTestScore: undefined,
     highSchoolCurriculum: undefined,
-    curriculumGrades: {}, // Add the required field
-    curriculumSubjects: [] // Initialize with empty array
+    curriculumGrades: {},
+    curriculumSubjects: []
   });
 
   useEffect(() => {
@@ -118,7 +118,7 @@ const ProfileEditPage = () => {
   }
 
   if (!currentUser) {
-    return null; // Redirecting
+    return null;
   }
 
   return (
@@ -217,6 +217,9 @@ const ProfileEditPage = () => {
 
             {/* High School Curriculum Selector */}
             <CurriculumSelector />
+
+            {/* Extracurricular Activities */}
+            <ExtracurricularActivities />
 
             {/* Test Scores Card */}
             <Card>

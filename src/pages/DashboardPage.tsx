@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CurriculumDisplay from "@/components/CurriculumDisplay";
+import ExtracurricularDisplay from "@/components/ExtracurricularDisplay";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -154,6 +155,12 @@ const DashboardPage = () => {
               curriculum={currentUser.preferences.highSchoolCurriculum || ""} 
               subjects={currentUser.preferences.curriculumSubjects} 
               grades={currentUser.preferences.curriculumGrades} 
+            />
+          </div>
+
+          <div className="mb-10">
+            <ExtracurricularDisplay 
+              activities={currentUser.preferences.extracurricularActivities}
             />
           </div>
 
