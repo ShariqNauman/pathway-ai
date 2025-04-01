@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, UserCredentials, UserPreferences } from "@/types/user";
@@ -90,30 +91,53 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       if (profileData) {
+        // Define a type to properly type-check the profileData
+        type ProfileData = {
+          id: string;
+          name?: string;
+          email?: string;
+          intended_major?: string;
+          budget?: number;
+          preferred_country?: string;
+          preferred_university_type?: string;
+          study_level?: string;
+          sat_score?: number;
+          act_score?: number;
+          english_test_type?: string;
+          english_test_score?: number;
+          high_school_curriculum?: string;
+          curriculum_grades?: Record<string, any>;
+          curriculum_subjects?: string[];
+          created_at: string;
+        };
+        
+        // Cast the profileData to our defined type
+        const typedProfileData = profileData as unknown as ProfileData;
+        
         setCurrentUser({
           id: userId,
           email: currentSession?.user.email || '',
-          name: profileData.name || '',
+          name: typedProfileData.name || '',
           preferences: {
-            intendedMajor: profileData.intended_major || '',
-            budget: profileData.budget || 0,
-            preferredCountry: profileData.preferred_country || '',
-            preferredUniversityType: profileData.preferred_university_type || '',
-            studyLevel: profileData.study_level || '',
-            satScore: profileData.sat_score || undefined,
-            actScore: profileData.act_score || undefined,
-            englishTestType: profileData.english_test_type || undefined,
-            englishTestScore: profileData.english_test_score || undefined,
-            highSchoolCurriculum: profileData.high_school_curriculum || undefined,
-            curriculumGrades: profileData.curriculum_grades ? 
-              Object.entries(profileData.curriculum_grades).reduce((acc, [key, value]) => {
+            intendedMajor: typedProfileData.intended_major || '',
+            budget: typedProfileData.budget || 0,
+            preferredCountry: typedProfileData.preferred_country || '',
+            preferredUniversityType: typedProfileData.preferred_university_type || '',
+            studyLevel: typedProfileData.study_level || '',
+            satScore: typedProfileData.sat_score || undefined,
+            actScore: typedProfileData.act_score || undefined,
+            englishTestType: typedProfileData.english_test_type || undefined,
+            englishTestScore: typedProfileData.english_test_score || undefined,
+            highSchoolCurriculum: typedProfileData.high_school_curriculum || undefined,
+            curriculumGrades: typedProfileData.curriculum_grades ? 
+              Object.entries(typedProfileData.curriculum_grades).reduce((acc, [key, value]) => {
                 acc[key] = String(value);
                 return acc;
               }, {} as Record<string, string>) : 
               {},
-            curriculumSubjects: profileData.curriculum_subjects || []
+            curriculumSubjects: typedProfileData.curriculum_subjects || []
           },
-          createdAt: new Date(profileData.created_at)
+          createdAt: new Date(typedProfileData.created_at)
         });
       }
     } catch (error) {
