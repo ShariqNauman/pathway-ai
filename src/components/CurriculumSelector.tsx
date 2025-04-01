@@ -31,14 +31,31 @@ const CurriculumSelector: React.FC<CurriculumSelectorProps> = ({ onUpdate }) => 
   const { currentUser, updateUserPreferences } = useUser();
   const { toast } = useToast();
   const [selectedCurriculum, setSelectedCurriculum] = useState(currentUser?.preferences.highSchoolCurriculum || "");
+  // Fix the type here to match the expected type in UserPreferences
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(currentUser?.preferences.curriculumSubjects || []);
-  const [grades, setGrades] = useState<Record<string, string>>(currentUser?.preferences.curriculumGrades || {});
+  // Change Record<string, string | number> to Record<string, string> to match the type constraint
+  const [grades, setGrades] = useState<Record<string, string>>(
+    // Convert any numbers to strings when initializing
+    currentUser?.preferences.curriculumGrades 
+      ? Object.entries(currentUser.preferences.curriculumGrades).reduce((acc, [key, value]) => {
+          acc[key] = String(value);
+          return acc;
+        }, {} as Record<string, string>)
+      : {}
+  );
 
   useEffect(() => {
     if (currentUser?.preferences.highSchoolCurriculum) {
       setSelectedCurriculum(currentUser.preferences.highSchoolCurriculum);
       setSelectedSubjects(currentUser.preferences.curriculumSubjects || []);
-      setGrades(currentUser.preferences.curriculumGrades || {});
+      // Convert any numbers to strings when updating from currentUser
+      if (currentUser.preferences.curriculumGrades) {
+        const stringGrades = Object.entries(currentUser.preferences.curriculumGrades).reduce((acc, [key, value]) => {
+          acc[key] = String(value);
+          return acc;
+        }, {} as Record<string, string>);
+        setGrades(stringGrades);
+      }
     }
   }, [currentUser]);
 
