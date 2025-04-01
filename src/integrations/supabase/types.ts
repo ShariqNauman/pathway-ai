@@ -100,38 +100,53 @@ export type Database = {
       }
       profiles: {
         Row: {
+          act_score: number | null
           budget: number | null
           created_at: string
           email: string | null
+          english_test_score: number | null
+          english_test_type: string | null
+          high_school_curriculum: string | null
           id: string
           intended_major: string | null
           name: string | null
           preferred_country: string | null
           preferred_university_type: string | null
+          sat_score: number | null
           study_level: string | null
           updated_at: string
         }
         Insert: {
+          act_score?: number | null
           budget?: number | null
           created_at?: string
           email?: string | null
+          english_test_score?: number | null
+          english_test_type?: string | null
+          high_school_curriculum?: string | null
           id: string
           intended_major?: string | null
           name?: string | null
           preferred_country?: string | null
           preferred_university_type?: string | null
+          sat_score?: number | null
           study_level?: string | null
           updated_at?: string
         }
         Update: {
+          act_score?: number | null
           budget?: number | null
           created_at?: string
           email?: string | null
+          english_test_score?: number | null
+          english_test_type?: string | null
+          high_school_curriculum?: string | null
           id?: string
           intended_major?: string | null
           name?: string | null
           preferred_country?: string | null
           preferred_university_type?: string | null
+          sat_score?: number | null
           study_level?: string | null
           updated_at?: string
         }
