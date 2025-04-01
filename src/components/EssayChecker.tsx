@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { toast } from "sonner";
 import EssayForm, { EssayFormValues } from "./essay-checker/EssayForm";
@@ -8,7 +9,11 @@ import EssayRating, { RatingCategory } from "./essay-checker/EssayRating";
 import { Button } from "./ui/button";
 import { FileText } from "lucide-react";
 
-const EssayChecker = () => {
+interface EssayCheckerProps {
+  initialSidebarOpen?: boolean;
+}
+
+const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [feedback, setFeedback] = useState<string>("");
   const [highlightedEssay, setHighlightedEssay] = useState<EssaySegment[]>([]);

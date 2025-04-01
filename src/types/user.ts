@@ -24,4 +24,3 @@ export interface UserPreferences {
   englishTestScore?: number;
   highSchoolCurriculum?: string;
 }
-
