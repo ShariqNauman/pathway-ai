@@ -23,4 +23,6 @@ export interface UserPreferences {
   englishTestType?: string;
   englishTestScore?: number;
   highSchoolCurriculum?: string;
+  curriculumGrades?: Record<string, string | number>; // Store grades for subjects
+  curriculumSubjects?: string[]; // List of selected subjects
 }

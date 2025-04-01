@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate, Link } from "react-router-dom";
@@ -6,10 +5,11 @@ import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import CurriculumDisplay from "@/components/CurriculumDisplay";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, Settings, LogOut, Award, BookOpen, GraduationCap } from "lucide-react";
+import { Loader2, Settings, LogOut, Award, BookOpen, GraduationCap, Book } from "lucide-react";
 
 const DashboardPage = () => {
   const { currentUser, logout, isLoading } = useUser();
@@ -87,7 +87,6 @@ const DashboardPage = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            {/* First card - Academic Preferences */}
             <Card>
               <CardHeader>
                 <CardTitle>Study Preferences</CardTitle>
@@ -113,7 +112,6 @@ const DashboardPage = () => {
               </CardContent>
             </Card>
 
-            {/* Second card - Financial Information */}
             <Card>
               <CardHeader>
                 <CardTitle>Financial Information</CardTitle>
@@ -135,7 +133,6 @@ const DashboardPage = () => {
               </CardContent>
             </Card>
 
-            {/* Third card - Location Preferences */}
             <Card>
               <CardHeader>
                 <CardTitle>Location Preferences</CardTitle>
@@ -152,7 +149,14 @@ const DashboardPage = () => {
             </Card>
           </div>
 
-          {/* New row for test scores */}
+          <div className="mb-10">
+            <CurriculumDisplay 
+              curriculum={currentUser.preferences.highSchoolCurriculum || ""} 
+              subjects={currentUser.preferences.curriculumSubjects} 
+              grades={currentUser.preferences.curriculumGrades} 
+            />
+          </div>
+
           <div className="mb-10">
             <Card>
               <CardHeader>
@@ -164,7 +168,6 @@ const DashboardPage = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* SAT Score */}
                   <div className="bg-muted/30 p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -177,7 +180,6 @@ const DashboardPage = () => {
                     )}
                   </div>
 
-                  {/* ACT Score */}
                   <div className="bg-muted/30 p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -190,7 +192,6 @@ const DashboardPage = () => {
                     )}
                   </div>
 
-                  {/* English Proficiency */}
                   <div className="bg-muted/30 p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <GraduationCap className="h-4 w-4 text-muted-foreground" />

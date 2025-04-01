@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, UserCredentials, UserPreferences } from "@/types/user";
@@ -104,7 +105,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             actScore: profileData.act_score || undefined,
             englishTestType: profileData.english_test_type || undefined,
             englishTestScore: profileData.english_test_score || undefined,
-            highSchoolCurriculum: profileData.high_school_curriculum || undefined
+            highSchoolCurriculum: profileData.high_school_curriculum || undefined,
+            curriculumGrades: profileData.curriculum_grades || {},
+            curriculumSubjects: profileData.curriculum_subjects || []
           },
           createdAt: new Date(profileData.created_at)
         });
@@ -207,6 +210,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           english_test_type: preferences.englishTestType,
           english_test_score: preferences.englishTestScore,
           high_school_curriculum: preferences.highSchoolCurriculum,
+          curriculum_grades: preferences.curriculumGrades,
+          curriculum_subjects: preferences.curriculumSubjects,
           updated_at: new Date().toISOString()
         })
         .eq('id', currentUser.id);

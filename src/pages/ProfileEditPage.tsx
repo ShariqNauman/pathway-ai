@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -6,6 +5,7 @@ import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import CurriculumSelector from "@/components/CurriculumSelector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -211,6 +211,9 @@ const ProfileEditPage = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* High School Curriculum Selector */}
+            <CurriculumSelector />
 
             {/* Test Scores Card */}
             <Card>
