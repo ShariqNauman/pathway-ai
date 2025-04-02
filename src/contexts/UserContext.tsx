@@ -248,23 +248,26 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           extracurricular_activities: preferences.extracurricularActivities as any,
           date_of_birth: preferences.dateOfBirth,
           address: preferences.address,
-          phone: preferences.phone,
-          updated_at: new Date().toISOString()
+          phone: preferences.phone
         })
         .eq('id', currentUser.id);
+        
+      if (error) {
+        console.error('Error updating preferences:', error);
+        toast("Failed to update preferences. Please try again.");
+        return;
+      }
       
-      if (error) throw error;
-
-      setCurrentUser(prev => prev ? {
-        ...prev,
-        preferences
-      } : null);
-
-      toast.success("Preferences updated successfully");
+      setCurrentUser(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          preferences
+        };
+      });
     } catch (error) {
       console.error('Error updating preferences:', error);
-      toast.error("Failed to update preferences. Please try again.");
-      throw error;
+      toast("Failed to update preferences. Please try again.");
     }
   };
 

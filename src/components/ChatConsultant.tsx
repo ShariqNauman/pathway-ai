@@ -449,218 +449,164 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
     }
   };
 
-  const saveMessage = async (message: Message, isNewChat = false) => {
-    if (!currentUser) return;
-    
+  const saveConversation = async (messagesToSave: Message[]) => {
+    if (!currentUser || isChatSavingInProgress) return;
+    setIsChatSavingInProgress(true);
+
     try {
-      if (!currentConversationId && message.sender === "user" && !isNewChat) {
-        await createNewConversation(message);
-        return;
-      }
-      
-      if (currentConversationId) {
-        await supabase
-          .from('chat_messages')
-          .insert([{
-            id: message.id,
-            conversation_id: currentConversationId,
-            content: message.content,
-            sender: message.sender,
-            created_at: message.timestamp.toISOString()
-          }]);
-        
-        await supabase
+      if (!currentConversationId) {
+        // Create new conversation
+        const { data: newConversation, error: createError } = await supabase
           .from('chat_conversations')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('id', currentConversationId);
+          .insert([{ 
+            user_id: currentUser.id,
+            title: DEFAULT_CHAT_TITLE
+          }])
+          .select();
+        
+        if (createError) throw createError;
+        
+        if (newConversation && newConversation.length > 0) {
+          const newConvId = newConversation[0].id;
+          setCurrentConversationId(newConvId);
+          
+          // Save all messages
+          const dbMessages = messagesToSave.map(msg => ({
+            conversation_id: newConvId,
+            content: msg.content,
+            sender: msg.sender,
+            id: msg.id,
+            created_at: msg.timestamp.toISOString()
+          }));
+
+          const { error: insertError } = await supabase
+            .from('chat_messages')
+            .insert(dbMessages);
+
+          if (insertError) throw insertError;
+          
+          // Update title if enough messages
+          if (messagesToSave.length >= MIN_USER_MESSAGES_FOR_TITLE) {
+            await updateConversationTitle(newConvId, messagesToSave);
+          }
+          
+          await fetchSavedChats();
+        }
+      } else {
+        // For existing conversations, save only the new messages
+        const existingMessageIds = new Set(messages.map(m => m.id));
+        const newMessages = messagesToSave.filter(msg => !existingMessageIds.has(msg.id));
+        
+        await Promise.all(newMessages.map(msg => 
+          supabase
+            .from('chat_messages')
+            .insert({
+              conversation_id: currentConversationId,
+              content: msg.content,
+              sender: msg.sender,
+              id: msg.id,
+              created_at: msg.timestamp.toISOString()
+            })
+        ));
+        
+        // Update title if enough messages
+        if (messagesToSave.length >= MIN_USER_MESSAGES_FOR_TITLE) {
+          await updateConversationTitle(currentConversationId, messagesToSave);
+        }
       }
     } catch (error) {
-      console.error("Error saving message:", error);
+      console.error('Error saving conversation:', error);
+      toast.error('Failed to save conversation');
+    } finally {
+      setIsChatSavingInProgress(false);
     }
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputValue.trim() || isLoading) return;
+  const handleSendMessage = async () => {
+    if (!inputValue.trim()) return;
 
-    const now = new Date();
     const userMessage: Message = {
       id: uuidv4(),
       content: inputValue.trim(),
       sender: "user",
-      timestamp: now,
+      timestamp: new Date(),
     };
 
-    const aiMessageId = uuidv4();
-    const aiMessage: Message = {
-      id: aiMessageId,
-      content: "",
-      sender: "ai",
-      timestamp: new Date(now.getTime() + 100),
-      isStreaming: true,
-    };
-
-    setMessages(prev => [...prev, userMessage, aiMessage]);
+    // Add user message to the chat
+    setMessages(prev => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
     setHasUserSentMessage(true);
-    setStreamingMessageId(aiMessageId);
 
     try {
-      let systemInstructions = "";
-      if (currentUser) {
-        // Make the AI behave more like a human university consultant with concise responses
-        systemInstructions = `You are a friendly and experienced university consultant having a natural conversation.
-          Keep your responses concise, clear, and to the point - typically 1-2 short paragraphs maximum.
-          Ask one focused question at a time instead of multiple questions.
-          When asking questions, keep them brief and specific.
-          Avoid long explanations unless specifically requested by the user.
-          Make it easy for users to respond by being direct and clear.
-          Address ${currentUser.name || 'them'} in a natural way.`;
+      // Prepare previous messages for context
+      const previousMessages = messages.map(msg => ({
+        content: msg.content,
+        role: msg.sender === "user" ? "user" : "model" as "user" | "model"
+      }));
 
-        // Silently pass user preferences to inform responses without explicitly mentioning them
-        if (currentUser.preferences) {
-          const { intendedMajor, budget, preferredCountry, studyLevel } = currentUser.preferences;
-          if (intendedMajor || budget || preferredCountry || studyLevel) {
-            systemInstructions += `\nContext (use naturally without explicitly mentioning): ` +
-              `${intendedMajor ? `They're interested in ${intendedMajor}. ` : ''}` +
-              `${budget ? `Their budget is around $${budget}. ` : ''}` +
-              `${preferredCountry ? `They're considering ${preferredCountry}. ` : ''}` +
-              `${studyLevel ? `Looking for ${studyLevel} programs. ` : ''}`;
-          }
-        }
-      }
+      // Create a temporary message for streaming
+      const tempMessageId = uuidv4();
+      setMessages(prev => [...prev, {
+        id: tempMessageId,
+        content: "",
+        sender: "ai",
+        timestamp: new Date(),
+        isStreaming: true
+      }]);
 
-      const previousMessages = messages
-        .filter(msg => msg.id !== welcomeMessageId)
-        .map(msg => ({
-          content: msg.content,
-          role: msg.sender === "user" ? "user" : "model" as "user" | "model"
-        }));
-
+      // Get AI response with streaming updates
       const response = await getGeminiResponse(
-        userMessage.content, 
-        systemInstructions, 
+        inputValue.trim(),
+        undefined,
         previousMessages,
         {
           onTextUpdate: (text) => {
-            setMessages(prev => 
-              prev.map(msg => 
-                msg.id === aiMessageId 
-                  ? { ...msg, content: text }
-                  : msg
-              )
-            );
+            setMessages(prev => prev.map(msg =>
+              msg.id === tempMessageId ? { ...msg, content: text } : msg
+            ));
           }
-        }
+        },
+        currentUser // Pass the current user profile to the API
       );
-      
+
       if (response.error) {
-        console.error("Gemini API Error:", response.error);
         toast.error(response.error);
-        setMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
+        // Remove the temporary message if there was an error
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
         return;
       }
 
-      // Update the final message
-      const finalAiMessage = {
-        ...aiMessage,
-        content: response.text,
-        isStreaming: false
-      };
+      // Update the temporary message with the final content
+      setMessages(prev => prev.map(msg =>
+        msg.id === tempMessageId ? {
+          ...msg,
+          content: response.text,
+          isStreaming: false
+        } : msg
+      ));
 
-      // Update messages with the final AI response
-      const finalMessages = [...messages, userMessage, finalAiMessage];
-      setMessages(finalMessages);
-
-      // Save messages if user is logged in
+      // Save the conversation if the user is logged in
       if (currentUser) {
-        if (!currentConversationId) {
-          // For new conversations, create it with all messages at once
-          const { data: newConversation, error: createError } = await supabase
-            .from('chat_conversations')
-            .insert([{ 
-              user_id: currentUser.id,
-              title: DEFAULT_CHAT_TITLE // Always start with default title
-            }])
-            .select();
-          
-          if (createError) throw createError;
-          
-          if (newConversation && newConversation.length > 0) {
-            const newConvId = newConversation[0].id;
-            setCurrentConversationId(newConvId);
-            
-            // Save all messages in the correct order
-            const messagesToSave = [
-              {
-                conversation_id: newConvId,
-                content: messages[0].content,
-                sender: messages[0].sender,
-                id: messages[0].id,
-                created_at: messages[0].timestamp.toISOString()
-              },
-              {
-                conversation_id: newConvId,
-                content: userMessage.content,
-                sender: userMessage.sender,
-                id: userMessage.id,
-                created_at: userMessage.timestamp.toISOString()
-              },
-              {
-                conversation_id: newConvId,
-                content: finalAiMessage.content,
-                sender: finalAiMessage.sender,
-                id: finalAiMessage.id,
-                created_at: finalAiMessage.timestamp.toISOString()
-              }
-            ];
-
-            // Insert all messages in one batch
-            const { error: insertError } = await supabase
-              .from('chat_messages')
-              .insert(messagesToSave);
-
-            if (insertError) {
-              console.error("Error saving messages:", insertError);
-              throw insertError;
-            }
-            
-            // Only update title if we have enough messages
-            if (finalMessages.length >= MIN_USER_MESSAGES_FOR_TITLE) {
-              await updateConversationTitle(newConvId, finalMessages);
-            }
-            
-            // Only fetch the list of chats, don't reload messages
-            await fetchSavedChats();
-          }
-        } else {
-          // For existing conversations, save both messages
-          await Promise.all([
-            saveMessage(userMessage),
-            saveMessage(finalAiMessage)
-          ]);
-          
-          // Only update title if we have enough messages
-          if (finalMessages.length >= MIN_USER_MESSAGES_FOR_TITLE) {
-            await updateConversationTitle(currentConversationId, finalMessages);
-          }
-        }
+        await saveConversation([...messages, userMessage, {
+          id: tempMessageId,
+          content: response.text,
+          sender: "ai",
+          timestamp: new Date()
+        }]);
       }
     } catch (error) {
-      console.error("Error getting AI response:", error);
-      toast.error("Failed to get response. Please try again.");
-      setMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
+      console.error('Error sending message:', error);
+      toast.error('Failed to send message. Please try again.');
     } finally {
       setIsLoading(false);
-      setStreamingMessageId(null);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage(e);
+      handleSendMessage();
     }
   };
 

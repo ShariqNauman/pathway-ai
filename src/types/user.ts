@@ -1,4 +1,3 @@
-
 export interface UserCredentials {
   email: string;
   password: string;
@@ -25,6 +24,7 @@ export interface ExtracurricularActivity {
 
 export interface UserPreferences {
   intendedMajor: string;
+  selectedDomains: string[]; // Array of selected domains within the major
   budget: number;
   preferredCountry: string;
   preferredUniversityType: string;

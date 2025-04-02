@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate, Link } from "react-router-dom";
@@ -13,9 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2, Settings, LogOut, Award, BookOpen, GraduationCap } from "lucide-react";
+import { ExtracurricularActivity } from "@/types/user";
 
 const DashboardPage = () => {
-  const { currentUser, logout, isLoading } = useUser();
+  const { currentUser, logout, isLoading, updateUserPreferences } = useUser();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -32,6 +32,23 @@ const DashboardPage = () => {
       description: "You have been logged out successfully"
     });
     navigate("/");
+  };
+
+  const handleActivitiesReorder = async (activities: ExtracurricularActivity[]) => {
+    if (!currentUser) return;
+
+    try {
+      await updateUserPreferences({
+        ...currentUser.preferences,
+        extracurricularActivities: activities
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reorder activities. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   if (isLoading) {
@@ -105,16 +122,18 @@ const DashboardPage = () => {
                     <dt className="text-sm font-medium text-muted-foreground">Field of Study</dt>
                     <dd className="text-base">{currentUser.preferences.intendedMajor || "Not specified"}</dd>
                   </div>
+                  {currentUser.preferences.selectedDomains?.length > 0 && (
+                    <div>
+                      <dt className="text-sm font-medium text-muted-foreground">Specializations</dt>
+                      <dd className="text-base">
+                        {currentUser.preferences.selectedDomains.join(", ")}
+                      </dd>
+                    </div>
+                  )}
                   <div>
                     <dt className="text-sm font-medium text-muted-foreground">Study Level</dt>
                     <dd className="text-base capitalize">{currentUser.preferences.studyLevel || "Not specified"}</dd>
                   </div>
-                  {currentUser.preferences.highSchoolCurriculum && (
-                    <div>
-                      <dt className="text-sm font-medium text-muted-foreground">High School Curriculum</dt>
-                      <dd className="text-base">{currentUser.preferences.highSchoolCurriculum}</dd>
-                    </div>
-                  )}
                 </dl>
               </CardContent>
             </Card>
@@ -169,6 +188,7 @@ const DashboardPage = () => {
           <div className="mb-10">
             <ExtracurricularDisplay 
               activities={currentUser.preferences.extracurricularActivities}
+              onActivitiesReorder={handleActivitiesReorder}
             />
           </div>
 

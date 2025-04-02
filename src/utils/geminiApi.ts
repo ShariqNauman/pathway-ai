@@ -10,27 +10,89 @@ interface StreamingOptions {
 // Use the provided API key
 const GEMINI_API_KEY = "AIzaSyAaEYKy6P3WkHBArYGoxc1s0QW2fm3rTOI";
 
+// Format user preferences into a readable string
+const formatUserPreferences = (userProfile: any) => {
+  if (!userProfile) return '';
+  
+  const prefs = userProfile.preferences;
+  const sections = [];
+
+  // Academic Information
+  const academic = [
+    prefs.intendedMajor && `Field of Study: ${prefs.intendedMajor}`,
+    prefs.studyLevel && `Study Level: ${prefs.studyLevel}`,
+    prefs.highSchoolCurriculum && `High School Curriculum: ${prefs.highSchoolCurriculum}`,
+  ].filter(Boolean);
+
+  // Curriculum Details
+  const curriculumDetails = [];
+  if (prefs.curriculumSubjects?.length > 0) {
+    curriculumDetails.push(`Selected Subjects: ${prefs.curriculumSubjects.join(", ")}`);
+  }
+  if (Object.keys(prefs.curriculumGrades || {}).length > 0) {
+    const grades = Object.entries(prefs.curriculumGrades)
+      .map(([subject, grade]) => `${subject}: ${grade}`)
+      .join("\n");
+    curriculumDetails.push(`Grades:\n${grades}`);
+  }
+
+  // Test Scores
+  const testScores = [
+    prefs.satScore && `SAT Score: ${prefs.satScore}`,
+    prefs.actScore && `ACT Score: ${prefs.actScore}`,
+    prefs.englishTestType && `English Test: ${prefs.englishTestType} (Score: ${prefs.englishTestScore})`,
+  ].filter(Boolean);
+
+  // Location and Financial
+  const locationFinancial = [
+    prefs.preferredCountry && `Preferred Country: ${prefs.preferredCountry}`,
+    prefs.preferredUniversityType && `Preferred Institution Type: ${prefs.preferredUniversityType}`,
+    prefs.budget && `Yearly Budget: $${prefs.budget.toLocaleString()} USD`,
+  ].filter(Boolean);
+
+  // Extracurricular Activities
+  const activities = prefs.extracurricularActivities?.map(activity => 
+    `${activity.name} (${activity.position} at ${activity.organization}, ${activity.yearsInvolved})`
+  ) || [];
+
+  if (academic.length) sections.push("Academic Information:\n" + academic.join("\n"));
+  if (curriculumDetails.length) sections.push("Curriculum Details:\n" + curriculumDetails.join("\n\n"));
+  if (testScores.length) sections.push("Test Scores:\n" + testScores.join("\n"));
+  if (locationFinancial.length) sections.push("Location & Financial Information:\n" + locationFinancial.join("\n"));
+  if (activities.length) sections.push("Extracurricular Activities:\n" + activities.map(a => `- ${a}`).join("\n"));
+
+  return sections.join("\n\n");
+};
+
 // Default system instructions for the AI consultant
-const DEFAULT_SYSTEM_INSTRUCTIONS = `You are an efficient university consultant AI. Follow these guidelines:
+const DEFAULT_SYSTEM_INSTRUCTIONS = `You are a friendly and experienced university consultant having a natural conversation. Follow these guidelines:
 
-1. Be concise and focused - ask only essential questions
-2. Never repeat questions that have already been answered
-3. Group related questions together instead of asking them one by one
-4. Limit yourself to 3-5 key questions at a time
-5. If you have enough information to make a recommendation, do so without asking more questions
-6. Use the user's profile information when available instead of asking for it again
-7. If a question is optional, mention that it's optional
-8. When recommending universities, focus on the most relevant options first
+1. Be warm and conversational, like a knowledgeable friend
+2. Keep responses concise and focused
+3. Never explicitly mention or reference that you know their profile information
+4. Naturally incorporate their profile information into your responses and recommendations
+5. Ask only what's not already provided in their profile
+6. Limit yourself to 1-2 key questions at a time
+7. Make it easy for users to respond with direct, specific questions
+8. When recommending universities, explain why they'd be a great fit in a conversational way
+9. Focus on what matters most to them based on their profile and responses
 
-Remember: Quality of information is more important than quantity of questions.`;
+Remember: Be natural and efficient - help them feel comfortable while respecting their time.`;
 
 export async function getGeminiResponse(
   prompt: string,
   systemInstructions: string = DEFAULT_SYSTEM_INSTRUCTIONS,
   previousMessages: {content: string, role: "user" | "model"}[] = [],
-  streamingOptions?: StreamingOptions
+  streamingOptions?: StreamingOptions,
+  userProfile?: any
 ): Promise<GeminiResponse> {
   try {
+    // Format user profile information if available
+    const userProfileInfo = userProfile ? formatUserPreferences(userProfile) : '';
+    const enhancedSystemInstructions = userProfileInfo ? 
+      `${systemInstructions}\n\nUser Profile Information:\n${userProfileInfo}` : 
+      systemInstructions;
+
     // Using gemini-2.0-flash model as it's supported for this API version
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
     
@@ -41,8 +103,8 @@ export async function getGeminiResponse(
           role: "user",
           parts: [
             {
-              text: systemInstructions ? 
-                `${systemInstructions}\n\n${prompt}` : 
+              text: enhancedSystemInstructions ? 
+                `${enhancedSystemInstructions}\n\n${prompt}` : 
                 prompt
             }
           ]
@@ -77,8 +139,8 @@ export async function getGeminiResponse(
       requestBody.contents.push({
         role: "user",
         parts: [{ 
-          text: systemInstructions ? 
-            `${systemInstructions}\n\n${prompt}` : 
+          text: enhancedSystemInstructions ? 
+            `${enhancedSystemInstructions}\n\n${prompt}` : 
             prompt 
         }]
       });

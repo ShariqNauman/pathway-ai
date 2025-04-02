@@ -540,5 +540,56 @@ export const curriculumData: Record<string, CurriculumInfo> = {
       "Music",
       "Tourism",
     ]
+  },
+  "Pakistani HSSC": {
+    name: "Pakistani HSSC",
+    region: "Pakistan",
+    gradingSystem: {
+      description: "Percentage-based grading system",
+      scale: "A1 (90-100%), A (85-89%), B (75-84%), C (65-74%), D (55-64%), E (45-54%), F (<45%)",
+      passingGrade: "E (45%) or higher"
+    },
+    commonSubjects: [
+      "English",
+      "Urdu",
+      "Mathematics",
+      "Physics",
+      "Chemistry",
+      "Biology",
+      "Computer Science",
+      "Economics",
+      "Statistics",
+      "Pakistan Studies",
+      "Islamic Studies"
+    ],
+    allPossibleSubjects: [
+      "English",
+      "Urdu",
+      "Mathematics",
+      "Physics",
+      "Chemistry",
+      "Biology",
+      "Computer Science",
+      "Economics",
+      "Statistics",
+      "Pakistan Studies",
+      "Islamic Studies",
+      "General Science",
+      "Geography",
+      "History",
+      "Business Studies",
+      "Accounting",
+      "Principles of Commerce",
+      "Principles of Economics",
+      "Sociology",
+      "Psychology",
+      "Political Science",
+      "Islamic History",
+      "Arabic",
+      "Persian",
+      "Home Economics",
+      "Fine Arts",
+      "Physical Education"
+    ]
   }
 };

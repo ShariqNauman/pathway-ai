@@ -10,6 +10,7 @@ import ExtracurricularActivities from "@/components/ExtracurricularActivities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Select, 
   SelectContent, 
@@ -22,6 +23,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowLeft, Loader2, Award, BookOpen } from "lucide-react";
 import { UserPreferences } from "@/types/user";
 import PersonalInfo from "@/components/PersonalInfo";
+import { majorDomains } from "@/data/majorDomains";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const ProfileEditPage = () => {
   const { currentUser, updateUserPreferences, isLoading } = useUser();
@@ -29,6 +32,7 @@ const ProfileEditPage = () => {
   const { toast } = useToast();
   const [preferences, setPreferences] = useState<UserPreferences>({
     intendedMajor: "",
+    selectedDomains: [],
     budget: 0,
     preferredCountry: "",
     preferredUniversityType: "",
@@ -39,8 +43,22 @@ const ProfileEditPage = () => {
     englishTestScore: undefined,
     highSchoolCurriculum: undefined,
     curriculumGrades: {},
-    curriculumSubjects: []
+    curriculumSubjects: [],
+    extracurricularActivities: []
   });
+
+  // Get available domains for the selected major
+  const availableDomains = preferences.intendedMajor ? majorDomains[preferences.intendedMajor] || [] : [];
+
+  const handleDomainChange = (domain: string) => {
+    setPreferences(prev => {
+      const currentDomains = prev.selectedDomains || [];
+      const newDomains = currentDomains.includes(domain)
+        ? currentDomains.filter(d => d !== domain)
+        : [...currentDomains, domain];
+      return { ...prev, selectedDomains: newDomains };
+    });
+  };
 
   useEffect(() => {
     if (!isLoading && !currentUser) {
@@ -52,6 +70,13 @@ const ProfileEditPage = () => {
       setPreferences(currentUser.preferences);
     }
   }, [currentUser, isLoading, navigate]);
+
+  // Reset selected domains when major changes
+  useEffect(() => {
+    if (!majorDomains[preferences.intendedMajor]) {
+      setPreferences(prev => ({ ...prev, selectedDomains: [] }));
+    }
+  }, [preferences.intendedMajor]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,17 +163,6 @@ const ProfileEditPage = () => {
             
             <PersonalInfo />
             
-            <div className="mb-8">
-              <Button 
-                variant="ghost" 
-                className="mb-4" 
-                onClick={() => navigate("/dashboard")}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Dashboard
-              </Button>
-            </div>
-
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Academic Preferences Card */}
               <Card>
@@ -175,6 +189,28 @@ const ProfileEditPage = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {availableDomains.length > 0 && (
+                    <div className="space-y-3">
+                      <Label>Specializations (Select all that apply)</Label>
+                      <ScrollArea className="h-[200px] rounded-md border p-4">
+                        <div className="space-y-4">
+                          {availableDomains.map((domain) => (
+                            <div key={domain} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={domain}
+                                checked={preferences.selectedDomains?.includes(domain)}
+                                onCheckedChange={() => handleDomainChange(domain)}
+                              />
+                              <Label htmlFor={domain} className="cursor-pointer">
+                                {domain}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  )}
 
                   <div className="space-y-3">
                     <Label>Study Level</Label>
