@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
@@ -38,6 +37,15 @@ const Hero = () => {
               Find your <span className="text-primary">perfect</span> 
               <br />educational pathway
             </motion.h1>
+            
+            <motion.div
+              className="inline-block bg-primary/10 text-primary px-4 py-2 rounded-full mb-6"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut", delay: 0.3 }}
+            >
+              <span className="font-medium">100% Free Platform</span>
+            </motion.div>
             
             <motion.p 
               className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0"

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
@@ -8,6 +7,8 @@ import { ThemeToggle } from "./ThemeToggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { LogIn, User } from "lucide-react";
+import { NavigationMenuItem, NavigationMenuList } from "@/components/ui/navigation-menu";
+import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -21,6 +22,7 @@ const Header = () => {
     { name: "Essay Analyzer", href: "/essay-analyzer" },
     { name: "Consultant", href: "/consultant" },
     { name: "Contact", href: "/contact" },
+    { name: "Support Us", href: "/donations" }
   ];
 
   useEffect(() => {
@@ -160,6 +162,11 @@ const Header = () => {
             className="md:hidden bg-background/95 backdrop-blur-md shadow-lg"
           >
             <nav className="px-4 py-5 space-y-4">
+              <div className="border-b border-border pb-2 mb-2">
+                <span className="text-sm text-muted-foreground">
+                  100% Free Platform
+                </span>
+              </div>
               {navItems.map((item) => (
                 <Link
                   key={item.name}

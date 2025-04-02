@@ -1,4 +1,3 @@
-
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -19,6 +18,7 @@ import OnboardingPage from "./pages/OnboardingPage";
 import DashboardPage from "./pages/DashboardPage";
 import ProfileEditPage from "./pages/ProfileEditPage";
 import { ThemeProvider } from "./components/ThemeProvider";
+import DonationsPage from "./pages/DonationsPage";
 
 // Create a new queryClient with proper configuration for auth persistence
 const queryClient = new QueryClient({
@@ -38,10 +38,7 @@ const ScrollToTop = () => {
   useEffect(() => {
     // Only scroll to top on PUSH navigation (not on POP or REPLACE)
     if (navigationType === 'PUSH') {
-      // Don't auto-scroll on certain pages
-      if (!pathname.includes('/consultant') && !pathname.includes('/essay-analyzer')) {
-        window.scrollTo(0, 0);
-      }
+      window.scrollTo(0, 0);
     }
   }, [pathname, navigationType]);
   
@@ -70,6 +67,7 @@ const App = () => (
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/donations" element={<DonationsPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
