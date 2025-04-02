@@ -545,9 +545,9 @@ export const curriculumData: Record<string, CurriculumInfo> = {
     name: "Pakistani HSSC",
     region: "Pakistan",
     gradingSystem: {
-      description: "Percentage-based grading system",
-      scale: "A1 (90-100%), A (85-89%), B (75-84%), C (65-74%), D (55-64%), E (45-54%), F (<45%)",
-      passingGrade: "E (45%) or higher"
+      description: "10-point grading system",
+      scale: "A++ (90-100%), A+ (85-89%), A (80-84%), B++ (75-79%), B+ (70-74%), B (65-69%), C (60-64%), D (50-59%), E (40-49%), U (<40%)",
+      passingGrade: "E (40%) or higher"
     },
     commonSubjects: [
       "English",

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { 
   Select, 
@@ -140,7 +139,9 @@ const CurriculumSelector: React.FC<CurriculumSelectorProps> = ({ onUpdate }) => 
               <SelectValue placeholder="Select your curriculum" />
             </SelectTrigger>
             <SelectContent>
-              {Object.keys(curriculumData).map((curr) => (
+              {Object.keys(curriculumData)
+                .sort((a, b) => a.localeCompare(b))
+                .map((curr) => (
                 <SelectItem key={curr} value={curr}>
                   {curr} ({curriculumData[curr].region})
                 </SelectItem>
