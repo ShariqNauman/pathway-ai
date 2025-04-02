@@ -21,6 +21,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { toast } from "sonner";
 
 interface ExtracurricularDragDropProps {
   activities?: ExtracurricularActivity[];
@@ -49,7 +50,7 @@ const SortableActivity = ({ activity }: { activity: ExtracurricularActivity }) =
     <div 
       ref={setNodeRef} 
       style={style} 
-      className="border rounded-lg p-4 bg-background mb-4"
+      className="border rounded-lg p-4 bg-background mb-4 max-w-full"
     >
       <div className="flex items-start gap-2">
         <button
@@ -61,7 +62,7 @@ const SortableActivity = ({ activity }: { activity: ExtracurricularActivity }) =
         >
           <GripVertical className="h-4 w-4" />
         </button>
-        <div className="flex-1">
+        <div className="flex-1 overflow-hidden">
           <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2 mb-2">
             <div>
               <h4 className="font-medium">{activity.name}</h4>
@@ -83,7 +84,7 @@ const SortableActivity = ({ activity }: { activity: ExtracurricularActivity }) =
           )}
           
           {activity.description && (
-            <p className="text-sm mt-2">{activity.description}</p>
+            <p className="text-sm mt-2 break-words">{activity.description}</p>
           )}
         </div>
       </div>
@@ -98,7 +99,7 @@ const ExtracurricularDragDrop: React.FC<ExtracurricularDragDropProps> = ({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Increasing the activation distance to prevent accidental drags
+        distance: 8, // Activation distance to prevent accidental drags
       },
     }),
     useSensor(KeyboardSensor, {
@@ -117,6 +118,7 @@ const ExtracurricularDragDrop: React.FC<ExtracurricularDragDropProps> = ({
         const newActivities = arrayMove(activities, oldIndex, newIndex);
         if (onActivitiesReorder) {
           onActivitiesReorder(newActivities);
+          toast("Activities reordered successfully");
         }
       }
     }
@@ -148,7 +150,7 @@ const ExtracurricularDragDrop: React.FC<ExtracurricularDragDropProps> = ({
         </CardTitle>
         <CardDescription>Drag and drop to reorder activities by importance</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="max-w-full">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -158,7 +160,7 @@ const ExtracurricularDragDrop: React.FC<ExtracurricularDragDropProps> = ({
             items={activities.map(activity => activity.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div>
+            <div className="max-w-full">
               {activities.map((activity) => (
                 <SortableActivity key={activity.id} activity={activity} />
               ))}

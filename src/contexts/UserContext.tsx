@@ -112,7 +112,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           address?: string;
           phone?: string;
           date_of_birth?: string;
-          selected_domains?: string[]; // Added this field to match Supabase structure
+          selected_domains?: string[];
         };
         
         const typedProfileData = profileData as unknown as ProfileData;
@@ -123,7 +123,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: typedProfileData.name || '',
           preferences: {
             intendedMajor: typedProfileData.intended_major || '',
-            selectedDomains: typedProfileData.selected_domains || [], // Map from Supabase field
+            selectedDomains: typedProfileData.selected_domains || [],
             budget: typedProfileData.budget || 0,
             preferredCountry: typedProfileData.preferred_country || '',
             preferredUniversityType: typedProfileData.preferred_university_type || '',
@@ -146,6 +146,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             phone: typedProfileData.phone || ''
           },
           createdAt: new Date(typedProfileData.created_at)
+        });
+        
+        console.log("Loaded user profile:", {
+          ...typedProfileData,
+          selectedDomains: typedProfileData.selected_domains
         });
       }
     } catch (error) {
@@ -233,11 +238,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!currentUser) return;
     
     try {
+      console.log("Updating preferences with:", {
+        selectedDomains: preferences.selectedDomains
+      });
+      
       const { error } = await supabase
         .from('profiles')
         .update({
           intended_major: preferences.intendedMajor,
-          selected_domains: preferences.selectedDomains, // Add this line to update the selectedDomains
+          selected_domains: preferences.selectedDomains,
           budget: preferences.budget,
           preferred_country: preferences.preferredCountry,
           preferred_university_type: preferences.preferredUniversityType,
@@ -268,6 +277,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ...prev,
           preferences
         };
+      });
+      
+      console.log("Preferences updated successfully:", {
+        selectedDomains: preferences.selectedDomains
       });
     } catch (error) {
       console.error('Error updating preferences:', error);

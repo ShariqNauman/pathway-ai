@@ -119,6 +119,7 @@ export type Database = {
           preferred_country: string | null
           preferred_university_type: string | null
           sat_score: number | null
+          selected_domains: string[] | null
           study_level: string | null
           updated_at: string
         }
@@ -142,6 +143,7 @@ export type Database = {
           preferred_country?: string | null
           preferred_university_type?: string | null
           sat_score?: number | null
+          selected_domains?: string[] | null
           study_level?: string | null
           updated_at?: string
         }
@@ -165,6 +167,7 @@ export type Database = {
           preferred_country?: string | null
           preferred_university_type?: string | null
           sat_score?: number | null
+          selected_domains?: string[] | null
           study_level?: string | null
           updated_at?: string
         }
