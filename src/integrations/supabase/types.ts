@@ -101,10 +101,12 @@ export type Database = {
       profiles: {
         Row: {
           act_score: number | null
+          address: string | null
           budget: number | null
           created_at: string
           curriculum_grades: Json | null
           curriculum_subjects: string[] | null
+          date_of_birth: string | null
           email: string | null
           english_test_score: number | null
           english_test_type: string | null
@@ -113,6 +115,7 @@ export type Database = {
           id: string
           intended_major: string | null
           name: string | null
+          phone: string | null
           preferred_country: string | null
           preferred_university_type: string | null
           sat_score: number | null
@@ -121,10 +124,12 @@ export type Database = {
         }
         Insert: {
           act_score?: number | null
+          address?: string | null
           budget?: number | null
           created_at?: string
           curriculum_grades?: Json | null
           curriculum_subjects?: string[] | null
+          date_of_birth?: string | null
           email?: string | null
           english_test_score?: number | null
           english_test_type?: string | null
@@ -133,6 +138,7 @@ export type Database = {
           id: string
           intended_major?: string | null
           name?: string | null
+          phone?: string | null
           preferred_country?: string | null
           preferred_university_type?: string | null
           sat_score?: number | null
@@ -141,10 +147,12 @@ export type Database = {
         }
         Update: {
           act_score?: number | null
+          address?: string | null
           budget?: number | null
           created_at?: string
           curriculum_grades?: Json | null
           curriculum_subjects?: string[] | null
+          date_of_birth?: string | null
           email?: string | null
           english_test_score?: number | null
           english_test_type?: string | null
@@ -153,6 +161,7 @@ export type Database = {
           id?: string
           intended_major?: string | null
           name?: string | null
+          phone?: string | null
           preferred_country?: string | null
           preferred_university_type?: string | null
           sat_score?: number | null
