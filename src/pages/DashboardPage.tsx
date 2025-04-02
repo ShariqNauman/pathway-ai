@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate, Link } from "react-router-dom";
@@ -6,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CurriculumDisplay from "@/components/CurriculumDisplay";
-import ExtracurricularDisplay from "@/components/ExtracurricularDisplay";
+import ExtracurricularDragDrop from "@/components/ExtracurricularDragDrop";
 import PersonalInfoDisplay from "@/components/PersonalInfoDisplay";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -127,7 +128,7 @@ const DashboardPage = () => {
                     <dt className="text-sm font-medium text-muted-foreground">Field of Study</dt>
                     <dd className="text-base">{currentUser.preferences.intendedMajor || "Not specified"}</dd>
                   </div>
-                  {currentUser.preferences.selectedDomains?.length > 0 && (
+                  {currentUser.preferences.selectedDomains && currentUser.preferences.selectedDomains.length > 0 && (
                     <div>
                       <dt className="text-sm font-medium text-muted-foreground">Specializations</dt>
                       <dd className="text-base">
@@ -191,7 +192,7 @@ const DashboardPage = () => {
           )}
 
           <div className="mb-10">
-            <ExtracurricularDisplay 
+            <ExtracurricularDragDrop 
               activities={currentUser.preferences.extracurricularActivities}
               onActivitiesReorder={handleActivitiesReorder}
             />

@@ -112,6 +112,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           address?: string;
           phone?: string;
           date_of_birth?: string;
+          selected_domains?: string[]; // Added this field to match Supabase structure
         };
         
         const typedProfileData = profileData as unknown as ProfileData;
@@ -122,7 +123,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: typedProfileData.name || '',
           preferences: {
             intendedMajor: typedProfileData.intended_major || '',
-            selectedDomains: [], // Add the missing selectedDomains property with an empty array as default
+            selectedDomains: typedProfileData.selected_domains || [], // Map from Supabase field
             budget: typedProfileData.budget || 0,
             preferredCountry: typedProfileData.preferred_country || '',
             preferredUniversityType: typedProfileData.preferred_university_type || '',
@@ -236,6 +237,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('profiles')
         .update({
           intended_major: preferences.intendedMajor,
+          selected_domains: preferences.selectedDomains, // Add this line to update the selectedDomains
           budget: preferences.budget,
           preferred_country: preferences.preferredCountry,
           preferred_university_type: preferences.preferredUniversityType,
