@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,6 @@ const PersonalInfo: React.FC<PersonalInfoProps> = ({ onUpdate }) => {
   // Add personal info fields to the form
   const [personalInfo, setPersonalInfo] = useState({
     fullName: currentUser?.name || "",
-    email: currentUser?.email || "",
     dateOfBirth: "",
     address: "",
     phone: ""
@@ -30,7 +28,6 @@ const PersonalInfo: React.FC<PersonalInfoProps> = ({ onUpdate }) => {
     if (currentUser) {
       setPersonalInfo({
         fullName: currentUser.name || "",
-        email: currentUser.email || "",
         dateOfBirth: currentUser.preferences.dateOfBirth || "",
         address: currentUser.preferences.address || "",
         phone: currentUser.preferences.phone || ""
@@ -91,19 +88,6 @@ const PersonalInfo: React.FC<PersonalInfoProps> = ({ onUpdate }) => {
               onChange={handleInputChange}
               placeholder="Enter your full name"
               disabled // Name is set during registration and can't be changed here
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="email">Email Address</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              value={personalInfo.email}
-              onChange={handleInputChange}
-              placeholder="Enter your email address"
-              disabled // Email is set during registration and can't be changed here
             />
           </div>
           
