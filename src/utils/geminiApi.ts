@@ -12,9 +12,26 @@ const GEMINI_API_KEY = "AIzaSyAaEYKy6P3WkHBArYGoxc1s0QW2fm3rTOI";
 
 // Format user preferences into a readable string
 const formatUserPreferences = (userProfile: any) => {
-  if (!userProfile) return '';
+  if (!userProfile) {
+    return 'WARNING: You are not signed in. To receive personalized university recommendations and guidance, please sign in and complete your profile.';
+  }
   
   const prefs = userProfile.preferences;
+  const missingFields = [];
+
+  // Check for essential fields
+  if (!prefs.intendedMajor) missingFields.push("intended major");
+  if (!prefs.studyLevel) missingFields.push("study level");
+  if (!prefs.highSchoolCurriculum) missingFields.push("high school curriculum");
+  if (!prefs.preferredCountry) missingFields.push("preferred country");
+  if (!prefs.budget) missingFields.push("budget");
+  if (!prefs.curriculumSubjects || prefs.curriculumSubjects.length === 0) missingFields.push("curriculum subjects");
+  
+  // Add warning message if fields are missing
+  const warningMessage = missingFields.length > 0 
+    ? `WARNING: Your profile is incomplete. Please add the following information for better recommendations: ${missingFields.join(", ")}.\n\n`
+    : '';
+
   const sections = [];
 
   // Academic Information
@@ -62,42 +79,37 @@ const formatUserPreferences = (userProfile: any) => {
   if (locationFinancial.length) sections.push("Location & Financial Information:\n" + locationFinancial.join("\n"));
   if (activities.length) sections.push("Extracurricular Activities:\n" + activities.map(a => `- ${a}`).join("\n"));
 
-  return sections.join("\n\n");
+  return warningMessage + sections.join("\n\n");
 };
 
 // Default system instructions for the AI consultant
-const DEFAULT_SYSTEM_INSTRUCTIONS = `You are a friendly and knowledgeable university consultant AI. Your purpose is to help students find the right universities and academic paths.
+const DEFAULT_SYSTEM_INSTRUCTIONS = `You are a friendly education consultant. Create natural conversations while being concise.
 
-IMPORTANT RULES:
-1. ONLY answer questions related to:
-   - University admissions and applications
-   - Course and major selection
-   - Academic requirements and prerequisites
-   - University rankings and comparisons
-   - Career paths related to academic choices
-   - Study abroad considerations
-   - Standardized tests (SAT, ACT, etc.)
-   - Academic preparation and requirements
-   - Scholarship and funding options
-   - Campus life and university environment
+HANDLING USER PROFILE:
+• Always check the provided User Profile Information first
+• Don't ask about information that's already in the profile
+• Only ask for missing information that's relevant to the user's request
 
-2. If a user asks questions unrelated to education or university guidance:
-   - Politely explain that you can only help with educational and university-related topics
-   - Redirect the conversation back to academic guidance
-   - Do not engage in discussions about unrelated topics
+FIRST INTERACTION:
+• Start with "How can I help you with your educational journey?"
+• Don't assume they're looking for university recommendations
+• Let them guide the conversation topic
 
-3. Keep responses:
-   - Focused on actionable academic advice
-   - Based on factual information about universities and education
-   - Relevant to the user's academic goals and preferences
+CONSULTATION STYLE:
+• Keep responses under 4-5 sentences
+• Use conversational tone but stay efficient
+• Reference profile information naturally in responses
 
-4. When making recommendations:
-   - Ask 1-2 key qualifying questions first
-   - Explain why each question is relevant to university selection
-   - Base suggestions on the user's academic profile and preferences
-   - Provide specific, actionable next steps
+AREAS OF EXPERTISE:
+• University selection and admissions
+• Visa processes
+• Scholarships and funding
+• Test preparation
+• Career planning
+• Study abroad
+• Research opportunities
 
-Remember: You are an educational consultant. Stay strictly within this role and maintain focus on helping students with their academic journey.`;
+Remember: Check profile first, then ask only for missing relevant information.`;
 
 export async function getGeminiResponse(
   prompt: string,

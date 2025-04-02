@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate, Link } from "react-router-dom";
@@ -14,11 +13,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2, Settings, LogOut, Award, BookOpen, GraduationCap } from "lucide-react";
 import { ExtracurricularActivity } from "@/types/user";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const DashboardPage = () => {
   const { currentUser, logout, isLoading, updateUserPreferences } = useUser();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Check for missing essential fields
+  const getMissingFields = () => {
+    if (!currentUser?.preferences) return [];
+    const prefs = currentUser.preferences;
+    const missingFields = [];
+    
+    if (!prefs.intendedMajor) missingFields.push("intended major");
+    if (!prefs.studyLevel) missingFields.push("study level");
+    if (!prefs.highSchoolCurriculum) missingFields.push("high school curriculum");
+    if (!prefs.preferredCountry) missingFields.push("preferred country");
+    if (!prefs.budget) missingFields.push("budget");
+    if (!prefs.curriculumSubjects || prefs.curriculumSubjects.length === 0) missingFields.push("curriculum subjects");
+    
+    return missingFields;
+  };
+
+  const missingFields = getMissingFields();
 
   useEffect(() => {
     if (!isLoading && !currentUser) {
@@ -88,6 +107,23 @@ const DashboardPage = () => {
       <Header />
       <main className="flex-grow py-20 px-4">
         <div className="max-w-5xl mx-auto">
+          {missingFields.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mb-8"
+            >
+              <Alert variant="destructive" className="bg-destructive/10 text-destructive border-destructive/20">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Your profile is incomplete. Please add your {missingFields.join(", ")} in your{' '}
+                  <Link to="/profile/edit" className="font-medium underline hover:text-destructive/90">profile settings</Link> for better recommendations.
+                </AlertDescription>
+              </Alert>
+            </motion.div>
+          )}
+
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10">
             <div className="flex items-center gap-4 mb-6 md:mb-0">
               <Avatar className="h-16 w-16">

@@ -1,7 +1,31 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { useUser } from "@/contexts/UserContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const Hero = () => {
+  const { currentUser } = useUser();
+  
+  // Check for missing essential fields
+  const getMissingFields = () => {
+    if (!currentUser?.preferences) return [];
+    const prefs = currentUser.preferences;
+    const missingFields = [];
+    
+    if (!prefs.intendedMajor) missingFields.push("intended major");
+    if (!prefs.studyLevel) missingFields.push("study level");
+    if (!prefs.highSchoolCurriculum) missingFields.push("high school curriculum");
+    if (!prefs.preferredCountry) missingFields.push("preferred country");
+    if (!prefs.budget) missingFields.push("budget");
+    if (!prefs.curriculumSubjects || prefs.curriculumSubjects.length === 0) missingFields.push("curriculum subjects");
+    
+    return missingFields;
+  };
+
+  const missingFields = currentUser ? getMissingFields() : [];
+  const showWarning = !currentUser || missingFields.length > 0;
+
   return (
     <section className="relative min-h-screen pt-32 pb-20 px-6 lg:px-10 overflow-hidden">
       {/* Background gradient */}
@@ -11,6 +35,23 @@ const Hero = () => {
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM5OTk5OTkiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djZoNnYtNmgtNnptMC0xMnY2aDZ2LTZoLTZ6bTAtMTJ2Nmg2di02aC02em0tMTIgMTJ2Nmg2di02aC02em0wLTEydjZoNnYtNmgtNnptMCAxMnYxMmgxMlYyMkgyNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-50 -z-10"></div>
       
       <div className="max-w-7xl mx-auto">
+        {!currentUser && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="mb-8"
+          >
+            <Alert variant="destructive" className="bg-destructive/10 text-destructive border-destructive/20">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Please <Link to="/login" className="font-medium underline hover:text-destructive/90">sign in</Link> or{' '}
+                <Link to="/signup" className="font-medium underline hover:text-destructive/90">create an account</Link> to receive personalized university recommendations.
+              </AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
+
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Hero content */}
           <motion.div
