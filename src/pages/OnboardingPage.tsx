@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -9,6 +8,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Select, 
   SelectContent, 
@@ -19,6 +19,8 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, User, GraduationCap, DollarSign, Map } from "lucide-react";
 import { UserPreferences } from "@/types/user";
+import { majorDomains } from "@/data/majorDomains";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const OnboardingPage = () => {
   const { currentUser, updateUserPreferences, isLoading } = useUser();
@@ -28,6 +30,7 @@ const OnboardingPage = () => {
   const [step, setStep] = useState(1);
   const [preferences, setPreferences] = useState<UserPreferences>({
     intendedMajor: "",
+    selectedDomains: [],
     budget: 0,
     preferredCountry: "",
     preferredUniversityType: "",
@@ -39,11 +42,29 @@ const OnboardingPage = () => {
     phone: ""
   });
 
+  const availableDomains = preferences.intendedMajor ? majorDomains[preferences.intendedMajor] || [] : [];
+
+  const handleDomainChange = (domain: string) => {
+    setPreferences(prev => {
+      const currentDomains = prev.selectedDomains || [];
+      const newDomains = currentDomains.includes(domain)
+        ? currentDomains.filter(d => d !== domain)
+        : [...currentDomains, domain];
+      return { ...prev, selectedDomains: newDomains };
+    });
+  };
+
   useEffect(() => {
     if (currentUser?.preferences) {
       setPreferences(currentUser.preferences);
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!majorDomains[preferences.intendedMajor]) {
+      setPreferences(prev => ({ ...prev, selectedDomains: [] }));
+    }
+  }, [preferences.intendedMajor]);
 
   const handleNextStep = () => {
     if (validateCurrentStep()) {
@@ -117,7 +138,6 @@ const OnboardingPage = () => {
               Help us personalize your experience
             </p>
             
-            {/* Progress indicator */}
             <div className="mt-6 flex justify-center">
               <div className="flex space-x-2">
                 {[1, 2, 3, 4].map((s) => (
@@ -133,7 +153,6 @@ const OnboardingPage = () => {
             </div>
           </div>
 
-          {/* Step 1: Personal Information */}
           {step === 1 && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -182,7 +201,6 @@ const OnboardingPage = () => {
             </motion.div>
           )}
 
-          {/* Step 2: Major and Study Level */}
           {step === 2 && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -213,6 +231,28 @@ const OnboardingPage = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {preferences.intendedMajor && availableDomains.length > 0 && (
+                <div className="space-y-3">
+                  <Label>Which specializations interest you? (Optional)</Label>
+                  <ScrollArea className="h-[150px] rounded-md border p-4">
+                    <div className="space-y-4">
+                      {availableDomains.map((domain) => (
+                        <div key={domain} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`domain-${domain}`}
+                            checked={preferences.selectedDomains?.includes(domain)}
+                            onCheckedChange={() => handleDomainChange(domain)}
+                          />
+                          <Label htmlFor={`domain-${domain}`} className="cursor-pointer">
+                            {domain}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
 
               <div className="space-y-3">
                 <Label>What level are you planning to study?</Label>
@@ -247,7 +287,6 @@ const OnboardingPage = () => {
             </motion.div>
           )}
 
-          {/* Step 3: Budget */}
           {step === 3 && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -286,7 +325,6 @@ const OnboardingPage = () => {
             </motion.div>
           )}
 
-          {/* Step 4: Country and Institution Type */}
           {step === 4 && (
             <motion.div
               initial={{ opacity: 0 }}

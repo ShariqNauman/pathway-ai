@@ -11,7 +11,7 @@ import {
   DialogDescription, 
   DialogFooter, 
   DialogHeader, 
-  DialogTitle, 
+  DialogTitle,
   DialogTrigger 
 } from "@/components/ui/dialog";
 import { useUser } from "@/contexts/UserContext";
@@ -80,7 +80,7 @@ const ExtracurricularActivities: React.FC<ExtracurricularActivitiesProps> = ({ o
     setIsEditing(false);
   };
 
-  const handleAdd = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleAdd = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault(); // Prevent any default form submission
     
     if (!currentActivity.name || !currentActivity.organization) {
@@ -91,7 +91,7 @@ const ExtracurricularActivities: React.FC<ExtracurricularActivitiesProps> = ({ o
       return;
     }
 
-    const updatedActivities = [...activities];
+    let updatedActivities = [...activities];
     
     if (isEditing) {
       // Update existing activity
@@ -116,25 +116,34 @@ const ExtracurricularActivities: React.FC<ExtracurricularActivitiesProps> = ({ o
     }
 
     setActivities(updatedActivities);
-    resetForm();
-    setDialogOpen(false);
     
     // Update preferences
     if (currentUser) {
-      updateUserPreferences({
-        ...currentUser.preferences,
-        extracurricularActivities: updatedActivities
-      });
-      
-      toast({
-        title: isEditing ? "Activity updated" : "Activity added",
-        description: `${currentActivity.name} has been ${isEditing ? 'updated' : 'added'} successfully`
-      });
-      
-      if (onUpdate) {
-        onUpdate();
+      try {
+        await updateUserPreferences({
+          ...currentUser.preferences,
+          extracurricularActivities: updatedActivities
+        });
+        
+        toast({
+          title: isEditing ? "Activity updated" : "Activity added",
+          description: `${currentActivity.name} has been ${isEditing ? 'updated' : 'added'} successfully`
+        });
+        
+        if (onUpdate) {
+          onUpdate();
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to update activities",
+          variant: "destructive"
+        });
       }
     }
+
+    resetForm();
+    setDialogOpen(false);
   };
 
   const handleEdit = (activity: ExtracurricularActivity, e: React.MouseEvent) => {
@@ -146,7 +155,7 @@ const ExtracurricularActivities: React.FC<ExtracurricularActivitiesProps> = ({ o
     setDialogOpen(true);
   };
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.preventDefault(); // Prevent any default navigation
     e.stopPropagation(); // Stop event propagation
     
@@ -155,18 +164,26 @@ const ExtracurricularActivities: React.FC<ExtracurricularActivitiesProps> = ({ o
     
     // Update preferences
     if (currentUser) {
-      updateUserPreferences({
-        ...currentUser.preferences,
-        extracurricularActivities: updatedActivities
-      });
-      
-      toast({
-        title: "Activity removed",
-        description: "The activity has been removed successfully"
-      });
-      
-      if (onUpdate) {
-        onUpdate();
+      try {
+        await updateUserPreferences({
+          ...currentUser.preferences,
+          extracurricularActivities: updatedActivities
+        });
+        
+        toast({
+          title: "Activity removed",
+          description: "The activity has been removed successfully"
+        });
+        
+        if (onUpdate) {
+          onUpdate();
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to remove activity",
+          variant: "destructive"
+        });
       }
     }
   };
@@ -214,7 +231,7 @@ const ExtracurricularActivities: React.FC<ExtracurricularActivitiesProps> = ({ o
                 Add Activity
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{isEditing ? 'Edit Activity' : 'Add Extracurricular Activity'}</DialogTitle>
                 <DialogDescription>

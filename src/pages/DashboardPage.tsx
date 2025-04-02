@@ -42,6 +42,11 @@ const DashboardPage = () => {
         ...currentUser.preferences,
         extracurricularActivities: activities
       });
+      
+      toast({
+        title: "Activities reordered",
+        description: "Your activities have been reordered successfully"
+      });
     } catch (error) {
       toast({
         title: "Error",

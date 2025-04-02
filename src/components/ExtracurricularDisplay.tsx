@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,27 +27,36 @@ interface ExtracurricularDisplayProps {
   onActivitiesReorder?: (activities: ExtracurricularActivity[]) => void;
 }
 
-const SortableActivity: React.FC<{ activity: ExtracurricularActivity }> = ({ activity }) => {
+const SortableActivity = ({ activity }: { activity: ExtracurricularActivity }) => {
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
+    isDragging,
   } = useSortable({ id: activity.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  };
+    zIndex: isDragging ? 10 : 1,
+    position: isDragging ? 'relative' : 'static',
+    opacity: isDragging ? 0.8 : 1,
+  } as React.CSSProperties;
 
   return (
-    <div ref={setNodeRef} style={style} className="border rounded-lg p-4">
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      className="border rounded-lg p-4 bg-background"
+    >
       <div className="flex items-start gap-2">
         <button
           {...attributes}
           {...listeners}
-          className="p-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+          className="p-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
+          type="button"
         >
           <GripVertical className="h-4 w-4" />
         </button>
@@ -85,7 +95,11 @@ const ExtracurricularDisplay: React.FC<ExtracurricularDisplayProps> = ({
   onActivitiesReorder 
 }) => {
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // Only activate after dragging 5px to avoid accidental drags
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -98,8 +112,12 @@ const ExtracurricularDisplay: React.FC<ExtracurricularDisplayProps> = ({
       const oldIndex = activities.findIndex((activity) => activity.id === active.id);
       const newIndex = activities.findIndex((activity) => activity.id === over.id);
       
-      const newActivities = arrayMove(activities, oldIndex, newIndex);
-      onActivitiesReorder?.(newActivities);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newActivities = arrayMove(activities, oldIndex, newIndex);
+        if (onActivitiesReorder) {
+          onActivitiesReorder(newActivities);
+        }
+      }
     }
   };
 

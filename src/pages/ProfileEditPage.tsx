@@ -47,7 +47,6 @@ const ProfileEditPage = () => {
     extracurricularActivities: []
   });
 
-  // Get available domains for the selected major
   const availableDomains = preferences.intendedMajor ? majorDomains[preferences.intendedMajor] || [] : [];
 
   const handleDomainChange = (domain: string) => {
@@ -71,9 +70,8 @@ const ProfileEditPage = () => {
     }
   }, [currentUser, isLoading, navigate]);
 
-  // Reset selected domains when major changes
   useEffect(() => {
-    if (!majorDomains[preferences.intendedMajor]) {
+    if (preferences.intendedMajor && !majorDomains[preferences.intendedMajor]) {
       setPreferences(prev => ({ ...prev, selectedDomains: [] }));
     }
   }, [preferences.intendedMajor]);
@@ -190,7 +188,7 @@ const ProfileEditPage = () => {
                     </Select>
                   </div>
 
-                  {availableDomains.length > 0 && (
+                  {preferences.intendedMajor && availableDomains.length > 0 && (
                     <div className="space-y-3">
                       <Label>Specializations (Select all that apply)</Label>
                       <ScrollArea className="h-[200px] rounded-md border p-4">
