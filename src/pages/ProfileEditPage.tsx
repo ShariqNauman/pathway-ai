@@ -21,6 +21,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2, Award, BookOpen } from "lucide-react";
 import { UserPreferences } from "@/types/user";
+import PersonalInfo from "@/components/PersonalInfo";
 
 const ProfileEditPage = () => {
   const { currentUser, updateUserPreferences, isLoading } = useUser();
@@ -132,259 +133,263 @@ const ProfileEditPage = () => {
       <Header />
       <main className="flex-grow py-20 px-4">
         <div className="max-w-3xl mx-auto">
-          <div className="mb-8">
-            <Button 
-              variant="ghost" 
-              className="mb-4" 
-              onClick={() => navigate("/dashboard")}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
-            </Button>
+          <div className="space-y-8">
             <h1 className="text-3xl font-bold">Edit Your Profile</h1>
-            <p className="text-muted-foreground mt-2">Update your preferences and settings</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Academic Preferences Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Academic Preferences</CardTitle>
-                <CardDescription>Update your study preferences</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-3">
-                  <Label htmlFor="major">Field of Study</Label>
-                  <Select 
-                    onValueChange={(value) => updatePreference("intendedMajor", value)}
-                    value={preferences.intendedMajor}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a field of study" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {majorOptions.map((major) => (
-                        <SelectItem key={major} value={major}>
-                          {major}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-3">
-                  <Label>Study Level</Label>
-                  <RadioGroup 
-                    className="flex flex-col space-y-3"
-                    value={preferences.studyLevel}
-                    onValueChange={(value) => updatePreference("studyLevel", value)}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="undergraduate" id="undergraduate" />
-                      <Label htmlFor="undergraduate">Undergraduate (Bachelor's)</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="graduate" id="graduate" />
-                      <Label htmlFor="graduate">Graduate (Master's)</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="doctorate" id="doctorate" />
-                      <Label htmlFor="doctorate">Doctorate (PhD)</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                <div className="space-y-3">
-                  <Label htmlFor="curriculum">High School Curriculum</Label>
-                  <Select 
-                    onValueChange={(value) => updatePreference("highSchoolCurriculum", value)}
-                    value={preferences.highSchoolCurriculum || ""}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your curriculum" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {curriculumOptions.map((curriculum) => (
-                        <SelectItem key={curriculum} value={curriculum}>
-                          {curriculum}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* High School Curriculum Selector */}
-            <CurriculumSelector />
-
-            {/* Extracurricular Activities */}
-            <ExtracurricularActivities />
-
-            {/* Test Scores Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5" />
-                  Test Scores
-                </CardTitle>
-                <CardDescription>Add your standardized test scores</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <Label htmlFor="satScore">SAT Score (out of 1600)</Label>
-                    <Input
-                      id="satScore"
-                      type="number"
-                      min="400"
-                      max="1600"
-                      placeholder="Enter your SAT score"
-                      value={preferences.satScore || ""}
-                      onChange={(e) => updatePreference("satScore", e.target.value ? parseInt(e.target.value) : undefined)}
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label htmlFor="actScore">ACT Score (out of 36)</Label>
-                    <Input
-                      id="actScore"
-                      type="number"
-                      min="1"
-                      max="36"
-                      placeholder="Enter your ACT score"
-                      value={preferences.actScore || ""}
-                      onChange={(e) => updatePreference("actScore", e.target.value ? parseInt(e.target.value) : undefined)}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <Label htmlFor="englishTest">English Proficiency Test</Label>
-                  <Select 
-                    onValueChange={(value) => updatePreference("englishTestType", value)}
-                    value={preferences.englishTestType || ""}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a test type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {englishTestOptions.map((test) => (
-                        <SelectItem key={test} value={test}>
-                          {test}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {preferences.englishTestType && (
-                  <div className="space-y-3">
-                    <Label htmlFor="englishScore">English Test Score</Label>
-                    <Input
-                      id="englishScore"
-                      type="number"
-                      min="0"
-                      placeholder={`Enter your ${preferences.englishTestType} score`}
-                      value={preferences.englishTestScore || ""}
-                      onChange={(e) => updatePreference("englishTestScore", e.target.value ? parseInt(e.target.value) : undefined)}
-                    />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Financial Information Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Financial Information</CardTitle>
-                <CardDescription>Update your budget information</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-3">
-                  <Label htmlFor="budget">Yearly Budget (USD)</Label>
-                  <Input
-                    id="budget"
-                    type="number"
-                    min="0"
-                    placeholder="E.g. 30000"
-                    value={preferences.budget || ""}
-                    onChange={(e) => updatePreference("budget", parseInt(e.target.value) || 0)}
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <Label>Institution Type</Label>
-                  <RadioGroup 
-                    className="flex flex-col space-y-3"
-                    value={preferences.preferredUniversityType}
-                    onValueChange={(value) => updatePreference("preferredUniversityType", value)}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="public" id="public-edit" />
-                      <Label htmlFor="public-edit">Public University</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="private" id="private-edit" />
-                      <Label htmlFor="private-edit">Private University</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="either" id="either-edit" />
-                      <Label htmlFor="either-edit">No Preference</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Location Preferences Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Location Preferences</CardTitle>
-                <CardDescription>Update your location preferences</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-3">
-                  <Label htmlFor="country">Preferred Country</Label>
-                  <Select 
-                    onValueChange={(value) => updatePreference("preferredCountry", value)}
-                    value={preferences.preferredCountry}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a country" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countryOptions.map((country) => (
-                        <SelectItem key={country} value={country}>
-                          {country}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="flex justify-end space-x-4">
+            
+            <PersonalInfo />
+            
+            <div className="mb-8">
               <Button 
-                type="button" 
-                variant="outline" 
+                variant="ghost" 
+                className="mb-4" 
                 onClick={() => navigate("/dashboard")}
               >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Changes"
-                )}
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Dashboard
               </Button>
             </div>
-          </form>
+
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Academic Preferences Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Academic Preferences</CardTitle>
+                  <CardDescription>Update your study preferences</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="major">Field of Study</Label>
+                    <Select 
+                      onValueChange={(value) => updatePreference("intendedMajor", value)}
+                      value={preferences.intendedMajor}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a field of study" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {majorOptions.map((major) => (
+                          <SelectItem key={major} value={major}>
+                            {major}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label>Study Level</Label>
+                    <RadioGroup 
+                      className="flex flex-col space-y-3"
+                      value={preferences.studyLevel}
+                      onValueChange={(value) => updatePreference("studyLevel", value)}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="undergraduate" id="undergraduate" />
+                        <Label htmlFor="undergraduate">Undergraduate (Bachelor's)</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="graduate" id="graduate" />
+                        <Label htmlFor="graduate">Graduate (Master's)</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="doctorate" id="doctorate" />
+                        <Label htmlFor="doctorate">Doctorate (PhD)</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label htmlFor="curriculum">High School Curriculum</Label>
+                    <Select 
+                      onValueChange={(value) => updatePreference("highSchoolCurriculum", value)}
+                      value={preferences.highSchoolCurriculum || ""}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your curriculum" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {curriculumOptions.map((curriculum) => (
+                          <SelectItem key={curriculum} value={curriculum}>
+                            {curriculum}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* High School Curriculum Selector */}
+              <CurriculumSelector />
+
+              {/* Extracurricular Activities */}
+              <ExtracurricularActivities />
+
+              {/* Test Scores Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="h-5 w-5" />
+                    Test Scores
+                  </CardTitle>
+                  <CardDescription>Add your standardized test scores</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <Label htmlFor="satScore">SAT Score (out of 1600)</Label>
+                      <Input
+                        id="satScore"
+                        type="number"
+                        min="400"
+                        max="1600"
+                        placeholder="Enter your SAT score"
+                        value={preferences.satScore || ""}
+                        onChange={(e) => updatePreference("satScore", e.target.value ? parseInt(e.target.value) : undefined)}
+                      />
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label htmlFor="actScore">ACT Score (out of 36)</Label>
+                      <Input
+                        id="actScore"
+                        type="number"
+                        min="1"
+                        max="36"
+                        placeholder="Enter your ACT score"
+                        value={preferences.actScore || ""}
+                        onChange={(e) => updatePreference("actScore", e.target.value ? parseInt(e.target.value) : undefined)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label htmlFor="englishTest">English Proficiency Test</Label>
+                    <Select 
+                      onValueChange={(value) => updatePreference("englishTestType", value)}
+                      value={preferences.englishTestType || ""}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a test type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {englishTestOptions.map((test) => (
+                          <SelectItem key={test} value={test}>
+                            {test}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {preferences.englishTestType && (
+                    <div className="space-y-3">
+                      <Label htmlFor="englishScore">English Test Score</Label>
+                      <Input
+                        id="englishScore"
+                        type="number"
+                        min="0"
+                        placeholder={`Enter your ${preferences.englishTestType} score`}
+                        value={preferences.englishTestScore || ""}
+                        onChange={(e) => updatePreference("englishTestScore", e.target.value ? parseInt(e.target.value) : undefined)}
+                      />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Financial Information Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Financial Information</CardTitle>
+                  <CardDescription>Update your budget information</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="budget">Yearly Budget (USD)</Label>
+                    <Input
+                      id="budget"
+                      type="number"
+                      min="0"
+                      placeholder="E.g. 30000"
+                      value={preferences.budget || ""}
+                      onChange={(e) => updatePreference("budget", parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label>Institution Type</Label>
+                    <RadioGroup 
+                      className="flex flex-col space-y-3"
+                      value={preferences.preferredUniversityType}
+                      onValueChange={(value) => updatePreference("preferredUniversityType", value)}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="public" id="public-edit" />
+                        <Label htmlFor="public-edit">Public University</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="private" id="private-edit" />
+                        <Label htmlFor="private-edit">Private University</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="either" id="either-edit" />
+                        <Label htmlFor="either-edit">No Preference</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Location Preferences Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Location Preferences</CardTitle>
+                  <CardDescription>Update your location preferences</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="country">Preferred Country</Label>
+                    <Select 
+                      onValueChange={(value) => updatePreference("preferredCountry", value)}
+                      value={preferences.preferredCountry}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countryOptions.map((country) => (
+                          <SelectItem key={country} value={country}>
+                            {country}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-end space-x-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => navigate("/dashboard")}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       </main>
       <Footer />

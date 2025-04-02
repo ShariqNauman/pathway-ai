@@ -80,7 +80,9 @@ const ExtracurricularActivities: React.FC<ExtracurricularActivitiesProps> = ({ o
     setIsEditing(false);
   };
 
-  const handleAdd = () => {
+  const handleAdd = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault(); // Prevent any default form submission
+    
     if (!currentActivity.name || !currentActivity.organization) {
       toast({
         title: "Missing information",
@@ -135,13 +137,19 @@ const ExtracurricularActivities: React.FC<ExtracurricularActivitiesProps> = ({ o
     }
   };
 
-  const handleEdit = (activity: ExtracurricularActivity) => {
+  const handleEdit = (activity: ExtracurricularActivity, e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent any default navigation
+    e.stopPropagation(); // Stop event propagation
+    
     setCurrentActivity(activity);
     setIsEditing(true);
     setDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: string, e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent any default navigation
+    e.stopPropagation(); // Stop event propagation
+    
     const updatedActivities = activities.filter(activity => activity.id !== id);
     setActivities(updatedActivities);
     
@@ -163,6 +171,20 @@ const ExtracurricularActivities: React.FC<ExtracurricularActivitiesProps> = ({ o
     }
   };
 
+  const handleDialogOpenChange = (open: boolean) => {
+    // If we're closing the dialog and not via the Add button (which sets dialogOpen to false itself)
+    if (!open && dialogOpen) {
+      resetForm();
+    }
+    setDialogOpen(open);
+  };
+
+  const handleOpenAddDialog = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent any default behavior
+    resetForm();
+    setDialogOpen(true);
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -180,15 +202,13 @@ const ExtracurricularActivities: React.FC<ExtracurricularActivitiesProps> = ({ o
             {activities.length} of {MAX_ACTIVITIES} activities added
           </p>
           
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
               <Button 
                 size="sm" 
-                onClick={() => {
-                  resetForm();
-                  setDialogOpen(true);
-                }}
+                onClick={handleOpenAddDialog}
                 disabled={activities.length >= MAX_ACTIVITIES}
+                type="button"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Activity
@@ -282,10 +302,10 @@ const ExtracurricularActivities: React.FC<ExtracurricularActivitiesProps> = ({ o
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                <Button variant="outline" onClick={() => setDialogOpen(false)} type="button">
                   Cancel
                 </Button>
-                <Button onClick={handleAdd}>
+                <Button onClick={handleAdd} type="button">
                   {isEditing ? 'Update' : 'Add'}
                 </Button>
               </DialogFooter>
@@ -317,14 +337,16 @@ const ExtracurricularActivities: React.FC<ExtracurricularActivitiesProps> = ({ o
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleEdit(activity)}
+                      onClick={(e) => handleEdit(activity, e)}
+                      type="button"
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleDelete(activity.id)}
+                      onClick={(e) => handleDelete(activity.id, e)}
+                      type="button"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

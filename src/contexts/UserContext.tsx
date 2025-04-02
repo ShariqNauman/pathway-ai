@@ -90,7 +90,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       if (profileData) {
-        // Define a type to properly type-check the profileData
         type ProfileData = {
           id: string;
           name?: string;
@@ -109,9 +108,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           curriculum_subjects?: string[];
           extracurricular_activities?: ExtracurricularActivity[];
           created_at: string;
+          address?: string;
+          phone?: string;
+          date_of_birth?: string;
         };
         
-        // Cast the profileData to our defined type
         const typedProfileData = profileData as unknown as ProfileData;
         
         setCurrentUser({
@@ -136,7 +137,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }, {} as Record<string, string>) : 
               {},
             curriculumSubjects: typedProfileData.curriculum_subjects || [],
-            extracurricularActivities: typedProfileData.extracurricular_activities || []
+            extracurricularActivities: typedProfileData.extracurricular_activities || [],
+            dateOfBirth: typedProfileData.date_of_birth || '',
+            address: typedProfileData.address || '',
+            phone: typedProfileData.phone || ''
           },
           createdAt: new Date(typedProfileData.created_at)
         });
@@ -242,13 +246,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           curriculum_grades: preferences.curriculumGrades,
           curriculum_subjects: preferences.curriculumSubjects,
           extracurricular_activities: preferences.extracurricularActivities as any,
+          date_of_birth: preferences.dateOfBirth,
+          address: preferences.address,
+          phone: preferences.phone,
           updated_at: new Date().toISOString()
         })
         .eq('id', currentUser.id);
       
       if (error) throw error;
 
-      // Update local state
       setCurrentUser(prev => prev ? {
         ...prev,
         preferences

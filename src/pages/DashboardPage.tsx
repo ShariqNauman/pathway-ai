@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate, Link } from "react-router-dom";
@@ -7,10 +8,11 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CurriculumDisplay from "@/components/CurriculumDisplay";
 import ExtracurricularDisplay from "@/components/ExtracurricularDisplay";
+import PersonalInfoDisplay from "@/components/PersonalInfoDisplay";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, Settings, LogOut, Award, BookOpen, GraduationCap, Book } from "lucide-react";
+import { Loader2, Settings, LogOut, Award, BookOpen, GraduationCap } from "lucide-react";
 
 const DashboardPage = () => {
   const { currentUser, logout, isLoading } = useUser();
@@ -87,6 +89,10 @@ const DashboardPage = () => {
             </div>
           </div>
 
+          <div className="mb-10">
+            <PersonalInfoDisplay userProfile={currentUser} />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <Card>
               <CardHeader>
@@ -150,13 +156,15 @@ const DashboardPage = () => {
             </Card>
           </div>
 
-          <div className="mb-10">
-            <CurriculumDisplay 
-              curriculum={currentUser.preferences.highSchoolCurriculum || ""} 
-              subjects={currentUser.preferences.curriculumSubjects} 
-              grades={currentUser.preferences.curriculumGrades} 
-            />
-          </div>
+          {currentUser.preferences.highSchoolCurriculum && (
+            <div className="mb-10">
+              <CurriculumDisplay 
+                curriculum={currentUser.preferences.highSchoolCurriculum || ""} 
+                subjects={currentUser.preferences.curriculumSubjects} 
+                grades={currentUser.preferences.curriculumGrades} 
+              />
+            </div>
+          )}
 
           <div className="mb-10">
             <ExtracurricularDisplay 

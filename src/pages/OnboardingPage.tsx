@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -16,7 +17,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2 } from "lucide-react";
+import { Loader2, User, GraduationCap, DollarSign, Map } from "lucide-react";
 import { UserPreferences } from "@/types/user";
 
 const OnboardingPage = () => {
@@ -31,9 +32,18 @@ const OnboardingPage = () => {
     preferredCountry: "",
     preferredUniversityType: "",
     studyLevel: "",
-    curriculumGrades: {}, // Add the required field
-    curriculumSubjects: [] // Initialize with empty array
+    curriculumGrades: {}, // Required field
+    curriculumSubjects: [], // Initialize with empty array
+    dateOfBirth: "",
+    address: "",
+    phone: ""
   });
+
+  useEffect(() => {
+    if (currentUser?.preferences) {
+      setPreferences(currentUser.preferences);
+    }
+  }, [currentUser]);
 
   const handleNextStep = () => {
     if (validateCurrentStep()) {
@@ -49,11 +59,13 @@ const OnboardingPage = () => {
 
   const validateCurrentStep = () => {
     switch (step) {
-      case 1:
-        return preferences.intendedMajor && preferences.studyLevel;
+      case 1: // Personal Info
+        return preferences.dateOfBirth && preferences.address && preferences.phone;
       case 2:
-        return preferences.budget > 0;
+        return preferences.intendedMajor && preferences.studyLevel;
       case 3:
+        return preferences.budget > 0;
+      case 4:
         return preferences.preferredCountry && preferences.preferredUniversityType;
       default:
         return true;
@@ -100,7 +112,7 @@ const OnboardingPage = () => {
           className="w-full max-w-lg p-8 rounded-lg shadow-lg bg-card"
         >
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold">Tell Us About Your Goals</h1>
+            <h1 className="text-3xl font-bold">Tell Us About You</h1>
             <p className="text-muted-foreground mt-2">
               Help us personalize your experience
             </p>
@@ -108,10 +120,10 @@ const OnboardingPage = () => {
             {/* Progress indicator */}
             <div className="mt-6 flex justify-center">
               <div className="flex space-x-2">
-                {[1, 2, 3].map((s) => (
+                {[1, 2, 3, 4].map((s) => (
                   <div 
                     key={s} 
-                    className={`h-2 w-16 rounded-full ${
+                    className={`h-2 w-12 rounded-full ${
                       s === step ? "bg-primary" : 
                       s < step ? "bg-primary/60" : "bg-muted"
                     }`}
@@ -121,7 +133,7 @@ const OnboardingPage = () => {
             </div>
           </div>
 
-          {/* Step 1: Major and Study Level */}
+          {/* Step 1: Personal Information */}
           {step === 1 && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -129,6 +141,60 @@ const OnboardingPage = () => {
               exit={{ opacity: 0 }}
               className="space-y-6"
             >
+              <div className="flex items-center gap-2 mb-4">
+                <User className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Personal Information</h2>
+              </div>
+              
+              <div className="space-y-3">
+                <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                <Input
+                  id="dateOfBirth"
+                  type="date"
+                  value={preferences.dateOfBirth || ""}
+                  onChange={(e) => updatePreference("dateOfBirth", e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  placeholder="Enter your address"
+                  value={preferences.address || ""}
+                  onChange={(e) => updatePreference("address", e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  placeholder="Enter your phone number"
+                  value={preferences.phone || ""}
+                  onChange={(e) => updatePreference("phone", e.target.value)}
+                />
+              </div>
+
+              <Button onClick={handleNextStep} className="w-full">
+                Continue
+              </Button>
+            </motion.div>
+          )}
+
+          {/* Step 2: Major and Study Level */}
+          {step === 2 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-6"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <GraduationCap className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Academic Goals</h2>
+              </div>
+              
               <div className="space-y-3">
                 <Label htmlFor="major">What do you plan to study?</Label>
                 <Select 
@@ -170,20 +236,30 @@ const OnboardingPage = () => {
                 </RadioGroup>
               </div>
 
-              <Button onClick={handleNextStep} className="w-full">
-                Continue
-              </Button>
+              <div className="flex space-x-3">
+                <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+                  Back
+                </Button>
+                <Button onClick={handleNextStep} className="flex-1">
+                  Continue
+                </Button>
+              </div>
             </motion.div>
           )}
 
-          {/* Step 2: Budget */}
-          {step === 2 && (
+          {/* Step 3: Budget */}
+          {step === 3 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="space-y-6"
             >
+              <div className="flex items-center gap-2 mb-4">
+                <DollarSign className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Budget Information</h2>
+              </div>
+              
               <div className="space-y-3">
                 <Label htmlFor="budget">What's your yearly budget for education? (USD)</Label>
                 <Input
@@ -200,7 +276,7 @@ const OnboardingPage = () => {
               </div>
 
               <div className="flex space-x-3">
-                <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+                <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
                   Back
                 </Button>
                 <Button onClick={handleNextStep} className="flex-1">
@@ -210,14 +286,19 @@ const OnboardingPage = () => {
             </motion.div>
           )}
 
-          {/* Step 3: Country and Institution Type */}
-          {step === 3 && (
+          {/* Step 4: Country and Institution Type */}
+          {step === 4 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="space-y-6"
             >
+              <div className="flex items-center gap-2 mb-4">
+                <Map className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Location Preferences</h2>
+              </div>
+              
               <div className="space-y-3">
                 <Label htmlFor="country">Which country are you interested in studying?</Label>
                 <Select 
@@ -260,7 +341,7 @@ const OnboardingPage = () => {
               </div>
 
               <div className="flex space-x-3">
-                <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
+                <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
                   Back
                 </Button>
                 <Button onClick={handleSubmit} className="flex-1" disabled={isLoading}>

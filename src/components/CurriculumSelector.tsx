@@ -86,7 +86,10 @@ const CurriculumSelector: React.FC<CurriculumSelectorProps> = ({ onUpdate }) => 
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Add preventDefault to stop any form submission
+    e.preventDefault();
+    
     if (!currentUser) return;
 
     updateUserPreferences({
@@ -104,6 +107,12 @@ const CurriculumSelector: React.FC<CurriculumSelectorProps> = ({ onUpdate }) => 
     if (onUpdate) {
       onUpdate();
     }
+  };
+
+  const handleShowAllClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Add preventDefault to stop any navigation
+    e.preventDefault();
+    setShowAll(!showAll);
   };
 
   const filteredSubjects = selectedCurriculum ? 
@@ -175,7 +184,8 @@ const CurriculumSelector: React.FC<CurriculumSelectorProps> = ({ onUpdate }) => 
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => setShowAll(!showAll)}
+                  onClick={handleShowAllClick} // Fixed this to use the new handler
+                  type="button" // Explicitly set button type to prevent form submission
                 >
                   {showAll ? "Show Common Subjects" : "Show All Subjects"}
                 </Button>
@@ -239,7 +249,7 @@ const CurriculumSelector: React.FC<CurriculumSelectorProps> = ({ onUpdate }) => 
               </div>
             )}
 
-            <Button onClick={handleSave} className="w-full">Save Curriculum Information</Button>
+            <Button onClick={handleSave} className="w-full" type="button">Save Curriculum Information</Button>
           </>
         )}
       </CardContent>

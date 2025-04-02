@@ -37,4 +37,7 @@ export interface UserPreferences {
   curriculumGrades: Record<string, string>; // Changed to Record<string, string> for consistency
   curriculumSubjects?: string[]; // List of selected subjects
   extracurricularActivities?: ExtracurricularActivity[]; // Added extracurricular activities
+  dateOfBirth?: string; // Added personal info fields
+  address?: string;    // Added personal info fields
+  phone?: string;      // Added personal info fields
 }
