@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, UserCredentials, UserPreferences, ExtracurricularActivity } from "@/types/user";
@@ -121,6 +122,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: typedProfileData.name || '',
           preferences: {
             intendedMajor: typedProfileData.intended_major || '',
+            selectedDomains: [], // Add the missing selectedDomains property with an empty array as default
             budget: typedProfileData.budget || 0,
             preferredCountry: typedProfileData.preferred_country || '',
             preferredUniversityType: typedProfileData.preferred_university_type || '',
