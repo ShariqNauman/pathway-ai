@@ -10,9 +10,23 @@ interface StreamingOptions {
 // Use the provided API key
 const GEMINI_API_KEY = "AIzaSyAaEYKy6P3WkHBArYGoxc1s0QW2fm3rTOI";
 
+// Default system instructions for the AI consultant
+const DEFAULT_SYSTEM_INSTRUCTIONS = `You are an efficient university consultant AI. Follow these guidelines:
+
+1. Be concise and focused - ask only essential questions
+2. Never repeat questions that have already been answered
+3. Group related questions together instead of asking them one by one
+4. Limit yourself to 3-5 key questions at a time
+5. If you have enough information to make a recommendation, do so without asking more questions
+6. Use the user's profile information when available instead of asking for it again
+7. If a question is optional, mention that it's optional
+8. When recommending universities, focus on the most relevant options first
+
+Remember: Quality of information is more important than quantity of questions.`;
+
 export async function getGeminiResponse(
   prompt: string,
-  systemInstructions: string = "",
+  systemInstructions: string = DEFAULT_SYSTEM_INSTRUCTIONS,
   previousMessages: {content: string, role: "user" | "model"}[] = [],
   streamingOptions?: StreamingOptions
 ): Promise<GeminiResponse> {

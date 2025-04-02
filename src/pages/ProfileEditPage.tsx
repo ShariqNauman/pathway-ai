@@ -73,7 +73,7 @@ const ProfileEditPage = () => {
 
   const countryOptions = [
     "United States", "United Kingdom", "Canada", "Australia", 
-    "Germany", "France", "Japan", "South Korea", "China", "Other"
+    "Germany", "France", "Japan", "South Korea", "China", "Pakistan", "Other"
   ];
 
   const curriculumOptions = [

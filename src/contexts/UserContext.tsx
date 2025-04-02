@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, UserCredentials, UserPreferences, ExtracurricularActivity } from "@/types/user";
@@ -11,7 +10,7 @@ interface UserContextType {
   login: (credentials: UserCredentials) => Promise<boolean>;
   signup: (credentials: UserCredentials & { name: string }) => Promise<boolean>;
   logout: () => Promise<void>;
-  updateUserPreferences: (preferences: UserPreferences) => void;
+  updateUserPreferences: (preferences: UserPreferences) => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -242,19 +241,24 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           high_school_curriculum: preferences.highSchoolCurriculum,
           curriculum_grades: preferences.curriculumGrades,
           curriculum_subjects: preferences.curriculumSubjects,
-          extracurricular_activities: preferences.extracurricularActivities,
+          extracurricular_activities: preferences.extracurricularActivities as any,
           updated_at: new Date().toISOString()
         })
         .eq('id', currentUser.id);
       
       if (error) throw error;
-      
-      setCurrentUser({
-        ...currentUser,
+
+      // Update local state
+      setCurrentUser(prev => prev ? {
+        ...prev,
         preferences
-      });
+      } : null);
+
+      toast.success("Preferences updated successfully");
     } catch (error) {
-      console.error('Failed to update user preferences:', error);
+      console.error('Error updating preferences:', error);
+      toast.error("Failed to update preferences. Please try again.");
+      throw error;
     }
   };
 

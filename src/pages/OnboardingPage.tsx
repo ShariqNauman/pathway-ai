@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -81,7 +80,7 @@ const OnboardingPage = () => {
 
   const countryOptions = [
     "United States", "United Kingdom", "Canada", "Australia", 
-    "Germany", "France", "Japan", "South Korea", "China", "Other"
+    "Germany", "France", "Japan", "South Korea", "China", "Pakistan", "Other"
   ];
 
   return (
