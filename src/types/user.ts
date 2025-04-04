@@ -1,3 +1,4 @@
+
 export interface UserCredentials {
   email: string;
   password: string;
@@ -38,6 +39,8 @@ export interface UserPreferences {
   curriculumSubjects?: string[]; // List of selected subjects
   extracurricularActivities?: ExtracurricularActivity[]; // Added extracurricular activities
   dateOfBirth?: string; // Added personal info fields
-  address?: string;    // Added personal info fields
-  phone?: string;      // Added personal info fields
+  nationality?: string;    // Added nationality instead of address
+  countryOfResidence?: string; // Added country of residence
+  countryCode?: string;      // Added country code prefix
+  phoneNumber?: string;      // Actual phone number
 }

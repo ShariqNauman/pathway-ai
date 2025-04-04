@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -17,10 +18,78 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, User, GraduationCap, DollarSign, Map } from "lucide-react";
+import { Loader2, User, GraduationCap, DollarSign, Map, Globe, Flag, Phone } from "lucide-react";
 import { UserPreferences } from "@/types/user";
 import { majorDomains } from "@/data/majorDomains";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
+// Country list for dropdowns
+const COUNTRIES = [
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", 
+  "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", 
+  "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", 
+  "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", 
+  "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic", 
+  "Denmark", "Djibouti", "Dominica", "Dominican Republic", "East Timor", "Ecuador", "Egypt", "El Salvador", 
+  "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France", "Gabon", 
+  "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana", 
+  "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", 
+  "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Korea, North", "Korea, South", "Kosovo", 
+  "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", 
+  "Luxembourg", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", 
+  "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", 
+  "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", 
+  "North Macedonia", "Norway", "Oman", "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", 
+  "Peru", "Philippines", "Poland", "Portugal", "Qatar", "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", 
+  "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", 
+  "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", 
+  "Somalia", "South Africa", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", 
+  "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", 
+  "Turkey", "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", 
+  "United States", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", 
+  "Zambia", "Zimbabwe"
+];
+
+// Country code list for phone numbers
+const COUNTRY_CODES = [
+  {code: "+1", country: "United States/Canada"},
+  {code: "+44", country: "United Kingdom"},
+  {code: "+91", country: "India"},
+  {code: "+61", country: "Australia"},
+  {code: "+49", country: "Germany"},
+  {code: "+33", country: "France"},
+  {code: "+86", country: "China"},
+  {code: "+81", country: "Japan"},
+  {code: "+7", country: "Russia"},
+  {code: "+55", country: "Brazil"},
+  {code: "+52", country: "Mexico"},
+  {code: "+27", country: "South Africa"},
+  {code: "+82", country: "South Korea"},
+  {code: "+39", country: "Italy"},
+  {code: "+34", country: "Spain"},
+  {code: "+31", country: "Netherlands"},
+  {code: "+966", country: "Saudi Arabia"},
+  {code: "+971", country: "United Arab Emirates"},
+  {code: "+65", country: "Singapore"},
+  {code: "+90", country: "Turkey"},
+  {code: "+92", country: "Pakistan"},
+  {code: "+20", country: "Egypt"},
+  {code: "+234", country: "Nigeria"},
+  {code: "+351", country: "Portugal"},
+  {code: "+972", country: "Israel"},
+  {code: "+60", country: "Malaysia"},
+  {code: "+46", country: "Sweden"},
+  {code: "+41", country: "Switzerland"},
+  {code: "+45", country: "Denmark"},
+  {code: "+47", country: "Norway"},
+  {code: "+358", country: "Finland"},
+  {code: "+48", country: "Poland"},
+  {code: "+43", country: "Austria"},
+  {code: "+380", country: "Ukraine"},
+  {code: "+30", country: "Greece"},
+  {code: "+36", country: "Hungary"},
+  {code: "+62", country: "Indonesia"},
+];
 
 const OnboardingPage = () => {
   const { currentUser, updateUserPreferences, isLoading } = useUser();
@@ -38,8 +107,10 @@ const OnboardingPage = () => {
     curriculumGrades: {}, // Required field
     curriculumSubjects: [], // Initialize with empty array
     dateOfBirth: "",
-    address: "",
-    phone: ""
+    nationality: "",
+    countryOfResidence: "",
+    countryCode: "",
+    phoneNumber: ""
   });
 
   const availableDomains = preferences.intendedMajor ? majorDomains[preferences.intendedMajor] || [] : [];
@@ -81,7 +152,11 @@ const OnboardingPage = () => {
   const validateCurrentStep = () => {
     switch (step) {
       case 1: // Personal Info
-        return preferences.dateOfBirth && preferences.address && preferences.phone;
+        return preferences.dateOfBirth && 
+               preferences.nationality && 
+               preferences.countryOfResidence && 
+               preferences.countryCode && 
+               preferences.phoneNumber;
       case 2:
         return preferences.intendedMajor && preferences.studyLevel;
       case 3:
@@ -176,23 +251,69 @@ const OnboardingPage = () => {
               </div>
 
               <div className="space-y-3">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  placeholder="Enter your address"
-                  value={preferences.address || ""}
-                  onChange={(e) => updatePreference("address", e.target.value)}
-                />
+                <Label htmlFor="nationality">Nationality</Label>
+                <Select 
+                  onValueChange={(value) => updatePreference("nationality", value)}
+                  value={preferences.nationality}
+                >
+                  <SelectTrigger id="nationality">
+                    <SelectValue placeholder="Select your nationality" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-80">
+                    {COUNTRIES.map((country) => (
+                      <SelectItem key={`nationality-${country}`} value={country}>
+                        {country}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="countryOfResidence">Country of Residence</Label>
+                <Select 
+                  onValueChange={(value) => updatePreference("countryOfResidence", value)}
+                  value={preferences.countryOfResidence}
+                >
+                  <SelectTrigger id="countryOfResidence">
+                    <SelectValue placeholder="Select your country of residence" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-80">
+                    {COUNTRIES.map((country) => (
+                      <SelectItem key={`residence-${country}`} value={country}>
+                        {country}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-3">
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  placeholder="Enter your phone number"
-                  value={preferences.phone || ""}
-                  onChange={(e) => updatePreference("phone", e.target.value)}
-                />
+                <div className="flex gap-2">
+                  <Select 
+                    onValueChange={(value) => updatePreference("countryCode", value)}
+                    value={preferences.countryCode}
+                  >
+                    <SelectTrigger id="countryCode" className="w-[140px]">
+                      <SelectValue placeholder="Code" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-80">
+                      {COUNTRY_CODES.map((item) => (
+                        <SelectItem key={item.code} value={item.code}>
+                          {item.code} ({item.country})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id="phoneNumber"
+                    placeholder="Enter phone number"
+                    value={preferences.phoneNumber || ""}
+                    onChange={(e) => updatePreference("phoneNumber", e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
               </div>
 
               <Button onClick={handleNextStep} className="w-full">

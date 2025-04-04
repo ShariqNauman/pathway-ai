@@ -100,6 +100,8 @@ const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen = false 
                 feedback={feedback}
                 isAnalyzing={isAnalyzing}
                 ratings={ratings}
+                essayType={currentFormValues.essayType}
+                prompt={currentFormValues.prompt}
               />
             </div>
           )}

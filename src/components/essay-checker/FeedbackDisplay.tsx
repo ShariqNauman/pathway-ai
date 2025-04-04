@@ -1,9 +1,11 @@
 
 import React from "react";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2, Download } from "lucide-react";
 import { EssaySegment } from "./HighlightedEssay";
 import HighlightedEssay from "./HighlightedEssay";
 import EssayRating, { RatingCategory } from "./EssayRating";
+import { Button } from "@/components/ui/button";
+import { generatePDF } from "@/utils/pdfGenerator";
 
 interface FeedbackDisplayProps {
   highlightedEssay: EssaySegment[];
@@ -13,9 +15,18 @@ interface FeedbackDisplayProps {
     overall: number;
     categories: RatingCategory[];
   };
+  essayType?: string;
+  prompt?: string;
 }
 
-const FeedbackDisplay = ({ highlightedEssay, feedback, isAnalyzing, ratings }: FeedbackDisplayProps) => {
+const FeedbackDisplay = ({ 
+  highlightedEssay, 
+  feedback, 
+  isAnalyzing, 
+  ratings,
+  essayType,
+  prompt
+}: FeedbackDisplayProps) => {
   if (isAnalyzing) {
     return (
       <div className="text-center py-12">
@@ -34,8 +45,27 @@ const FeedbackDisplay = ({ highlightedEssay, feedback, isAnalyzing, ratings }: F
     );
   }
 
+  const handleDownloadPDF = () => {
+    generatePDF(highlightedEssay, feedback, ratings, essayType, prompt);
+  };
+
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-semibold">Analysis Results</h3>
+        {highlightedEssay.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadPDF}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Download PDF
+          </Button>
+        )}
+      </div>
+
       {highlightedEssay.length > 0 && <HighlightedEssay segments={highlightedEssay} />}
       
       {feedback && (

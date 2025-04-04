@@ -1,6 +1,7 @@
+
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Calendar, MapPin, Phone } from "lucide-react";
+import { User, Calendar, Flag, Globe, Phone } from "lucide-react";
 import { UserProfile } from "@/types/user";
 
 interface PersonalInfoDisplayProps {
@@ -36,10 +37,18 @@ const PersonalInfoDisplay: React.FC<PersonalInfoDisplayProps> = ({ userProfile }
           </div>
           
           <div className="flex items-center gap-3">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <Flag className="h-4 w-4 text-muted-foreground" />
             <div>
-              <p className="text-sm text-muted-foreground">Address</p>
-              <p className="font-medium">{userProfile.preferences.address || "Not provided"}</p>
+              <p className="text-sm text-muted-foreground">Nationality</p>
+              <p className="font-medium">{userProfile.preferences.nationality || "Not provided"}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-sm text-muted-foreground">Country of Residence</p>
+              <p className="font-medium">{userProfile.preferences.countryOfResidence || "Not provided"}</p>
             </div>
           </div>
           
@@ -47,7 +56,11 @@ const PersonalInfoDisplay: React.FC<PersonalInfoDisplayProps> = ({ userProfile }
             <Phone className="h-4 w-4 text-muted-foreground" />
             <div>
               <p className="text-sm text-muted-foreground">Phone Number</p>
-              <p className="font-medium">{userProfile.preferences.phone || "Not provided"}</p>
+              <p className="font-medium">
+                {userProfile.preferences.countryCode && userProfile.preferences.phoneNumber ? 
+                  `${userProfile.preferences.countryCode} ${userProfile.preferences.phoneNumber}` : 
+                  "Not provided"}
+              </p>
             </div>
           </div>
         </div>

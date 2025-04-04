@@ -109,8 +109,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           curriculum_subjects?: string[];
           extracurricular_activities?: ExtracurricularActivity[];
           created_at: string;
-          address?: string;
-          phone?: string;
+          nationality?: string;
+          country_of_residence?: string;
+          country_code?: string;
+          phone_number?: string;
           date_of_birth?: string;
           selected_domains?: string[];
         };
@@ -142,8 +144,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             curriculumSubjects: typedProfileData.curriculum_subjects || [],
             extracurricularActivities: typedProfileData.extracurricular_activities || [],
             dateOfBirth: typedProfileData.date_of_birth || '',
-            address: typedProfileData.address || '',
-            phone: typedProfileData.phone || ''
+            nationality: typedProfileData.nationality || '',
+            countryOfResidence: typedProfileData.country_of_residence || '',
+            countryCode: typedProfileData.country_code || '',
+            phoneNumber: typedProfileData.phone_number || ''
           },
           createdAt: new Date(typedProfileData.created_at)
         });
@@ -239,7 +243,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       console.log("Updating preferences with:", {
-        selectedDomains: preferences.selectedDomains
+        selectedDomains: preferences.selectedDomains,
+        nationality: preferences.nationality,
+        countryOfResidence: preferences.countryOfResidence
       });
       
       const { error } = await supabase
@@ -260,8 +266,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           curriculum_subjects: preferences.curriculumSubjects,
           extracurricular_activities: preferences.extracurricularActivities as any,
           date_of_birth: preferences.dateOfBirth,
-          address: preferences.address,
-          phone: preferences.phone
+          nationality: preferences.nationality,
+          country_of_residence: preferences.countryOfResidence,
+          country_code: preferences.countryCode,
+          phone_number: preferences.phoneNumber
         })
         .eq('id', currentUser.id);
         
