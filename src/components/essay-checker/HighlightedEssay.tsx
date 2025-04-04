@@ -18,13 +18,19 @@ const HighlightedEssay = ({ segments }: HighlightedEssayProps) => {
   return (
     <div className="mb-6">
       <h4 className="font-medium mb-2 text-sm">Your Essay with Feedback:</h4>
-      <div className="p-4 bg-muted/50 rounded-md font-sans text-sm">
+      <div className="p-4 bg-muted/50 rounded-md font-sans text-sm whitespace-pre-wrap">
         {segments.map((segment, index) => (
           segment.highlighted ? (
             <HoverCard key={index} openDelay={200}>
               <HoverCardTrigger asChild>
-                <span className="bg-red-200 dark:bg-red-500/30 text-red-700 dark:text-red-300 cursor-help rounded px-0.5">
+                <span 
+                  className="bg-red-200 dark:bg-red-500/30 text-red-700 dark:text-red-300 cursor-help rounded px-0.5 relative group"
+                  data-segment-id={index}
+                >
                   {segment.text}
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center opacity-80">
+                    {index + 1}
+                  </span>
                 </span>
               </HoverCardTrigger>
               <HoverCardContent className="w-80">

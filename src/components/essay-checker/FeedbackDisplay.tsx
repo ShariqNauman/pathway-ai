@@ -55,16 +55,32 @@ const FeedbackDisplay = ({
       setError(null);
       setIsGeneratingPDF(true);
       
-      // Validate input data before generating PDF
-      if (!Array.isArray(highlightedEssay) || highlightedEssay.length === 0) {
-        throw new Error("Essay content is empty or invalid");
+      // More detailed validation
+      if (!Array.isArray(highlightedEssay)) {
+        throw new Error("Essay content is invalid: not an array");
+      }
+      
+      if (highlightedEssay.length === 0) {
+        throw new Error("Essay content is empty");
+      }
+      
+      // Validate segments
+      const invalidSegments = highlightedEssay.filter(segment => 
+        !segment || typeof segment.text !== 'string'
+      );
+      
+      if (invalidSegments.length > 0) {
+        console.error("Invalid segments found:", invalidSegments);
+        throw new Error(`Found ${invalidSegments.length} invalid segments in essay`);
       }
       
       console.log("Starting PDF generation with data:", {
-        essaySegmentsCount: highlightedEssay?.length || 0,
+        essayType,
+        prompt: prompt?.substring(0, 30) + (prompt && prompt.length > 30 ? '...' : ''),
+        segmentsCount: highlightedEssay.length,
         hasFeedback: !!feedback,
         hasRatings: !!ratings,
-        firstSegment: highlightedEssay[0]
+        sampleSegment: highlightedEssay[0]
       });
       
       await generatePDF(highlightedEssay, feedback, ratings, essayType, prompt);

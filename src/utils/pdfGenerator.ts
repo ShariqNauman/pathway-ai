@@ -49,8 +49,25 @@ export const generatePDF = async (
     // Set up some variables for positioning
     const margin = 20;
     const pageWidth = pdf.internal.pageSize.getWidth() - margin * 2;
+    const pageHeight = pdf.internal.pageSize.getHeight() - margin * 2;
     let yPos = margin;
     const lineHeight = 7;
+    const fontSize = 10;
+
+    // Function to add a new page
+    const addNewPage = () => {
+      pdf.addPage();
+      yPos = margin;
+    };
+
+    // Check if we need to add a new page
+    const checkPageBreak = (neededSpace: number) => {
+      if (yPos + neededSpace > pageHeight + margin) {
+        addNewPage();
+        return true;
+      }
+      return false;
+    };
 
     // Add title
     pdf.setTextColor(0, 0, 0);
@@ -82,6 +99,8 @@ export const generatePDF = async (
 
     // Add ratings if available
     if (ratings && typeof ratings === 'object') {
+      checkPageBreak(50); // Approximate space needed for ratings
+      
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(12);
       pdf.text("Ratings", margin, yPos);
@@ -108,91 +127,131 @@ export const generatePDF = async (
     }
 
     // Add highlighted essay with feedback
+    checkPageBreak(20); // Check if we need to add a page for the essay
+    
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(12);
     pdf.text("Essay with Feedback", margin, yPos);
     yPos += lineHeight * 1.5;
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(10);
+    
+    // Store all segment data for precise annotation placement
+    const segmentData: Array<{
+      text: string;
+      startIndex: number;
+      endIndex: number;
+      highlighted: boolean;
+      comment: string | null;
+    }> = [];
+    
+    // Process the essay segments into a continuous text
+    let fullEssayText = "";
+    for (const segment of validSegments) {
+      const startIndex = fullEssayText.length;
+      fullEssayText += segment.text;
+      const endIndex = fullEssayText.length;
+      
+      segmentData.push({
+        text: segment.text,
+        startIndex,
+        endIndex,
+        highlighted: segment.highlighted,
+        comment: segment.comment
+      });
+    }
 
-    // Add essay text with annotations
-    const annotations = [];
-    let currentLineY = yPos;
+    // Split the full essay text into lines that fit the page
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(fontSize);
+    const essayLines = pdf.splitTextToSize(fullEssayText, pageWidth);
+    
+    // Calculate how many pages will be needed for the essay
+    const linesPerPage = Math.floor((pageHeight - lineHeight * 2) / (fontSize * 0.5));
+    const totalPages = Math.ceil(essayLines.length / linesPerPage);
+    
+    console.log(`Essay will be split across ${totalPages} pages with ~${linesPerPage} lines per page`);
+
+    // Track annotation positions and the annotations themselves
+    const annotations: Array<{
+      number: number;
+      x: number;
+      y: number;
+      comment: string;
+    }> = [];
+    
+    // Draw essay text and place markers
+    let lineIndex = 0;
     let annotationCounter = 1;
     
-    // Safely extract and combine all text
-    let aggregatedText = "";
-    for (const segment of validSegments) {
-      if (segment && typeof segment.text === 'string') {
-        aggregatedText += segment.text;
-      }
-    }
-
-    if (!aggregatedText) {
-      throw new Error("Essay content is empty");
-    }
-
-    const essayLines = pdf.splitTextToSize(aggregatedText, pageWidth - 5);
-
-    // Add the essay text
-    pdf.text(essayLines, margin, yPos);
-    yPos += essayLines.length * 5 + 15; // Add space after the essay
-
-    // Second pass: collect annotation information
-    let processedChars = 0;
-    let lineIndex = 0;
-    let charIndex = 0;
-
-    for (const segment of validSegments) {
-      if (!segment || typeof segment.text !== 'string') continue;
+    // Character tracking for annotation placement
+    let charPosition = 0;
+    let currentLine = 0;
+    
+    // Iterate through lines and place them on pages
+    for (let i = 0; i < essayLines.length; i++) {
+      const line = essayLines[i];
       
-      const segmentText = segment.text;
-      for (let i = 0; i < segmentText.length; i++) {
-        // If this is the first character of a highlighted segment, add an annotation
-        if (segment.highlighted && i === 0) {
-          annotations.push({
-            text: `${annotationCounter}`,
-            x: margin + (charIndex % 100) * 1.8, // Adjust positioning to prevent overflow
-            y: currentLineY,
-            comment: segment.comment || ""
-          });
-          annotationCounter++;
-        }
+      // Add a new page if needed
+      if (yPos > pageHeight - lineHeight) {
+        addNewPage();
+      }
+      
+      // Get the width of a character to help with positioning
+      const charWidth = pdf.getStringUnitWidth("A") * fontSize / pdf.internal.scaleFactor;
+      
+      // Track the character positions on this line
+      for (let c = 0; c < line.length; c++) {
+        const globalCharPos = charPosition + c;
         
-        // Advance character counter and update line position if needed
-        charIndex++;
-        if (charIndex >= 100) { // Roughly estimate characters per line
-          charIndex = 0;
-          lineIndex++;
-          currentLineY += 5; // Line height
+        // Check if this character is at the start of a highlighted segment
+        for (const segment of segmentData) {
+          if (segment.highlighted && globalCharPos === segment.startIndex) {
+            // Place an annotation marker here
+            const xPos = margin + (c * charWidth);
+            const yPos_marker = yPos - 3; // Slightly above the text
+            
+            annotations.push({
+              number: annotationCounter,
+              x: xPos,
+              y: yPos_marker,
+              comment: segment.comment || ""
+            });
+            
+            annotationCounter++;
+          }
         }
       }
-      processedChars += segmentText.length;
+      
+      // Add the line text
+      pdf.text(line, margin, yPos);
+      charPosition += line.length;
+      yPos += fontSize * 0.5;
+      currentLine++;
     }
-
-    // Add the annotations
-    for (let i = 0; i < annotations.length; i++) {
-      const ann = annotations[i];
-      // Draw small circle around the number and red circle
+    
+    // Add the markers for annotations
+    for (const ann of annotations) {
       pdf.setDrawColor(255, 0, 0);
       pdf.setFillColor(255, 0, 0);
-      pdf.circle(ann.x, ann.y - 3, 3, 'F');
-      // Add the number in white
+      pdf.circle(ann.x, ann.y, 3, 'F');
+      
+      // Add white number inside the circle
       pdf.setTextColor(255, 255, 255);
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(8);
-      pdf.text(`${i + 1}`, ann.x - 1, ann.y - 1);
+      
+      // Center the number in the circle
+      const numberText = ann.number.toString();
+      const numberWidth = pdf.getStringUnitWidth(numberText) * 8 / pdf.internal.scaleFactor;
+      pdf.text(numberText, ann.x - (numberWidth / 2), ann.y + 2);
+      
       // Reset text color
       pdf.setTextColor(0, 0, 0);
     }
 
-    // Add a new page for feedback if needed
-    if (yPos > pdf.internal.pageSize.getHeight() - margin) {
-      pdf.addPage();
-      yPos = margin;
-    }
+    // Add a new page for detailed feedback
+    addNewPage();
 
-    // Add feedback comments
+    // Add detailed feedback for annotations
     if (annotations.length > 0) {
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(12);
@@ -201,36 +260,40 @@ export const generatePDF = async (
 
       for (let i = 0; i < annotations.length; i++) {
         const ann = annotations[i];
-        if (!ann.comment) continue;
         
+        // Check if we need a new page
+        if (yPos > pageHeight - 30) {
+          addNewPage();
+        }
+        
+        // Draw the red circle with number
         pdf.setFillColor(255, 0, 0);
         pdf.circle(margin + 3, yPos - 1, 3, 'F');
+        
+        // Add white number
         pdf.setTextColor(255, 255, 255);
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(8);
-        pdf.text(`${i + 1}`, margin + 2, yPos);
+        pdf.text((i + 1).toString(), margin + 2, yPos);
+        
+        // Reset color and add the comment
         pdf.setTextColor(0, 0, 0);
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(10);
-        const commentLines = pdf.splitTextToSize(ann.comment, pageWidth - margin - 10);
+        
+        const commentLines = pdf.splitTextToSize(ann.comment, pageWidth - 15);
         pdf.text(commentLines, margin + 8, yPos);
         yPos += commentLines.length * 5 + 7;
-
-        // Add a new page if needed
-        if (yPos > pdf.internal.pageSize.getHeight() - margin - 20 && i < annotations.length - 1) {
-          pdf.addPage();
-          yPos = margin;
-        }
       }
     }
 
     // Add overall feedback
     if (feedback) {
-      // Add a new page if needed
-      if (yPos > pdf.internal.pageSize.getHeight() - margin - 60) {
-        pdf.addPage();
-        yPos = margin;
+      // Check if we need a new page
+      if (yPos > pageHeight - 60) {
+        addNewPage();
       }
+      
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(12);
       pdf.text("Overall Feedback", margin, yPos);
@@ -244,7 +307,15 @@ export const generatePDF = async (
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(10);
       const feedbackLines = pdf.splitTextToSize(formattedFeedback, pageWidth);
-      pdf.text(feedbackLines, margin, yPos);
+      
+      // Check if feedback might need multiple pages
+      for (let i = 0; i < feedbackLines.length; i++) {
+        if (yPos > pageHeight - lineHeight) {
+          addNewPage();
+        }
+        pdf.text(feedbackLines[i], margin, yPos);
+        yPos += lineHeight;
+      }
     }
 
     // Save the PDF
