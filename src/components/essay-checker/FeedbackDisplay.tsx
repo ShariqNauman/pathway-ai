@@ -39,7 +39,7 @@ const FeedbackDisplay = ({
     );
   }
 
-  if (!highlightedEssay.length && !feedback) {
+  if (!highlightedEssay?.length && !feedback) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         <FileText className="mx-auto h-12 w-12 mb-4 opacity-20" />
@@ -51,6 +51,13 @@ const FeedbackDisplay = ({
   const handleDownloadPDF = async () => {
     try {
       setIsGeneratingPDF(true);
+      
+      // Validate the data before generating PDF
+      if (!Array.isArray(highlightedEssay) || highlightedEssay.length === 0) {
+        toast.error("No essay content to generate PDF from");
+        return;
+      }
+      
       await generatePDF(highlightedEssay, feedback, ratings, essayType, prompt);
       toast.success("PDF generated successfully!");
     } catch (error) {
@@ -65,7 +72,7 @@ const FeedbackDisplay = ({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-semibold">Analysis Results</h3>
-        {highlightedEssay.length > 0 && (
+        {highlightedEssay?.length > 0 && (
           <Button
             variant="outline"
             size="sm"
@@ -88,7 +95,7 @@ const FeedbackDisplay = ({
         )}
       </div>
 
-      {highlightedEssay.length > 0 && <HighlightedEssay segments={highlightedEssay} />}
+      {highlightedEssay?.length > 0 && <HighlightedEssay segments={highlightedEssay} />}
       
       {feedback && (
         <div className="mt-6 border-t pt-6">

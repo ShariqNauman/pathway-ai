@@ -248,34 +248,38 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         countryOfResidence: preferences.countryOfResidence
       });
       
+      // Create a sanitized object for the database update
+      const profileUpdate = {
+        intended_major: preferences.intendedMajor || '',
+        selected_domains: preferences.selectedDomains || [],
+        budget: preferences.budget || 0,
+        preferred_country: preferences.preferredCountry || '',
+        preferred_university_type: preferences.preferredUniversityType || '',
+        study_level: preferences.studyLevel || 'undergraduate',
+        sat_score: preferences.satScore || null,
+        act_score: preferences.actScore || null,
+        english_test_type: preferences.englishTestType || null,
+        english_test_score: preferences.englishTestScore || null,
+        high_school_curriculum: preferences.highSchoolCurriculum || null,
+        curriculum_grades: preferences.curriculumGrades || {},
+        curriculum_subjects: preferences.curriculumSubjects || [],
+        extracurricular_activities: preferences.extracurricularActivities || [],
+        date_of_birth: preferences.dateOfBirth || null,
+        nationality: preferences.nationality || null,
+        country_of_residence: preferences.countryOfResidence || null,
+        phone: preferences.phoneNumber ? 
+          `${preferences.countryCode || ''}${preferences.phoneNumber}` : 
+          null
+      };
+      
       const { error } = await supabase
         .from('profiles')
-        .update({
-          intended_major: preferences.intendedMajor,
-          selected_domains: preferences.selectedDomains,
-          budget: preferences.budget,
-          preferred_country: preferences.preferredCountry,
-          preferred_university_type: preferences.preferredUniversityType,
-          study_level: preferences.studyLevel,
-          sat_score: preferences.satScore,
-          act_score: preferences.actScore,
-          english_test_type: preferences.englishTestType,
-          english_test_score: preferences.englishTestScore,
-          high_school_curriculum: preferences.highSchoolCurriculum,
-          curriculum_grades: preferences.curriculumGrades,
-          curriculum_subjects: preferences.curriculumSubjects,
-          extracurricular_activities: preferences.extracurricularActivities as any,
-          date_of_birth: preferences.dateOfBirth,
-          nationality: preferences.nationality,
-          country_of_residence: preferences.countryOfResidence,
-          country_code: preferences.countryCode,
-          phone_number: preferences.phoneNumber
-        })
+        .update(profileUpdate)
         .eq('id', currentUser.id);
         
       if (error) {
         console.error('Error updating preferences:', error);
-        toast("Failed to update preferences. Please try again.");
+        toast.error("Failed to update preferences. Please try again.");
         return;
       }
       
@@ -290,9 +294,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log("Preferences updated successfully:", {
         selectedDomains: preferences.selectedDomains
       });
+      
+      toast.success("Preferences updated successfully");
     } catch (error) {
       console.error('Error updating preferences:', error);
-      toast("Failed to update preferences. Please try again.");
+      toast.error("Failed to update preferences. Please try again.");
     }
   };
 
