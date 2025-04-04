@@ -28,7 +28,7 @@ export interface UserPreferences {
   budget: number;
   preferredCountry: string;
   preferredUniversityType: string;
-  studyLevel: string;
+  studyLevel?: string; // Made optional since it will always be "undergraduate"
   satScore?: number;
   actScore?: number;
   englishTestType?: string;

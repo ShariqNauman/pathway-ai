@@ -172,10 +172,6 @@ const DashboardPage = () => {
                       </dd>
                     </div>
                   )}
-                  <div>
-                    <dt className="text-sm font-medium text-muted-foreground">Study Level</dt>
-                    <dd className="text-base capitalize">{currentUser.preferences.studyLevel || "Not specified"}</dd>
-                  </div>
                 </dl>
               </CardContent>
             </Card>

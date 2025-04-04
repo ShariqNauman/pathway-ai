@@ -34,7 +34,7 @@ const OnboardingPage = () => {
     budget: 0,
     preferredCountry: "",
     preferredUniversityType: "",
-    studyLevel: "",
+    studyLevel: "undergraduate",
     curriculumGrades: {}, // Required field
     curriculumSubjects: [], // Initialize with empty array
     dateOfBirth: "",
@@ -253,28 +253,6 @@ const OnboardingPage = () => {
                   </ScrollArea>
                 </div>
               )}
-
-              <div className="space-y-3">
-                <Label>What level are you planning to study?</Label>
-                <RadioGroup 
-                  className="flex flex-col space-y-3"
-                  value={preferences.studyLevel}
-                  onValueChange={(value) => updatePreference("studyLevel", value)}
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="undergraduate" id="undergraduate" />
-                    <Label htmlFor="undergraduate">Undergraduate (Bachelor's)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="graduate" id="graduate" />
-                    <Label htmlFor="graduate">Graduate (Master's)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="doctorate" id="doctorate" />
-                    <Label htmlFor="doctorate">Doctorate (PhD)</Label>
-                  </div>
-                </RadioGroup>
-              </div>
 
               <div className="flex space-x-3">
                 <Button variant="outline" onClick={() => setStep(1)} className="flex-1">

@@ -10,8 +10,25 @@ import {
   Plus,
   MessageSquare,
   PanelLeft,
-  ChevronLeft
+  ChevronLeft,
+  MoreVertical,
+  Trash2,
+  Pencil
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -250,6 +267,9 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
   const initialLoadRef = useRef(true);
 
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [chatToRename, setChatToRename] = useState<SavedChat | null>(null);
+  const [newChatTitle, setNewChatTitle] = useState("");
 
   useEffect(() => {
     if (currentUser) {
@@ -703,6 +723,74 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
     }
   };
 
+  const deleteChat = async (chatId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      // Delete all messages in the conversation
+      const { error: messagesError } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('conversation_id', chatId);
+        
+      if (messagesError) throw messagesError;
+      
+      // Delete the conversation
+      const { error: conversationError } = await supabase
+        .from('chat_conversations')
+        .delete()
+        .eq('id', chatId);
+        
+      if (conversationError) throw conversationError;
+      
+      // Update the UI
+      setSavedChats(prev => prev.filter(chat => chat.id !== chatId));
+      
+      // If the deleted chat was the current one, start a new chat
+      if (currentConversationId === chatId) {
+        startNewChat();
+      }
+      
+      toast.success("Chat deleted successfully");
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+      toast.error("Failed to delete chat");
+    }
+  };
+
+  const renameChat = async (chatId: string, newTitle: string) => {
+    if (!currentUser || !newTitle.trim()) return;
+    
+    try {
+      const { error } = await supabase
+        .from('chat_conversations')
+        .update({ title: newTitle.trim() })
+        .eq('id', chatId);
+        
+      if (error) throw error;
+      
+      // Update the UI
+      setSavedChats(prev => prev.map(chat => 
+        chat.id === chatId ? { ...chat, title: newTitle.trim() } : chat
+      ));
+      
+      toast.success("Chat renamed successfully");
+    } catch (error) {
+      console.error("Error renaming chat:", error);
+      toast.error("Failed to rename chat");
+    }
+  };
+
+  const handleRenameSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (chatToRename && newChatTitle.trim()) {
+      renameChat(chatToRename.id, newChatTitle);
+      setIsRenameDialogOpen(false);
+      setChatToRename(null);
+      setNewChatTitle("");
+    }
+  };
+
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Sidebar - only show for logged in users */}
@@ -736,27 +824,93 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
             </div>
             <div className="flex-1 overflow-y-auto">
               {savedChats.map((chat) => (
-                <button
+                <div
                   key={chat.id}
-                  onClick={() => loadConversation(chat.id)}
                   className={cn(
-                    "w-full text-left px-4 py-2 hover:bg-muted/80 transition-colors",
+                    "group relative w-full text-left px-4 py-2 hover:bg-muted/80 transition-colors",
                     currentConversationId === chat.id && "bg-muted"
                   )}
                 >
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    <span className="truncate">{chat.title}</span>
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {formatDate(chat.lastMessageDate)}
-                  </div>
-                </button>
+                  <button
+                    onClick={() => loadConversation(chat.id)}
+                    className="w-full text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      <span className="truncate">{chat.title}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {formatDate(chat.lastMessageDate)}
+                    </div>
+                  </button>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setChatToRename(chat);
+                          setNewChatTitle(chat.title);
+                          setIsRenameDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Rename
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteChat(chat.id);
+                        }}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               ))}
             </div>
           </div>
         </motion.div>
       )}
+
+      {/* Rename Dialog */}
+      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Chat</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleRenameSubmit}>
+            <div className="py-4">
+              <Input
+                value={newChatTitle}
+                onChange={(e) => setNewChatTitle(e.target.value)}
+                placeholder="Enter new chat title"
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsRenameDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!newChatTitle.trim()}>
+                Rename
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Main chat area */}
       <div className="flex-1 flex flex-col h-full relative">

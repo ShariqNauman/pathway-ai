@@ -36,7 +36,7 @@ const ProfileEditPage = () => {
     budget: 0,
     preferredCountry: "",
     preferredUniversityType: "",
-    studyLevel: "",
+    studyLevel: "undergraduate",
     satScore: undefined,
     actScore: undefined,
     englishTestType: undefined,
@@ -209,47 +209,6 @@ const ProfileEditPage = () => {
                       </ScrollArea>
                     </div>
                   )}
-
-                  <div className="space-y-3">
-                    <Label>Study Level</Label>
-                    <RadioGroup 
-                      className="flex flex-col space-y-3"
-                      value={preferences.studyLevel}
-                      onValueChange={(value) => updatePreference("studyLevel", value)}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="undergraduate" id="undergraduate" />
-                        <Label htmlFor="undergraduate">Undergraduate (Bachelor's)</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="graduate" id="graduate" />
-                        <Label htmlFor="graduate">Graduate (Master's)</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="doctorate" id="doctorate" />
-                        <Label htmlFor="doctorate">Doctorate (PhD)</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label htmlFor="curriculum">High School Curriculum</Label>
-                    <Select 
-                      onValueChange={(value) => updatePreference("highSchoolCurriculum", value)}
-                      value={preferences.highSchoolCurriculum || ""}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your curriculum" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {curriculumOptions.map((curriculum) => (
-                          <SelectItem key={curriculum} value={curriculum}>
-                            {curriculum}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </CardContent>
               </Card>
 
