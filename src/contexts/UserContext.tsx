@@ -251,20 +251,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         countryOfResidence: preferences.countryOfResidence
       });
       
-      // Convert extracurricular activities to a plain object format for storage
-      const plainExtracurricularActivities = preferences.extracurricularActivities 
-        ? preferences.extracurricularActivities.map(activity => {
-            return {
-              id: activity.id,
-              name: activity.name,
-              position: activity.position,
-              organization: activity.organization,
-              description: activity.description,
-              yearsInvolved: activity.yearsInvolved,
-              hoursPerWeek: activity.hoursPerWeek,
-              weeksPerYear: activity.weeksPerYear
-            };
-          })
+      // Convert extracurricular activities to a format Supabase can handle
+      const safeExtracurricularActivities = preferences.extracurricularActivities 
+        ? preferences.extracurricularActivities.map(activity => ({
+            id: activity.id || "",
+            name: activity.name || "",
+            position: activity.position || "",
+            organization: activity.organization || "",
+            description: activity.description || "",
+            yearsInvolved: activity.yearsInvolved || "",
+            hoursPerWeek: typeof activity.hoursPerWeek === 'number' ? activity.hoursPerWeek : 0,
+            weeksPerYear: typeof activity.weeksPerYear === 'number' ? activity.weeksPerYear : 0
+          }))
         : [];
       
       // Format phone based on countryCode and phoneNumber
@@ -278,6 +276,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Create a sanitized object for the database update
+      // Make sure all field names match exactly what's in the Supabase database
       const profileUpdate = {
         intended_major: preferences.intendedMajor || null,
         selected_domains: preferences.selectedDomains || [],
@@ -292,12 +291,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         high_school_curriculum: preferences.highSchoolCurriculum || null,
         curriculum_grades: preferences.curriculumGrades || {},
         curriculum_subjects: preferences.curriculumSubjects || [],
-        extracurricular_activities: plainExtracurricularActivities,
+        extracurricular_activities: safeExtracurricularActivities,
         date_of_birth: preferences.dateOfBirth || null,
         nationality: preferences.nationality || null,
-        country_of_residence: preferences.countryOfResidence || null,
+        address: preferences.nationality || null, // Using nationality as fallback for address if needed
         phone: formattedPhone
       };
+      
+      // Remove any fields that are not in the database schema
+      delete (profileUpdate as any).country_of_residence;
+      delete (profileUpdate as any).country_code;
+      delete (profileUpdate as any).phone_number;
       
       console.log("Sending profile update to Supabase:", profileUpdate);
       
@@ -308,7 +312,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
       if (error) {
         console.error('Error updating preferences:', error);
-        toast.error("Failed to update preferences. Please try again.");
+        toast.error(`Failed to update preferences: ${error.message}`);
         return;
       }
       

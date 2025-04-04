@@ -55,16 +55,17 @@ const FeedbackDisplay = ({
       setError(null);
       setIsGeneratingPDF(true);
       
+      // Validate input data before generating PDF
+      if (!Array.isArray(highlightedEssay) || highlightedEssay.length === 0) {
+        throw new Error("Essay content is empty or invalid");
+      }
+      
       console.log("Starting PDF generation with data:", {
         essaySegmentsCount: highlightedEssay?.length || 0,
         hasFeedback: !!feedback,
-        hasRatings: !!ratings
+        hasRatings: !!ratings,
+        firstSegment: highlightedEssay[0]
       });
-      
-      // Validate the data before generating PDF
-      if (!Array.isArray(highlightedEssay) || highlightedEssay.length === 0) {
-        throw new Error("No essay content to generate PDF from");
-      }
       
       await generatePDF(highlightedEssay, feedback, ratings, essayType, prompt);
       toast.success("PDF generated successfully!");
@@ -72,7 +73,7 @@ const FeedbackDisplay = ({
       console.error("Failed to generate PDF:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       setError(`Failed to generate PDF: ${errorMessage}`);
-      toast.error("Failed to generate PDF. Please try again.");
+      toast.error(`Failed to generate PDF: ${errorMessage}`);
     } finally {
       setIsGeneratingPDF(false);
     }

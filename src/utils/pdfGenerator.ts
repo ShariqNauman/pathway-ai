@@ -16,13 +16,28 @@ export const generatePDF = async (
   prompt?: string | null
 ): Promise<void> => {
   try {
+    console.log("PDF Generation - Input validation check:", {
+      segmentsProvided: !!segments,
+      segmentsIsArray: Array.isArray(segments),
+      segmentsLength: segments ? segments.length : 0,
+      feedbackProvided: !!feedback,
+      ratingsProvided: !!ratings
+    });
+    
     // Input validation - ensure segments exist and are an array
     if (!segments || !Array.isArray(segments) || segments.length === 0) {
       console.error("Invalid segments data:", segments);
       throw new Error("No valid essay content provided");
     }
 
-    console.log("Generating PDF with segments:", segments.length);
+    // Check that segments contain valid text
+    const validSegments = segments.filter(seg => seg && typeof seg.text === 'string');
+    if (validSegments.length === 0) {
+      console.error("No valid text in segments:", segments);
+      throw new Error("Essay segments contain no valid text");
+    }
+
+    console.log("Generating PDF with segments:", validSegments.length);
     
     // Create a new jsPDF instance
     const pdf = new jsPDF({
@@ -104,11 +119,11 @@ export const generatePDF = async (
     const annotations = [];
     let currentLineY = yPos;
     let annotationCounter = 1;
+    
+    // Safely extract and combine all text
     let aggregatedText = "";
-
-    // First pass: collect all text to calculate line breaks properly
-    for (const segment of segments) {
-      if (segment && segment.text) {
+    for (const segment of validSegments) {
+      if (segment && typeof segment.text === 'string') {
         aggregatedText += segment.text;
       }
     }
@@ -119,41 +134,41 @@ export const generatePDF = async (
 
     const essayLines = pdf.splitTextToSize(aggregatedText, pageWidth - 5);
 
-    // Second pass: add annotations for highlighted segments
+    // Add the essay text
+    pdf.text(essayLines, margin, yPos);
+    yPos += essayLines.length * 5 + 15; // Add space after the essay
+
+    // Second pass: collect annotation information
     let processedChars = 0;
     let lineIndex = 0;
     let charIndex = 0;
 
-    for (const segment of segments) {
-      if (!segment || !segment.text) continue;
+    for (const segment of validSegments) {
+      if (!segment || typeof segment.text !== 'string') continue;
       
       const segmentText = segment.text;
       for (let i = 0; i < segmentText.length; i++) {
-        // If we've reached the end of the current line, move to the next line
-        if (charIndex >= essayLines[lineIndex].length) {
-          lineIndex++;
-          charIndex = 0;
-          currentLineY += 5; // Line height
-        }
-
         // If this is the first character of a highlighted segment, add an annotation
         if (segment.highlighted && i === 0) {
           annotations.push({
             text: `${annotationCounter}`,
-            x: margin + charIndex * 2.5,
+            x: margin + (charIndex % 100) * 1.8, // Adjust positioning to prevent overflow
             y: currentLineY,
             comment: segment.comment || ""
           });
           annotationCounter++;
         }
+        
+        // Advance character counter and update line position if needed
         charIndex++;
-        processedChars++;
+        if (charIndex >= 100) { // Roughly estimate characters per line
+          charIndex = 0;
+          lineIndex++;
+          currentLineY += 5; // Line height
+        }
       }
+      processedChars += segmentText.length;
     }
-
-    // Add the essay text
-    pdf.text(essayLines, margin, yPos);
-    yPos += essayLines.length * 5 + 15; // Add space after the essay
 
     // Add the annotations
     for (let i = 0; i < annotations.length; i++) {
@@ -222,7 +237,8 @@ export const generatePDF = async (
       yPos += lineHeight * 1.5;
 
       // Format the HTML feedback (remove HTML tags)
-      const formattedFeedback = feedback.replace(/<[^>]+>/g, '') // Remove HTML tags
+      const formattedFeedback = feedback
+        .replace(/<[^>]+>/g, '') // Remove HTML tags
         .replace(/&nbsp;/g, ' '); // Replace &nbsp; with space
 
       pdf.setFont("helvetica", "normal");
