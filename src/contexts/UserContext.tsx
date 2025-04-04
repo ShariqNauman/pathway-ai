@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, UserCredentials, UserPreferences, ExtracurricularActivity } from "@/types/user";
@@ -263,13 +262,24 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         high_school_curriculum: preferences.highSchoolCurriculum || null,
         curriculum_grades: preferences.curriculumGrades || {},
         curriculum_subjects: preferences.curriculumSubjects || [],
-        extracurricular_activities: preferences.extracurricularActivities || [],
+        extracurricular_activities: preferences.extracurricularActivities 
+          ? preferences.extracurricularActivities.map(activity => ({
+              id: activity.id,
+              name: activity.name,
+              position: activity.position,
+              organization: activity.organization,
+              description: activity.description,
+              yearsInvolved: activity.yearsInvolved,
+              hoursPerWeek: activity.hoursPerWeek,
+              weeksPerYear: activity.weeksPerYear
+            }))
+          : [],
         date_of_birth: preferences.dateOfBirth || null,
         nationality: preferences.nationality || null,
         country_of_residence: preferences.countryOfResidence || null,
-        phone: preferences.phoneNumber ? 
-          `${preferences.countryCode || ''}${preferences.phoneNumber}` : 
-          null
+        phone: preferences.phoneNumber && preferences.countryCode 
+          ? `${preferences.countryCode}${preferences.phoneNumber}`
+          : null
       };
       
       const { error } = await supabase

@@ -55,6 +55,7 @@ const FeedbackDisplay = ({
       // Validate the data before generating PDF
       if (!Array.isArray(highlightedEssay) || highlightedEssay.length === 0) {
         toast.error("No essay content to generate PDF from");
+        setIsGeneratingPDF(false);
         return;
       }
       
