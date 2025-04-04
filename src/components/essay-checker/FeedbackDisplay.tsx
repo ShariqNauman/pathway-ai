@@ -6,6 +6,7 @@ import HighlightedEssay from "./HighlightedEssay";
 import EssayRating, { RatingCategory } from "./EssayRating";
 import { Button } from "@/components/ui/button";
 import { generatePDF } from "@/utils/pdfGenerator";
+import { toast } from "sonner";
 
 interface FeedbackDisplayProps {
   highlightedEssay: EssaySegment[];
@@ -27,6 +28,8 @@ const FeedbackDisplay = ({
   essayType,
   prompt
 }: FeedbackDisplayProps) => {
+  const [isGeneratingPDF, setIsGeneratingPDF] = React.useState(false);
+
   if (isAnalyzing) {
     return (
       <div className="text-center py-12">
@@ -45,8 +48,17 @@ const FeedbackDisplay = ({
     );
   }
 
-  const handleDownloadPDF = () => {
-    generatePDF(highlightedEssay, feedback, ratings, essayType, prompt);
+  const handleDownloadPDF = async () => {
+    try {
+      setIsGeneratingPDF(true);
+      await generatePDF(highlightedEssay, feedback, ratings, essayType, prompt);
+      toast.success("PDF generated successfully!");
+    } catch (error) {
+      console.error("Failed to generate PDF:", error);
+      toast.error("Failed to generate PDF. Please try again.");
+    } finally {
+      setIsGeneratingPDF(false);
+    }
   };
 
   return (
@@ -58,10 +70,20 @@ const FeedbackDisplay = ({
             variant="outline"
             size="sm"
             onClick={handleDownloadPDF}
+            disabled={isGeneratingPDF}
             className="flex items-center gap-2"
           >
-            <Download className="h-4 w-4" />
-            Download PDF
+            {isGeneratingPDF ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating PDF...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                Download PDF
+              </>
+            )}
           </Button>
         )}
       </div>
