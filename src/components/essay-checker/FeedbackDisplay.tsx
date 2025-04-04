@@ -1,12 +1,13 @@
 
 import React from "react";
-import { FileText, Loader2, Download } from "lucide-react";
+import { FileText, Loader2, Download, AlertCircle } from "lucide-react";
 import { EssaySegment } from "./HighlightedEssay";
 import HighlightedEssay from "./HighlightedEssay";
 import EssayRating, { RatingCategory } from "./EssayRating";
 import { Button } from "@/components/ui/button";
 import { generatePDF } from "@/utils/pdfGenerator";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface FeedbackDisplayProps {
   highlightedEssay: EssaySegment[];
@@ -29,6 +30,7 @@ const FeedbackDisplay = ({
   prompt
 }: FeedbackDisplayProps) => {
   const [isGeneratingPDF, setIsGeneratingPDF] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   if (isAnalyzing) {
     return (
@@ -50,19 +52,26 @@ const FeedbackDisplay = ({
 
   const handleDownloadPDF = async () => {
     try {
+      setError(null);
       setIsGeneratingPDF(true);
+      
+      console.log("Starting PDF generation with data:", {
+        essaySegmentsCount: highlightedEssay?.length || 0,
+        hasFeedback: !!feedback,
+        hasRatings: !!ratings
+      });
       
       // Validate the data before generating PDF
       if (!Array.isArray(highlightedEssay) || highlightedEssay.length === 0) {
-        toast.error("No essay content to generate PDF from");
-        setIsGeneratingPDF(false);
-        return;
+        throw new Error("No essay content to generate PDF from");
       }
       
       await generatePDF(highlightedEssay, feedback, ratings, essayType, prompt);
       toast.success("PDF generated successfully!");
     } catch (error) {
       console.error("Failed to generate PDF:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      setError(`Failed to generate PDF: ${errorMessage}`);
       toast.error("Failed to generate PDF. Please try again.");
     } finally {
       setIsGeneratingPDF(false);
@@ -95,6 +104,13 @@ const FeedbackDisplay = ({
           </Button>
         )}
       </div>
+
+      {error && (
+        <Alert variant="destructive" className="my-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       {highlightedEssay?.length > 0 && <HighlightedEssay segments={highlightedEssay} />}
       

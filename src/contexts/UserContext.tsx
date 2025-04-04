@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, UserCredentials, UserPreferences, ExtracurricularActivity } from "@/types/user";
@@ -238,7 +239,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateUserPreferences = async (preferences: UserPreferences) => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      toast.error("No user is currently logged in");
+      return;
+    }
     
     try {
       console.log("Updating preferences with:", {
@@ -247,23 +251,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         countryOfResidence: preferences.countryOfResidence
       });
       
-      // Create a sanitized object for the database update
-      const profileUpdate = {
-        intended_major: preferences.intendedMajor || '',
-        selected_domains: preferences.selectedDomains || [],
-        budget: preferences.budget || 0,
-        preferred_country: preferences.preferredCountry || '',
-        preferred_university_type: preferences.preferredUniversityType || '',
-        study_level: preferences.studyLevel || 'undergraduate',
-        sat_score: preferences.satScore || null,
-        act_score: preferences.actScore || null,
-        english_test_type: preferences.englishTestType || null,
-        english_test_score: preferences.englishTestScore || null,
-        high_school_curriculum: preferences.highSchoolCurriculum || null,
-        curriculum_grades: preferences.curriculumGrades || {},
-        curriculum_subjects: preferences.curriculumSubjects || [],
-        extracurricular_activities: preferences.extracurricularActivities 
-          ? preferences.extracurricularActivities.map(activity => ({
+      // Convert extracurricular activities to a plain object format for storage
+      const plainExtracurricularActivities = preferences.extracurricularActivities 
+        ? preferences.extracurricularActivities.map(activity => {
+            return {
               id: activity.id,
               name: activity.name,
               position: activity.position,
@@ -272,15 +263,43 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
               yearsInvolved: activity.yearsInvolved,
               hoursPerWeek: activity.hoursPerWeek,
               weeksPerYear: activity.weeksPerYear
-            }))
-          : [],
+            };
+          })
+        : [];
+      
+      // Format phone based on countryCode and phoneNumber
+      let formattedPhone = null;
+      if (preferences.phoneNumber && preferences.phoneNumber.trim() !== '') {
+        if (preferences.countryCode && preferences.countryCode.trim() !== '') {
+          formattedPhone = `${preferences.countryCode}${preferences.phoneNumber}`;
+        } else {
+          formattedPhone = preferences.phoneNumber;
+        }
+      }
+      
+      // Create a sanitized object for the database update
+      const profileUpdate = {
+        intended_major: preferences.intendedMajor || null,
+        selected_domains: preferences.selectedDomains || [],
+        budget: preferences.budget || null,
+        preferred_country: preferences.preferredCountry || null,
+        preferred_university_type: preferences.preferredUniversityType || null,
+        study_level: preferences.studyLevel || 'undergraduate',
+        sat_score: preferences.satScore || null,
+        act_score: preferences.actScore || null,
+        english_test_type: preferences.englishTestType || null,
+        english_test_score: preferences.englishTestScore || null,
+        high_school_curriculum: preferences.highSchoolCurriculum || null,
+        curriculum_grades: preferences.curriculumGrades || {},
+        curriculum_subjects: preferences.curriculumSubjects || [],
+        extracurricular_activities: plainExtracurricularActivities,
         date_of_birth: preferences.dateOfBirth || null,
         nationality: preferences.nationality || null,
         country_of_residence: preferences.countryOfResidence || null,
-        phone: preferences.phoneNumber && preferences.countryCode 
-          ? `${preferences.countryCode}${preferences.phoneNumber}`
-          : null
+        phone: formattedPhone
       };
+      
+      console.log("Sending profile update to Supabase:", profileUpdate);
       
       const { error } = await supabase
         .from('profiles')

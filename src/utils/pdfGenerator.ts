@@ -1,5 +1,5 @@
 
-import jspdf from 'jspdf';
+import jsPDF from 'jspdf';
 import { EssaySegment } from '@/components/essay-checker/HighlightedEssay';
 import { RatingCategory } from '@/components/essay-checker/EssayRating';
 
@@ -9,20 +9,23 @@ type RatingData = {
 };
 
 export const generatePDF = async (
-  segments: EssaySegment[], 
-  feedback?: string, 
+  segments: EssaySegment[] | null | undefined, 
+  feedback?: string | null, 
   ratings?: RatingData | null,
-  essayType?: string, 
-  prompt?: string
+  essayType?: string | null, 
+  prompt?: string | null
 ): Promise<void> => {
   try {
-    // Validate inputs to prevent errors
-    if (!Array.isArray(segments) || segments.length === 0) {
+    // Input validation - ensure segments exist and are an array
+    if (!segments || !Array.isArray(segments) || segments.length === 0) {
+      console.error("Invalid segments data:", segments);
       throw new Error("No valid essay content provided");
     }
 
+    console.log("Generating PDF with segments:", segments.length);
+    
     // Create a new jsPDF instance
-    const pdf = new jspdf({
+    const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4'
@@ -63,27 +66,30 @@ export const generatePDF = async (
     }
 
     // Add ratings if available
-    if (ratings) {
+    if (ratings && typeof ratings === 'object') {
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(12);
       pdf.text("Ratings", margin, yPos);
       yPos += lineHeight;
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(10);
-      pdf.text(`Overall Score: ${ratings.overall}/100`, margin, yPos);
-      yPos += lineHeight * 1.5;
+      
+      if (typeof ratings.overall === 'number') {
+        pdf.text(`Overall Score: ${ratings.overall}/100`, margin, yPos);
+        yPos += lineHeight * 1.5;
 
-      // Add category ratings
-      if (Array.isArray(ratings.categories)) {
-        for (const category of ratings.categories) {
-          if (category && category.name && category.score) {
-            pdf.setFont("helvetica", "normal");
-            pdf.text(`${category.name}: ${category.score}/100`, margin, yPos);
-            yPos += lineHeight;
+        // Add category ratings
+        if (Array.isArray(ratings.categories)) {
+          for (const category of ratings.categories) {
+            if (category && typeof category === 'object' && category.name && category.score !== undefined) {
+              pdf.setFont("helvetica", "normal");
+              pdf.text(`${category.name}: ${category.score}/100`, margin, yPos);
+              yPos += lineHeight;
+            }
           }
         }
+        yPos += 5;
       }
-      yPos += 5;
     }
 
     // Add highlighted essay with feedback
@@ -227,6 +233,7 @@ export const generatePDF = async (
 
     // Save the PDF
     pdf.save("essay-analysis.pdf");
+    console.log("PDF generated successfully");
     return Promise.resolve();
   } catch (error) {
     console.error("Error generating PDF:", error);
