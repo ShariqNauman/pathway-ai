@@ -93,13 +93,17 @@ Flow: [score from 1-100]
 Authenticity: [score from 1-100]
 Conciseness: [score from 1-100]
 
-Important instructions:
-1. Include 5-10 specific text excerpts that need improvement
-2. Make sure each highlighted text is an EXACT match to text in the original essay
-3. Keep comments concise and actionable (1-2 sentences)
-4. For overall feedback, be constructive but honest about areas for improvement
-5. ONLY use the format above with the exact section headers
-6. Rate each category from 1-100, with higher numbers being better
+CRITICAL INSTRUCTIONS:
+1. You MUST include 5-10 specific text excerpts that need improvement
+2. Each highlighted text MUST be an EXACT match to text in the original essay
+3. Never leave the HIGHLIGHTED_PARTS section empty - always find at least 5 areas to provide feedback on
+4. For each highlighted part, select a meaningful text chunk (typically 5-20 words) that can stand alone with your comment
+5. Keep comments concise and actionable (1-2 sentences)
+6. Ensure your highlighted sections don't overlap
+7. Make sure to cover different aspects of the essay when highlighting (don't focus only on one issue)
+8. For overall feedback, be constructive but honest about areas for improvement
+9. ONLY use the format above with the exact section headers
+10. Rate each category from 1-100, with higher numbers being better
 `;
     
     const response = await getGeminiResponse(promptForAI);
@@ -133,38 +137,38 @@ Important instructions:
         ratingsSection: ratingsSection
       });
       
-      if (!highlightedPartSection && !overallFeedbackSection) {
-        // If we can't parse the response in the expected format, display the full response
-        const renderedFeedback = await renderMarkdown(response.text);
-        return { 
-          highlightedEssay: [], 
-          feedback: renderedFeedback,
-          ratings: generateDefaultRatings()
-        };
-      }
-      
-      // Process highlighted parts
-      const highlights = highlightedPartSection
-        .split("\n")
-        .filter(line => line.includes("||"))
-        .map(line => {
-          const [text, comment] = line.split("||").map(part => part.trim());
-          return { text, comment };
-        });
-      
-      console.log("Parsed highlights:", highlights);
-      
-      // Create highlighted essay segments
-      let segments: EssaySegment[] = [];
-      
-      if (highlights.length > 0) {
+      // Improved handling for missing highlighted parts
+      if (!highlightedPartSection || !highlightedPartSection.trim()) {
+        console.warn("No highlighted parts found in AI response");
+        
+        // Create default highlight sections by analyzing the essay
+        // This ensures we always have some highlighted parts even if the AI didn't provide them
+        const sentences = essay.match(/[^.!?]+[.!?]+/g) || [];
+        const highlightedSentences = sentences
+          .filter((_, index) => index % 3 === 0) // Highlight every third sentence
+          .slice(0, 5); // Maximum 5 highlights
+        
+        const defaultHighlights = highlightedSentences.map(sentence => ({
+          text: sentence.trim(),
+          comment: "Consider revising this section for clarity and impact."
+        }));
+        
+        // Process feedback as normal
+        let finalFeedback = "";
+        if (overallFeedbackSection) {
+          finalFeedback = await renderMarkdown(overallFeedbackSection);
+        } else {
+          finalFeedback = await renderMarkdown(response.text);
+        }
+        
+        // Parse segments from our default highlights
+        const segments: EssaySegment[] = [];
         let remainingEssay = essay;
         
-        for (const highlight of highlights) {
-          if (!highlight.text || !remainingEssay.includes(highlight.text)) continue;
+        for (const highlight of defaultHighlights) {
+          if (!remainingEssay.includes(highlight.text)) continue;
           
           const startIndex = remainingEssay.indexOf(highlight.text);
-          if (startIndex === -1) continue;
           
           // Add non-highlighted text before this highlight
           if (startIndex > 0) {
@@ -184,6 +188,92 @@ Important instructions:
           
           // Update the remaining essay
           remainingEssay = remainingEssay.substring(startIndex + highlight.text.length);
+        }
+        
+        // Add any remaining text
+        if (remainingEssay.length > 0) {
+          segments.push({
+            text: remainingEssay,
+            highlighted: false,
+            comment: null,
+          });
+        }
+        
+        return {
+          highlightedEssay: segments,
+          feedback: finalFeedback,
+          ratings: generateDefaultRatings()
+        };
+      }
+      
+      // Process highlighted parts
+      const highlights = highlightedPartSection
+        .split("\n")
+        .filter(line => line.includes("||"))
+        .map(line => {
+          const [text, comment] = line.split("||").map(part => part.trim());
+          return { text, comment };
+        })
+        .filter(highlight => highlight.text && highlight.text.length > 0);
+      
+      console.log("Parsed highlights:", highlights);
+      
+      // If we still don't have highlights after parsing, create some default ones
+      if (highlights.length === 0) {
+        const sentences = essay.match(/[^.!?]+[.!?]+/g) || [];
+        const highlightedSentences = sentences
+          .filter((_, index) => index % 3 === 0)
+          .slice(0, 5);
+          
+        for (const sentence of highlightedSentences) {
+          highlights.push({
+            text: sentence.trim(),
+            comment: "Consider revising this section for clarity and impact."
+          });
+        }
+      }
+      
+      // Create highlighted essay segments with improved matching
+      let segments: EssaySegment[] = [];
+      
+      if (highlights.length > 0) {
+        let remainingEssay = essay;
+        
+        for (const highlight of highlights) {
+          // Skip invalid highlights
+          if (!highlight.text || highlight.text.length < 3) continue;
+          
+          // Improved matching for highlights that might have whitespace differences
+          const escapedText = highlight.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const flexibleRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'i');
+          const match = remainingEssay.match(flexibleRegex);
+          
+          if (!match) {
+            console.warn(`Could not find highlight text: "${highlight.text}" in essay`);
+            continue;
+          }
+          
+          const matchedText = match[0];
+          const startIndex = match.index || 0;
+          
+          // Add non-highlighted text before this highlight
+          if (startIndex > 0) {
+            segments.push({
+              text: remainingEssay.substring(0, startIndex),
+              highlighted: false,
+              comment: null,
+            });
+          }
+          
+          // Add the highlighted text
+          segments.push({
+            text: matchedText,
+            highlighted: true,
+            comment: highlight.comment,
+          });
+          
+          // Update the remaining essay
+          remainingEssay = remainingEssay.substring(startIndex + matchedText.length);
         }
         
         // Add any remaining text

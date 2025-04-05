@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { motion } from "framer-motion";
 
@@ -6,30 +5,14 @@ const testimonials = [
   {
     id: 1,
     content: "Pathway AI helped me find the perfect university that aligned with my career goals. The personalized recommendations were spot-on!",
-    author: "Emily Chen",
+    author: "Arub Bin Ali",
     position: "Computer Science Student",
-    avatar: "https://i.pravatar.cc/150?img=32",
   },
   {
     id: 2,
-    content: "As a first-generation college student, I had no idea where to start. This platform guided me through every step of the process.",
-    author: "Marcus Johnson",
-    position: "Business Administration Student",
-    avatar: "https://i.pravatar.cc/150?img=60",
-  },
-  {
-    id: 3,
-    content: "The scholarship recommendations saved me thousands of dollars. I wouldn't have found these opportunities without Pathway AI.",
-    author: "Sophia Rodriguez",
-    position: "Psychology Student",
-    avatar: "https://i.pravatar.cc/150?img=26",
-  },
-  {
-    id: 4,
     content: "The AI consultant answered all my questions about international admissions instantly. Incredibly helpful service!",
-    author: "Raj Patel",
+    author: "Muhammad Ahmad",
     position: "Engineering Student",
-    avatar: "https://i.pravatar.cc/150?img=12",
   },
 ];
 
@@ -102,16 +85,9 @@ const Testimonials = () => {
                         <path d="M9.352 4C4.456 7.456 1 13.12 1 19.36c0 5.088 3.072 8.064 6.624 8.064 3.36 0 5.856-2.688 5.856-5.856 0-3.168-2.208-5.472-5.088-5.472-.576 0-1.344.096-1.536.192.48-3.264 3.552-7.104 6.624-9.024L9.352 4zm16.512 0c-4.8 3.456-8.256 9.12-8.256 15.36 0 5.088 3.072 8.064 6.624 8.064 3.264 0 5.856-2.688 5.856-5.856 0-3.168-2.304-5.472-5.184-5.472-.576 0-1.248.096-1.44.192.48-3.264 3.456-7.104 6.528-9.024L25.864 4z" />
                       </svg>
                       <p className="text-xl md:text-2xl font-medium mb-8">"{testimonial.content}"</p>
-                      <div className="flex items-center justify-center">
-                        <img 
-                          src={testimonial.avatar} 
-                          alt={testimonial.author}
-                          className="w-12 h-12 rounded-full object-cover mr-4 border-2 border-primary/20"
-                        />
-                        <div className="text-left">
-                          <h4 className="font-semibold">{testimonial.author}</h4>
-                          <p className="text-sm text-muted-foreground">{testimonial.position}</p>
-                        </div>
+                      <div className="text-center">
+                        <h4 className="font-semibold">{testimonial.author}</h4>
+                        <p className="text-sm text-muted-foreground">{testimonial.position}</p>
                       </div>
                     </div>
                   </div>
