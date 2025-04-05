@@ -75,7 +75,7 @@ const DonationsPage = () => {
                 <Button 
                   size="lg" 
                   className="px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-primary to-primary/90"
-                  onClick={() => window.open('https://ko-fi.com/yourname')}
+                  onClick={() => window.open('https://ko-fi.com/pathwayai')}
                 >
                   Make a Donation
                 </Button>

@@ -66,9 +66,6 @@ const HighlightedEssay = ({ segments }: HighlightedEssayProps) => {
                   data-segment-id={index}
                 >
                   {segment.text}
-                  <span className={`absolute -top-2 -right-2 ${BADGE_COLORS[segmentColorMap.get(segment) || 0]} text-white text-xs rounded-full w-4 h-4 flex items-center justify-center opacity-80`}>
-                    {highlightedSegments.indexOf(segment) + 1}
-                  </span>
                 </span>
               </HoverCardTrigger>
               <HoverCardContent className="w-80">
