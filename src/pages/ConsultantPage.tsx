@@ -6,7 +6,7 @@ import ChatConsultant from "@/components/ChatConsultant";
 import { Helmet } from "react-helmet-async";
 
 const ConsultantPage = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Changed to false by default
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Default to false so sidebar starts closed
 
   return (
     <div className="flex flex-col min-h-screen bg-background">

@@ -1,11 +1,24 @@
+
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogClose
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 const Hero = () => {
   const { currentUser } = useUser();
+  const [showDemo, setShowDemo] = useState(false);
   
   // Check for missing essential fields
   const getMissingFields = () => {
@@ -25,6 +38,14 @@ const Hero = () => {
 
   const missingFields = currentUser ? getMissingFields() : [];
   const showWarning = !currentUser || missingFields.length > 0;
+
+  // Sample consultation results for the demo
+  const sampleConsultation = [
+    {
+      question: "Which universities would be good for computer science with a $30,000 annual budget?",
+      answer: "Based on your budget of $30,000 annually, here are some excellent universities for Computer Science:\n\n1. **University of Florida** - Strong CS program with tuition around $28,000 for international students.\n\n2. **Arizona State University** - Renowned engineering school with CS tuition at approximately $29,000.\n\n3. **North Carolina State University** - Excellent tech connections with tuition around $27,500.\n\n4. **University of Minnesota Twin Cities** - Strong research opportunities and falls within your budget.\n\n5. **University of Massachusetts Amherst** - Top-ranked CS program with costs around $30,000."
+    }
+  ];
 
   return (
     <section className="relative min-h-screen pt-32 pb-20 px-6 lg:px-10 overflow-hidden">
@@ -88,6 +109,31 @@ const Hero = () => {
               <span className="font-medium">100% Free Platform</span>
             </motion.div>
             
+            {/* AI explanation */}
+            <motion.div
+              className="mb-6 p-4 bg-accent/30 rounded-lg border border-primary/10"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, ease: "easeOut", delay: 0.3 }}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-md bg-primary/20 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2a9 9 0 0 1 9 9c0 3.9-3.1 7-7 7h-2a2 2 0 1 0 0 4h7" />
+                    <path d="M12 8a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z" />
+                    <path d="M12 16a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1Z" />
+                    <path d="M10 19a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2h2.5" />
+                    <path d="m2 2 20 20" />
+                    <path d="M13 5.5V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v7.5" />
+                  </svg>
+                </div>
+                <h3 className="font-medium text-lg">How Our AI Works</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Our advanced artificial intelligence analyzes your academic profile, goals, and preferences to match you with ideal universities. It processes data from 2,500+ institutions to provide personalized recommendations tailored just for you.
+              </p>
+            </motion.div>
+            
             <motion.p 
               className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0"
               initial={{ opacity: 0 }}
@@ -106,9 +152,12 @@ const Hero = () => {
               <Link to="/consultant" className="px-8 py-3 rounded-md bg-primary text-primary-foreground font-medium shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all w-full sm:w-auto text-center">
                 Get Started
               </Link>
-              <a href="#learn-more" className="px-8 py-3 rounded-md border border-border bg-white/50 backdrop-blur-sm hover:bg-white/80 transition-all w-full sm:w-auto text-center">
-                Learn More
-              </a>
+              <button 
+                onClick={() => setShowDemo(true)} 
+                className="px-8 py-3 rounded-md border border-border bg-white/50 backdrop-blur-sm hover:bg-white/80 transition-all w-full sm:w-auto text-center"
+              >
+                Try Demo
+              </button>
             </motion.div>
           </motion.div>
           
@@ -174,6 +223,49 @@ const Hero = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Demo Dialog */}
+      <Dialog open={showDemo} onOpenChange={setShowDemo}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Sample AI Consultation</DialogTitle>
+            <DialogDescription>
+              This is a preview of how our AI consultant provides personalized university recommendations.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 my-4">
+            {sampleConsultation.map((item, index) => (
+              <div key={index} className="space-y-4">
+                <Card className="bg-muted/20 border-muted">
+                  <CardContent className="p-4">
+                    <p className="font-medium">{item.question}</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-accent/10 border-accent/20">
+                  <CardContent className="p-4">
+                    <div className="prose max-w-none">
+                      <div dangerouslySetInnerHTML={{ 
+                        __html: item.answer.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n\n/g, '<br /><br />') 
+                      }} />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ))}
+          </div>
+          
+          <div className="flex justify-between mt-6">
+            <DialogClose asChild>
+              <Button variant="outline">Close Preview</Button>
+            </DialogClose>
+            <Link to="/consultant">
+              <Button>Try It Yourself</Button>
+            </Link>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };
