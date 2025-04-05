@@ -8,7 +8,6 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import EssayAnalyzerPage from "./pages/EssayAnalyzerPage";
 import ConsultantPage from "./pages/ConsultantPage";
-import FeaturesPage from "./pages/FeaturesPage";
 import ContactPage from "./pages/ContactPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
@@ -63,7 +62,6 @@ const App = () => (
               <Route path="/profile/edit" element={<ProfileEditPage />} />
               <Route path="/essay-analyzer" element={<EssayAnalyzerPage />} />
               <Route path="/consultant" element={<ConsultantPage />} />
-              <Route path="/features" element={<FeaturesPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
