@@ -180,7 +180,8 @@ export async function getGeminiResponse(
   previousMessages: {content: string, role: "user" | "model"}[] = [],
   streamingOptions?: StreamingOptions,
   userProfile?: any,
-  imageData?: string | null
+  imageData?: string | null,
+  additionalImages?: string[] // Support for multiple images
 ): Promise<GeminiResponse> {
   try {
     // Format user profile information if available
@@ -219,22 +220,40 @@ export async function getGeminiResponse(
     if (!previousMessages || previousMessages.length === 0) {
       // If image is provided, set up multipart content
       if (imageData) {
-        requestBody.contents = [{
-          role: "user",
-          parts: [
-            {
-              text: enhancedSystemInstructions
-            },
-            {
+        const parts: any[] = [
+          {
+            text: enhancedSystemInstructions
+          }
+        ];
+        
+        // Add the primary image
+        parts.push({
+          inline_data: {
+            mime_type: "image/jpeg",
+            data: imageData.split(',')[1] // Remove the data URL prefix
+          }
+        });
+        
+        // Add any additional images if provided
+        if (additionalImages && additionalImages.length > 0) {
+          additionalImages.forEach(img => {
+            parts.push({
               inline_data: {
                 mime_type: "image/jpeg",
-                data: imageData.split(',')[1] // Remove the data URL prefix
+                data: img.split(',')[1]
               }
-            },
-            {
-              text: prompt
-            }
-          ]
+            });
+          });
+        }
+        
+        // Add the prompt text
+        parts.push({
+          text: prompt
+        });
+        
+        requestBody.contents = [{
+          role: "user",
+          parts: parts
         }];
       } else {
         // Standard text request
@@ -264,20 +283,38 @@ export async function getGeminiResponse(
       
       // If there's an image, add it before the current message
       if (imageData) {
-        // Add the current message with image at the end
-        requestBody.contents.push({
-          role: "user",
-          parts: [
-            {
+        // Create parts array for the current message with images
+        const parts: any[] = [];
+        
+        // Add the primary image
+        parts.push({
+          inline_data: {
+            mime_type: "image/jpeg",
+            data: imageData.split(',')[1] // Remove the data URL prefix
+          }
+        });
+        
+        // Add any additional images if provided
+        if (additionalImages && additionalImages.length > 0) {
+          additionalImages.forEach(img => {
+            parts.push({
               inline_data: {
                 mime_type: "image/jpeg",
-                data: imageData.split(',')[1] // Remove the data URL prefix
+                data: img.split(',')[1]
               }
-            },
-            {
-              text: prompt
-            }
-          ]
+            });
+          });
+        }
+        
+        // Add the prompt text
+        parts.push({
+          text: prompt
+        });
+        
+        // Add the current message with images at the end
+        requestBody.contents.push({
+          role: "user",
+          parts: parts
         });
       } else {
         // Add the current text message

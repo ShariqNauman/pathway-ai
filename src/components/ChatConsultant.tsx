@@ -17,6 +17,7 @@ import {
   Image as ImageIcon,
   Mic,
   MicOff,
+  X
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -38,6 +39,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from "@/lib/utils";
 import { UserProfile } from "@/types/user";
+import { VoiceRecorder, processVoiceRecording } from "@/utils/voiceUtils";
 
 interface Message {
   id: string;
@@ -45,7 +47,7 @@ interface Message {
   sender: "user" | "ai";
   timestamp: Date;
   isStreaming?: boolean;
-  imageUrl?: string;
+  imageUrls?: string[];
 }
 
 interface SavedChat {
@@ -60,6 +62,7 @@ interface ChatConsultantProps {
 
 const DEFAULT_CHAT_TITLE = "New Chat";
 const MIN_USER_MESSAGES_FOR_TITLE = 5;
+const MAX_IMAGES = 3;
 
 const ABBREVIATIONS = {
   // Degrees and Levels
@@ -254,13 +257,15 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
   const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  // Change from single imageUrl to an array of imageUrls
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const initialLoadRef = useRef(true);
+  const voiceRecorder = useRef<VoiceRecorder>(new VoiceRecorder());
 
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
@@ -525,21 +530,21 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
 
   const handleSendMessage = async (overrideText?: string) => {
     const textToSend = overrideText || inputValue.trim();
-    if (!textToSend && !imageUrl) return;
+    if (!textToSend && imageUrls.length === 0) return;
 
     const userMessage: Message = {
       id: uuidv4(),
       content: textToSend,
       sender: "user",
       timestamp: new Date(),
-      imageUrl: imageUrl || undefined,
+      imageUrls: imageUrls.length > 0 ? [...imageUrls] : undefined,
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
     setHasUserSentMessage(true);
-    setImageUrl(null);
+    setImageUrls([]); // Clear images after sending
 
     try {
       const previousMessages = messages.map(msg => ({
@@ -556,6 +561,12 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
         isStreaming: true
       }]);
 
+      // Use the first image as primary and any others as additional
+      const primaryImage = userMessage.imageUrls && userMessage.imageUrls.length > 0 ? 
+        userMessage.imageUrls[0] : null;
+      const additionalImages = userMessage.imageUrls && userMessage.imageUrls.length > 1 ? 
+        userMessage.imageUrls.slice(1) : [];
+
       const response = await getGeminiResponse(
         textToSend,
         undefined,
@@ -568,7 +579,8 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
           }
         },
         currentUser,
-        imageUrl
+        primaryImage,
+        additionalImages
       );
 
       if (response.error) {
@@ -603,80 +615,45 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      setRecordingStream(stream);
-      
-      const recorder = new MediaRecorder(stream);
-      setMediaRecorder(recorder);
-      
-      const audioChunks: BlobPart[] = [];
-      
-      recorder.ondataavailable = (event) => {
-        audioChunks.push(event.data);
-      };
-      
-      recorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        const reader = new FileReader();
-        
-        reader.onloadend = async () => {
-          const base64data = reader.result as string;
-          const base64Audio = base64data.split(',')[1];
-          
-          try {
-            setIsLoading(true);
-            const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`, 
-              },
-              body: JSON.stringify({
-                audio: base64Audio,
-                model: 'whisper-1'
-              })
-            });
-            
-            if (response.ok) {
-              const result = await response.json();
-              const transcription = result.text;
-              
-              if (transcription && transcription.trim() !== '') {
-                setInputValue(transcription);
-                setTimeout(() => {
-                  handleSendMessage(transcription);
-                }, 100);
-              } else {
-                console.error("No transcription detected");
-              }
-            } else {
-              console.error("Failed to process voice:", await response.text());
-            }
-          } catch (error) {
-            console.error("Voice processing error:", error);
-          } finally {
-            setIsLoading(false);
-          }
-        };
-        
-        reader.readAsDataURL(audioBlob);
-      };
-      
-      recorder.start();
       setIsRecording(true);
-      
+      await voiceRecorder.current.start();
     } catch (error) {
       console.error("Error accessing microphone:", error);
+      setIsRecording(false);
+      // Don't show toast here to match requirements
     }
   };
 
-  const stopRecording = () => {
-    if (mediaRecorder && recordingStream) {
-      mediaRecorder.stop();
-      recordingStream.getTracks().forEach(track => track.stop());
-      setMediaRecorder(null);
-      setRecordingStream(null);
+  const stopRecording = async () => {
+    try {
+      if (isRecording) {
+        setIsLoading(true);
+        const audioBlob = await voiceRecorder.current.stop();
+        
+        try {
+          const transcription = await processVoiceRecording(audioBlob);
+          
+          if (transcription && transcription.trim() !== '') {
+            setInputValue(transcription);
+            setTimeout(() => {
+              handleSendMessage(transcription);
+            }, 100);
+          } else {
+            console.error("No transcription detected");
+          }
+        } catch (error) {
+          console.error("Voice processing error:", error);
+          // Don't show toast here to match requirements
+        } finally {
+          setIsLoading(false);
+        }
+        
+        setIsRecording(false);
+      }
+    } catch (error) {
+      console.error("Error stopping recording:", error);
       setIsRecording(false);
+      setIsLoading(false);
     }
   };
 
@@ -689,20 +666,31 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64data = reader.result as string;
-        setImageUrl(base64data);
-      };
-      reader.readAsDataURL(file);
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      // Limit to max number of images
+      const remainingSlots = MAX_IMAGES - imageUrls.length;
+      const filesToProcess = Math.min(files.length, remainingSlots);
+      
+      if (filesToProcess <= 0) {
+        return; // Silently fail if we've hit the limit
+      }
+      
+      for (let i = 0; i < filesToProcess; i++) {
+        const file = files[i];
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          setImageUrls(prev => [...prev, base64data]);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
   const handleImagePaste = (event: React.ClipboardEvent) => {
     const items = event.clipboardData?.items;
-    if (items) {
+    if (items && imageUrls.length < MAX_IMAGES) {
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
           const blob = items[i].getAsFile();
@@ -710,17 +698,20 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
             const reader = new FileReader();
             reader.onloadend = () => {
               const base64data = reader.result as string;
-              setImageUrl(base64data);
+              setImageUrls(prev => 
+                prev.length < MAX_IMAGES ? [...prev, base64data] : prev
+              );
             };
             reader.readAsDataURL(blob);
+            break; // Just process one image per paste
           }
         }
       }
     }
   };
 
-  const clearImage = () => {
-    setImageUrl(null);
+  const removeImage = (index: number) => {
+    setImageUrls(prev => prev.filter((_, i) => i !== index));
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -1019,131 +1010,3 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
 
         <div 
           ref={chatContainerRef}
-          className={cn(
-            "absolute inset-0 overflow-y-auto py-6 pb-32",
-            currentUser ? (sidebarOpen ? "px-4" : "pl-16 pr-4") : "px-4"
-          )}
-        >
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={cn(
-                "mb-6 flex gap-4",
-                message.sender === "user" ? "justify-end" : "justify-start"
-              )}
-            >
-              <div
-                className={cn(
-                  "max-w-[80%] rounded-lg p-4",
-                  message.sender === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
-                )}
-              >
-                {message.imageUrl && (
-                  <div className="mb-3">
-                    <img 
-                      src={message.imageUrl} 
-                      alt="Uploaded content" 
-                      className="max-w-full max-h-64 rounded-md"
-                    />
-                  </div>
-                )}
-                <ReactMarkdown>{message.content}</ReactMarkdown>
-                <div className="text-xs mt-2 opacity-70 flex items-center gap-2">
-                  {formatDate(message.timestamp)}
-                  {message.isStreaming && (
-                    <span className="inline-block w-3 h-3 bg-primary rounded-full animate-pulse" />
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
-
-        <div className="absolute bottom-0 left-0 right-0 border-t border-border p-4 bg-background">
-          {imageUrl && (
-            <div className="mb-2 relative">
-              <img 
-                src={imageUrl} 
-                alt="To be sent" 
-                className="h-16 rounded-md"
-              />
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="absolute top-0 right-0 rounded-full bg-background/80" 
-                onClick={clearImage}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-          <form 
-            onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} 
-            className="flex flex-col gap-2"
-          >
-            <div className="flex items-center gap-2 bg-background rounded-full border border-muted-foreground/20 px-4 py-2">
-              <Textarea
-                ref={textareaRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onPaste={handleImagePaste}
-                placeholder="Message ChatGPT..."
-                className="min-h-[20px] max-h-[150px] resize-none bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 shadow-none"
-                disabled={isLoading || isRecording}
-              />
-              <div className="flex items-center gap-2">
-                <button 
-                  type="button" 
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                  disabled={isLoading || isRecording}
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Upload image"
-                >
-                  <ImageIcon className="h-5 w-5" />
-                </button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  style={{ display: 'none' }}
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                />
-                <button 
-                  type="button" 
-                  className={cn(
-                    "transition-colors",
-                    isRecording 
-                      ? "text-destructive hover:text-destructive/80" 
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                  disabled={isLoading}
-                  onClick={toggleRecording}
-                  title={isRecording ? "Stop recording" : "Start voice chat"}
-                >
-                  {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={isLoading || (!inputValue.trim() && !imageUrl) || isRecording}
-                  className="bg-primary text-primary-foreground rounded-full p-2 disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <RotateCcw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default ChatConsultant;

@@ -7,23 +7,23 @@ export const processVoiceRecording = async (audioBlob: Blob): Promise<string> =>
     // Convert blob to base64
     const base64Audio = await blobToBase64(audioBlob);
     
-    // Create form data for API call
+    // Use Gemini's API instead of OpenAI
     const formData = new FormData();
     formData.append('file', audioBlob, 'audio.webm');
     formData.append('model', 'whisper-1');
     
-    // Call OpenAI's API directly
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    // Call the API directly
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/whisper-1:transcribe', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyAaEYKy6P3WkHBArYGoxc1s0QW2fm3rTOI"}`,
       },
       body: formData,
     });
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error:', errorText);
+      console.error('API error:', errorText);
       throw new Error('Failed to transcribe audio');
     }
     
@@ -78,7 +78,7 @@ export class VoiceRecorder {
       
       this.mediaRecorder.start();
     } catch (error) {
-      console.error('Error starting recording:', error);
+      console.error('Error accessing microphone:', error);
       throw error;
     }
   }
@@ -96,10 +96,10 @@ export class VoiceRecorder {
         resolve(audioBlob);
       };
       
-      this.mediaRecorder.onerror = (event) => {
+      this.mediaRecorder.addEventListener('error', (event) => {
         this.cleanup();
-        reject(event.error);
-      };
+        reject(new Error('Recording error occurred'));
+      });
       
       this.mediaRecorder.stop();
     });
