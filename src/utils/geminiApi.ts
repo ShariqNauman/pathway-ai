@@ -1,3 +1,4 @@
+
 interface GeminiResponse {
   text: string;
   error?: string;
@@ -102,6 +103,13 @@ CONSULTATION STYLE:
 • Reference profile information naturally in responses
 • Ask clarifying questions when needed
 
+HANDLING IMAGES:
+• When a user uploads an image, examine it carefully
+• Describe what you see in the image when appropriate
+• Answer questions related to the image content
+• Provide relevant educational advice based on image content
+• If you can't see the image clearly, politely ask for clarification
+
 AREAS OF EXPERTISE & SUPPORT:
 • Career exploration and planning
 • Personal development and skill building
@@ -171,7 +179,8 @@ export async function getGeminiResponse(
   systemInstructions: string = DEFAULT_SYSTEM_INSTRUCTIONS,
   previousMessages: {content: string, role: "user" | "model"}[] = [],
   streamingOptions?: StreamingOptions,
-  userProfile?: any
+  userProfile?: any,
+  imageData?: string | null
 ): Promise<GeminiResponse> {
   try {
     // Format user profile information if available
@@ -180,23 +189,14 @@ export async function getGeminiResponse(
       `${systemInstructions}\n\nUser Profile Information:\n${userProfileInfo}` : 
       systemInstructions;
 
-    // Using gemini-2.0-flash model as it's supported for this API version
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+    // Using Gemini Pro Vision model if image is provided, otherwise use Gemini Flash
+    const model = imageData ? "gemini-1.5-flash-latest" : "gemini-2.0-flash";
+    
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
     
     // Prepare the request body
-    const requestBody = {
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: enhancedSystemInstructions ? 
-                `${enhancedSystemInstructions}\n\n${prompt}` : 
-                prompt
-            }
-          ]
-        }
-      ],
+    let requestBody: any = {
+      contents: [],
       generationConfig: {
         temperature: 0.7,
         topK: 40,
@@ -214,9 +214,42 @@ export async function getGeminiResponse(
         }
       ]
     };
-
-    // Add previous messages if they exist
-    if (previousMessages && previousMessages.length > 0) {
+    
+    // If there are no previous messages, use the standard format
+    if (!previousMessages || previousMessages.length === 0) {
+      // If image is provided, set up multipart content
+      if (imageData) {
+        requestBody.contents = [{
+          role: "user",
+          parts: [
+            {
+              text: enhancedSystemInstructions
+            },
+            {
+              inline_data: {
+                mime_type: "image/jpeg",
+                data: imageData.split(',')[1] // Remove the data URL prefix
+              }
+            },
+            {
+              text: prompt
+            }
+          ]
+        }];
+      } else {
+        // Standard text request
+        requestBody.contents = [{
+          role: "user",
+          parts: [
+            {
+              text: enhancedSystemInstructions ? 
+                `${enhancedSystemInstructions}\n\n${prompt}` : 
+                prompt
+            }
+          ]
+        }];
+      }
+    } else {
       // Start with system instructions
       requestBody.contents = [{
         role: "user",
@@ -229,11 +262,30 @@ export async function getGeminiResponse(
         parts: [{ text: msg.content }]
       })));
       
-      // Add the current message at the end
-      requestBody.contents.push({
-        role: "user",
-        parts: [{ text: prompt }]
-      });
+      // If there's an image, add it before the current message
+      if (imageData) {
+        // Add the current message with image at the end
+        requestBody.contents.push({
+          role: "user",
+          parts: [
+            {
+              inline_data: {
+                mime_type: "image/jpeg",
+                data: imageData.split(',')[1] // Remove the data URL prefix
+              }
+            },
+            {
+              text: prompt
+            }
+          ]
+        });
+      } else {
+        // Add the current text message
+        requestBody.contents.push({
+          role: "user",
+          parts: [{ text: prompt }]
+        });
+      }
     }
 
     console.log('Gemini API Request:', JSON.stringify(requestBody, null, 2));

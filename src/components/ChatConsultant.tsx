@@ -13,7 +13,10 @@ import {
   ChevronLeft,
   MoreVertical,
   Trash2,
-  Pencil
+  Pencil,
+  Image as ImageIcon,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,6 +45,7 @@ interface Message {
   sender: "user" | "ai";
   timestamp: Date;
   isStreaming?: boolean;
+  imageUrl?: string;
 }
 
 interface SavedChat {
@@ -57,7 +61,6 @@ interface ChatConsultantProps {
 const DEFAULT_CHAT_TITLE = "New Chat";
 const MIN_USER_MESSAGES_FOR_TITLE = 5;
 
-// Add abbreviations map
 const ABBREVIATIONS = {
   // Degrees and Levels
   "computer science": "CS",
@@ -105,21 +108,17 @@ const ABBREVIATIONS = {
 };
 
 const analyzeConversationTitle = (messages: Message[]): string => {
-  // Count user messages only
   const userMessages = messages.filter(msg => msg.sender === "user");
   if (userMessages.length < MIN_USER_MESSAGES_FOR_TITLE) {
     return DEFAULT_CHAT_TITLE;
   }
 
-  // Get all messages to analyze the context
   const combinedText = messages
     .map(msg => msg.content)
     .join(" ")
     .toLowerCase();
 
-  // Common phrases and patterns for titles
   const titlePatterns = [
-    // Study Programs
     {
       match: (text: string) => {
         const programs = ["computer science", "engineering", "business", "data science", "ai"];
@@ -128,7 +127,6 @@ const analyzeConversationTitle = (messages: Message[]): string => {
         for (const program of programs) {
           for (const level of levels) {
             if (text.includes(program) && text.includes(level)) {
-              // Use abbreviations for shorter titles
               const levelAbbr = ABBREVIATIONS[level] || level;
               const programAbbr = ABBREVIATIONS[program] || program;
               return `${levelAbbr} in ${programAbbr}`;
@@ -142,7 +140,6 @@ const analyzeConversationTitle = (messages: Message[]): string => {
         return null;
       }
     },
-    // Application Process
     {
       match: (text: string) => {
         const topics = ["application", "apply", "admission", "requirements"];
@@ -158,7 +155,6 @@ const analyzeConversationTitle = (messages: Message[]): string => {
         return null;
       }
     },
-    // Career and Future Planning
     {
       match: (text: string) => {
         if (text.includes("career") || text.includes("job") || text.includes("work")) {
@@ -170,7 +166,6 @@ const analyzeConversationTitle = (messages: Message[]): string => {
         return null;
       }
     },
-    // Financial Topics
     {
       match: (text: string) => {
         if (text.includes("scholarship") || text.includes("financial aid")) {
@@ -182,7 +177,6 @@ const analyzeConversationTitle = (messages: Message[]): string => {
         return null;
       }
     },
-    // Location Based
     {
       match: (text: string) => {
         const locations = ["usa", "uk", "canada", "australia", "europe"];
@@ -197,7 +191,6 @@ const analyzeConversationTitle = (messages: Message[]): string => {
         return null;
       }
     },
-    // Documents and Tests
     {
       match: (text: string) => {
         if (text.includes("personal statement") || text.includes("essay")) {
@@ -214,7 +207,6 @@ const analyzeConversationTitle = (messages: Message[]): string => {
     }
   ];
 
-  // Try each pattern in order
   for (const pattern of titlePatterns) {
     const title = pattern.match(combinedText);
     if (title) {
@@ -222,7 +214,6 @@ const analyzeConversationTitle = (messages: Message[]): string => {
     }
   }
 
-  // If no patterns match, create a shorter title from the first user message
   const firstMessage = userMessages[0].content.toLowerCase();
   const words = firstMessage.split(" ").slice(0, 3);
   const title = words.join(" ");
@@ -234,12 +225,11 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
   
   const getWelcomeMessage = (user: UserProfile | null) => {
     if (user?.name) {
-      return `Hello ${user.name}! I'm your AI university consultant. How can I help with your educational journey today?`;
+      return `Hello ${user.name}! I'm your AI university consultant. How can I help with your educational journey today? You can upload images or use voice chat to communicate with me.`;
     }
-    return "Hello! I'm your AI university consultant. How can I help with your educational journey today?";
+    return "Hello! I'm your AI university consultant. How can I help with your educational journey today? You can upload images or use voice chat to communicate with me.";
   };
 
-  // Generate a UUID for the welcome message that will remain constant
   const welcomeMessageId = useMemo(() => uuidv4(), []);
 
   const [inputValue, setInputValue] = useState("");
@@ -253,13 +243,19 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Only initialize these states if user is logged in
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [hasShownPreferencesReminder, setHasShownPreferencesReminder] = useState(false);
   const [savedChats, setSavedChats] = useState<SavedChat[]>([]);
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
   const [isChatSavingInProgress, setIsChatSavingInProgress] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(currentUser ? initialSidebarOpen : false);
+  
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -345,7 +341,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
     try {
       setIsChatSavingInProgress(true);
       
-      // Always start with default title
       const { data: newConversation, error: createError } = await supabase
         .from('chat_conversations')
         .insert([{ 
@@ -360,16 +355,14 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
         const newConvId = newConversation[0].id;
         setCurrentConversationId(newConvId);
         
-        // Get the welcome message with the correct personalization
         const welcomeMessage = {
           id: welcomeMessageId,
           content: getWelcomeMessage(currentUser),
           sender: "ai" as const,
-          timestamp: new Date(Date.now() - 2000), // 2 seconds before user message
+          timestamp: new Date(Date.now() - 2000),
           created_at: new Date(Date.now() - 2000).toISOString()
         };
         
-        // Prepare all messages to save
         const messagesToSave = [
           {
             conversation_id: newConvId,
@@ -387,7 +380,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
           }
         ];
 
-        // Add AI response if provided
         if (aiMessage) {
           messagesToSave.push({
             conversation_id: newConvId,
@@ -398,7 +390,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
           });
         }
 
-        // Save all messages in one batch
         await supabase
           .from('chat_messages')
           .insert(messagesToSave);
@@ -415,19 +406,15 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
     }
   };
 
-  // Add function to update conversation title
   const updateConversationTitle = async (conversationId: string, messages: Message[]) => {
     if (!currentUser) return;
     
     try {
-      // Count user messages only
       const userMessageCount = messages.filter(msg => msg.sender === "user").length;
       
-      // Only update title once when we reach the minimum user messages
       if (userMessageCount === MIN_USER_MESSAGES_FOR_TITLE) {
         const newTitle = analyzeConversationTitle(messages);
         
-        // Update the title in the database
         const { error } = await supabase
           .from('chat_conversations')
           .update({ title: newTitle })
@@ -435,7 +422,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
           
         if (error) throw error;
         
-        // Refresh the saved chats to show the new title
         await fetchSavedChats();
       }
     } catch (error) {
@@ -475,7 +461,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
 
     try {
       if (!currentConversationId) {
-        // Create new conversation
         const { data: newConversation, error: createError } = await supabase
           .from('chat_conversations')
           .insert([{ 
@@ -490,7 +475,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
           const newConvId = newConversation[0].id;
           setCurrentConversationId(newConvId);
           
-          // Save all messages
           const dbMessages = messagesToSave.map(msg => ({
             conversation_id: newConvId,
             content: msg.content,
@@ -505,7 +489,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
 
           if (insertError) throw insertError;
           
-          // Update title if enough messages
           if (messagesToSave.length >= MIN_USER_MESSAGES_FOR_TITLE) {
             await updateConversationTitle(newConvId, messagesToSave);
           }
@@ -513,7 +496,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
           await fetchSavedChats();
         }
       } else {
-        // For existing conversations, save only the new messages
         const existingMessageIds = new Set(messages.map(m => m.id));
         const newMessages = messagesToSave.filter(msg => !existingMessageIds.has(msg.id));
         
@@ -529,7 +511,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
             })
         ));
         
-        // Update title if enough messages
         if (messagesToSave.length >= MIN_USER_MESSAGES_FOR_TITLE) {
           await updateConversationTitle(currentConversationId, messagesToSave);
         }
@@ -542,30 +523,30 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
+  const handleSendMessage = async (overrideText?: string) => {
+    const textToSend = overrideText || inputValue.trim();
+    if (!textToSend && !imageUrl) return;
 
     const userMessage: Message = {
       id: uuidv4(),
-      content: inputValue.trim(),
+      content: textToSend,
       sender: "user",
       timestamp: new Date(),
+      imageUrl: imageUrl || undefined,
     };
 
-    // Add user message to the chat
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
     setHasUserSentMessage(true);
+    setImageUrl(null);
 
     try {
-      // Prepare previous messages for context
       const previousMessages = messages.map(msg => ({
         content: msg.content,
         role: msg.sender === "user" ? "user" : "model" as "user" | "model"
       }));
 
-      // Create a temporary message for streaming
       const tempMessageId = uuidv4();
       setMessages(prev => [...prev, {
         id: tempMessageId,
@@ -575,9 +556,8 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
         isStreaming: true
       }]);
 
-      // Get AI response with streaming updates
       const response = await getGeminiResponse(
-        inputValue.trim(),
+        textToSend,
         undefined,
         previousMessages,
         {
@@ -587,17 +567,16 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
             ));
           }
         },
-        currentUser // Pass the current user profile to the API
+        currentUser,
+        imageUrl
       );
 
       if (response.error) {
         toast.error(response.error);
-        // Remove the temporary message if there was an error
         setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
         return;
       }
 
-      // Update the temporary message with the final content
       setMessages(prev => prev.map(msg =>
         msg.id === tempMessageId ? {
           ...msg,
@@ -606,7 +585,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
         } : msg
       ));
 
-      // Save the conversation if the user is logged in
       if (currentUser) {
         await saveConversation([...messages, userMessage, {
           id: tempMessageId,
@@ -623,6 +601,136 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
     }
   };
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setRecordingStream(stream);
+      
+      const recorder = new MediaRecorder(stream);
+      setMediaRecorder(recorder);
+      
+      const audioChunks: BlobPart[] = [];
+      
+      recorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+      };
+      
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const reader = new FileReader();
+        
+        reader.onloadend = async () => {
+          const base64data = reader.result as string;
+          const base64Audio = base64data.split(',')[1];
+          
+          try {
+            setIsLoading(true);
+            const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                audio: base64Audio,
+                model: 'whisper-1'
+              })
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              const transcription = result.text;
+              
+              if (transcription && transcription.trim() !== '') {
+                setInputValue(transcription);
+                setTimeout(() => {
+                  handleSendMessage(transcription);
+                }, 100);
+              } else {
+                toast.error("Couldn't detect speech. Please try again.");
+              }
+            } else {
+              toast.error("Failed to process voice. Please try again.");
+            }
+          } catch (error) {
+            console.error("Voice processing error:", error);
+            toast.error("Failed to process voice. Please try again.");
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        
+        reader.readAsDataURL(audioBlob);
+      };
+      
+      recorder.start();
+      setIsRecording(true);
+      toast.info("Recording... Speak now.");
+      
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+      toast.error("Failed to access microphone. Please check permissions.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && recordingStream) {
+      mediaRecorder.stop();
+      recordingStream.getTracks().forEach(track => track.stop());
+      setMediaRecorder(null);
+      setRecordingStream(null);
+      setIsRecording(false);
+      toast.info("Recording stopped. Processing your voice...");
+    }
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64data = reader.result as string;
+        setImageUrl(base64data);
+        toast.success("Image uploaded. Add your question and send.");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImagePaste = (event: React.ClipboardEvent) => {
+    const items = event.clipboardData?.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const blob = items[i].getAsFile();
+          if (blob) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64data = reader.result as string;
+              setImageUrl(base64data);
+              toast.success("Image pasted. Add your question and send.");
+            };
+            reader.readAsDataURL(blob);
+          }
+        }
+      }
+    }
+  };
+
+  const clearImage = () => {
+    setImageUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -636,7 +744,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
     try {
       setCurrentConversationId(conversationId);
       
-      // Get all messages and order by created_at to ensure correct sequence
       const { data: messagesData, error: msgError } = await supabase
         .from('chat_messages')
         .select('*')
@@ -646,15 +753,13 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
       if (msgError) throw msgError;
       
       if (messagesData) {
-        // Convert all messages from the database
         const loadedMessages = messagesData.map(msg => ({
           id: msg.id,
           content: msg.content,
           sender: msg.sender as "user" | "ai",
           timestamp: new Date(msg.created_at)
         }));
-
-        // Only set the loaded messages without adding a welcome message
+        
         setMessages(loadedMessages);
         setHasUserSentMessage(true);
       }
@@ -727,7 +832,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
     if (!currentUser) return;
     
     try {
-      // Delete all messages in the conversation
       const { error: messagesError } = await supabase
         .from('chat_messages')
         .delete()
@@ -735,7 +839,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
         
       if (messagesError) throw messagesError;
       
-      // Delete the conversation
       const { error: conversationError } = await supabase
         .from('chat_conversations')
         .delete()
@@ -743,10 +846,8 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
         
       if (conversationError) throw conversationError;
       
-      // Update the UI
       setSavedChats(prev => prev.filter(chat => chat.id !== chatId));
       
-      // If the deleted chat was the current one, start a new chat
       if (currentConversationId === chatId) {
         startNewChat();
       }
@@ -769,7 +870,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
         
       if (error) throw error;
       
-      // Update the UI
       setSavedChats(prev => prev.map(chat => 
         chat.id === chatId ? { ...chat, title: newTitle.trim() } : chat
       ));
@@ -793,7 +893,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
-      {/* Sidebar - only show for logged in users */}
       {currentUser && (
         <motion.div
           initial={false}
@@ -885,7 +984,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
         </motion.div>
       )}
 
-      {/* Rename Dialog */}
       <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -912,9 +1010,7 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
         </DialogContent>
       </Dialog>
 
-      {/* Main chat area */}
       <div className="flex-1 flex flex-col h-full relative">
-        {/* Sidebar toggle button - only show for logged in users */}
         {currentUser && !sidebarOpen && (
           <Button
             variant="ghost"
@@ -926,7 +1022,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
           </Button>
         )}
 
-        {/* Chat container */}
         <div 
           ref={chatContainerRef}
           className={cn(
@@ -950,6 +1045,15 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
                     : "bg-muted"
                 )}
               >
+                {message.imageUrl && (
+                  <div className="mb-3">
+                    <img 
+                      src={message.imageUrl} 
+                      alt="Uploaded content" 
+                      className="max-w-full max-h-64 rounded-md"
+                    />
+                  </div>
+                )}
                 <ReactMarkdown>{message.content}</ReactMarkdown>
                 <div className="text-xs mt-2 opacity-70 flex items-center gap-2">
                   {formatDate(message.timestamp)}
@@ -963,25 +1067,73 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input area */}
         <div className="absolute bottom-0 left-0 right-0 border-t border-border p-4 bg-background">
-          <form onSubmit={handleSendMessage} className="flex gap-2">
-            <Textarea
-              ref={textareaRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your message..."
-              className="min-h-[44px] max-h-[150px] resize-none"
-              disabled={isLoading}
-            />
-            <Button type="submit" disabled={isLoading || !inputValue.trim()}>
-              {isLoading ? (
-                <RotateCcw className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
+          {imageUrl && (
+            <div className="mb-2 relative">
+              <img 
+                src={imageUrl} 
+                alt="To be sent" 
+                className="h-16 rounded-md"
+              />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute top-0 right-0 rounded-full bg-background/80" 
+                onClick={clearImage}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+          <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <Textarea
+                ref={textareaRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onPaste={handleImagePaste}
+                placeholder="Type your message or paste an image..."
+                className="min-h-[44px] max-h-[150px] resize-none"
+                disabled={isLoading || isRecording}
+              />
+              <div className="flex flex-col gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="icon" 
+                  disabled={isLoading || isRecording}
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Upload image"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                </Button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                />
+                <Button 
+                  type="button" 
+                  variant={isRecording ? "destructive" : "outline"} 
+                  size="icon" 
+                  disabled={isLoading}
+                  onClick={toggleRecording}
+                  title={isRecording ? "Stop recording" : "Start voice chat"}
+                >
+                  {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </Button>
+              </div>
+              <Button type="submit" disabled={isLoading || (!inputValue.trim() && !imageUrl) || isRecording}>
+                {isLoading ? (
+                  <RotateCcw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </form>
         </div>
       </div>

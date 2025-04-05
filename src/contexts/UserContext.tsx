@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, UserCredentials, UserPreferences, ExtracurricularActivity } from "@/types/user";
@@ -109,12 +108,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           curriculum_subjects?: string[];
           extracurricular_activities?: ExtracurricularActivity[];
           created_at: string;
-          nationality?: string;
-          country_of_residence?: string;
-          country_code?: string;
-          phone_number?: string;
           date_of_birth?: string;
           selected_domains?: string[];
+          address?: string;
+          phone?: string;
         };
         
         const typedProfileData = profileData as unknown as ProfileData;
@@ -144,10 +141,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             curriculumSubjects: typedProfileData.curriculum_subjects || [],
             extracurricularActivities: typedProfileData.extracurricular_activities || [],
             dateOfBirth: typedProfileData.date_of_birth || '',
-            nationality: typedProfileData.nationality || '',
-            countryOfResidence: typedProfileData.country_of_residence || '',
-            countryCode: typedProfileData.country_code || '',
-            phoneNumber: typedProfileData.phone_number || ''
+            nationality: typedProfileData.address || '', // Using address field for nationality
+            countryOfResidence: typedProfileData.address || '', // Using address field for country of residence
+            countryCode: typedProfileData.phone ? typedProfileData.phone.split(' ')[0] : '', // Extract country code from phone
+            phoneNumber: typedProfileData.phone ? typedProfileData.phone.split(' ').slice(1).join(' ') : '', // Extract phone number
           },
           createdAt: new Date(typedProfileData.created_at)
         });
@@ -269,14 +266,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let formattedPhone = null;
       if (preferences.phoneNumber && preferences.phoneNumber.trim() !== '') {
         if (preferences.countryCode && preferences.countryCode.trim() !== '') {
-          formattedPhone = `${preferences.countryCode}${preferences.phoneNumber}`;
+          formattedPhone = `${preferences.countryCode} ${preferences.phoneNumber}`;
         } else {
           formattedPhone = preferences.phoneNumber;
         }
       }
       
       // Create a sanitized object for the database update
-      // Make sure all field names match exactly what's in the Supabase database
+      // Make sure to map the preferences to the actual column names in the database
       const profileUpdate = {
         intended_major: preferences.intendedMajor || null,
         selected_domains: preferences.selectedDomains || [],
@@ -293,15 +290,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         curriculum_subjects: preferences.curriculumSubjects || [],
         extracurricular_activities: safeExtracurricularActivities,
         date_of_birth: preferences.dateOfBirth || null,
-        nationality: preferences.nationality || null,
-        address: preferences.nationality || null, // Using nationality as fallback for address if needed
-        phone: formattedPhone
+        address: preferences.nationality || null, // Store nationality in address field
+        phone: formattedPhone // Store country code + phone number
       };
-      
-      // Remove any fields that are not in the database schema
-      delete (profileUpdate as any).country_of_residence;
-      delete (profileUpdate as any).country_code;
-      delete (profileUpdate as any).phone_number;
       
       console.log("Sending profile update to Supabase:", profileUpdate);
       
