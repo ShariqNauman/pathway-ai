@@ -6,12 +6,12 @@ import ChatConsultant from "@/components/ChatConsultant";
 import { Helmet } from "react-helmet-async";
 
 const ConsultantPage = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Changed to false by default
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Helmet>
-        <title>AI University Consultant | UniAdvisor</title>
+        <title>AI Consultant | Educational Advisor</title>
         <meta name="description" content="Get personalized university advice from our AI consultant" />
       </Helmet>
       

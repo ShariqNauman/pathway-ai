@@ -223,14 +223,14 @@ const analyzeConversationTitle = (messages: Message[]): string => {
   return title.charAt(0).toUpperCase() + title.slice(1);
 };
 
-const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
+const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => {
   const { currentUser } = useUser();
   
   const getWelcomeMessage = (user: UserProfile | null) => {
     if (user?.name) {
-      return `Hello ${user.name}! I'm your AI university consultant. How can I help with your educational journey today? You can upload images or use voice chat to communicate with me.`;
+      return `Hello ${user.name}! I'm your AI consultant. How can I help with your educational journey today? You can upload images or use voice chat to communicate with me.`;
     }
-    return "Hello! I'm your AI university consultant. How can I help with your educational journey today? You can upload images or use voice chat to communicate with me.";
+    return "Hello! I'm your AI consultant. How can I help with your educational journey today? You can upload images or use voice chat to communicate with me.";
   };
 
   const welcomeMessageId = useMemo(() => uuidv4(), []);
@@ -1086,7 +1086,7 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               onPaste={handleImagePaste}
-              placeholder="Message UniAdvisor..."
+              placeholder="Message AI Consultant..."
               className="pr-14 py-3 min-h-[50px] max-h-[200px] resize-none rounded-full"
               disabled={isLoading}
             />

@@ -1,34 +1,66 @@
 
 /**
- * Processes audio data for speech-to-text conversion
+ * Processes audio data for speech-to-text conversion using a free API
  */
 export const processVoiceRecording = async (audioBlob: Blob): Promise<string> => {
   try {
-    // Convert blob to base64
+    // Convert audio to base64
     const base64Audio = await blobToBase64(audioBlob);
     
-    // Use Gemini's API instead of OpenAI
-    const formData = new FormData();
-    formData.append('file', audioBlob, 'audio.webm');
-    formData.append('model', 'whisper-1');
-    
-    // Call the API directly
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/whisper-1:transcribe', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyAaEYKy6P3WkHBArYGoxc1s0QW2fm3rTOI"}`,
-      },
-      body: formData,
+    // Use free Web Speech API for transcription
+    return new Promise((resolve, reject) => {
+      // Create a temporary audio element
+      const audio = new Audio();
+      audio.src = URL.createObjectURL(audioBlob);
+      
+      // Create a SpeechRecognition instance
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      
+      if (!SpeechRecognition) {
+        // Fallback method if browser doesn't support Web Speech API
+        console.log("Speech recognition not supported, using simple detection");
+        resolve("Speech recognition not available in this browser. Please type your message instead.");
+        return;
+      }
+      
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      
+      // When we get a result, resolve the promise with the transcript
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        resolve(transcript);
+      };
+      
+      // Handle errors
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error', event.error);
+        reject(new Error(`Speech recognition error: ${event.error}`));
+      };
+      
+      // Play the audio and start recognition
+      audio.oncanplaythrough = () => {
+        try {
+          recognition.start();
+          audio.play();
+        } catch (error) {
+          console.error('Error starting recognition:', error);
+          reject(error);
+        }
+      };
+      
+      // Set a timeout in case recognition doesn't complete
+      setTimeout(() => {
+        try {
+          recognition.stop();
+          resolve(""); // Return empty if timeout
+        } catch (e) {
+          // Ignore errors on stopping
+        }
+      }, 10000); // 10 seconds timeout
     });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API error:', errorText);
-      throw new Error('Failed to transcribe audio');
-    }
-    
-    const data = await response.json();
-    return data.text || '';
   } catch (error) {
     console.error('Error processing voice recording:', error);
     throw error;
@@ -111,5 +143,13 @@ export class VoiceRecorder {
       this.stream = null;
     }
     this.mediaRecorder = null;
+  }
+}
+
+// Add TypeScript declarations for Web Speech API if needed
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
   }
 }
