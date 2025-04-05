@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -258,7 +257,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
   const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   
-  // Change from single imageUrl to an array of imageUrls
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -562,7 +560,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
         isStreaming: true
       }]);
 
-      // Use the first image as primary and any others as additional
       const primaryImage = userMessage.imageUrls && userMessage.imageUrls.length > 0 ? 
         userMessage.imageUrls[0] : null;
       const additionalImages = userMessage.imageUrls && userMessage.imageUrls.length > 1 ? 
@@ -1044,9 +1041,9 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
                 )}
                 <div>
                   {message.sender === "ai" ? (
-                    <ReactMarkdown className="prose dark:prose-invert">
-                      {message.content}
-                    </ReactMarkdown>
+                    <div className="prose dark:prose-invert">
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    </div>
                   ) : (
                     <div>{message.content}</div>
                   )}
