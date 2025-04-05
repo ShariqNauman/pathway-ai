@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from "react-router-dom";
 import { useEffect } from "react";
 import { UserProvider } from "@/contexts/UserContext";
+import { HelmetProvider } from 'react-helmet-async';
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import EssayAnalyzerPage from "./pages/EssayAnalyzerPage";
@@ -46,35 +47,37 @@ const ScrollToTop = () => {
 };
 
 const App = () => (
-  <ThemeProvider defaultTheme="light">
-    <UserProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          {/* Show toast notifications */}
-          <Toaster position="bottom-right" closeButton={true} />
-          <BrowserRouter>
-            <ScrollToTop />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/onboarding" element={<OnboardingPage />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/profile/edit" element={<ProfileEditPage />} />
-              <Route path="/essay-analyzer" element={<EssayAnalyzerPage />} />
-              <Route path="/consultant" element={<ConsultantPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/terms" element={<TermsPage />} />
-              <Route path="/privacy" element={<PrivacyPage />} />
-              <Route path="/donations" element={<DonationsPage />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </UserProvider>
-  </ThemeProvider>
+  <HelmetProvider>
+    <ThemeProvider defaultTheme="light">
+      <UserProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            {/* Show toast notifications */}
+            <Toaster position="bottom-right" closeButton={true} />
+            <BrowserRouter>
+              <ScrollToTop />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/onboarding" element={<OnboardingPage />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/profile/edit" element={<ProfileEditPage />} />
+                <Route path="/essay-analyzer" element={<EssayAnalyzerPage />} />
+                <Route path="/consultant" element={<ConsultantPage />} />
+                <Route path="/contact" element={<ContactPage />} />
+                <Route path="/terms" element={<TermsPage />} />
+                <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/donations" element={<DonationsPage />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </UserProvider>
+    </ThemeProvider>
+  </HelmetProvider>
 );
 
 export default App;

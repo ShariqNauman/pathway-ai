@@ -629,6 +629,7 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`, 
               },
               body: JSON.stringify({
                 audio: base64Audio,
@@ -646,14 +647,13 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
                   handleSendMessage(transcription);
                 }, 100);
               } else {
-                toast.error("Couldn't detect speech. Please try again.");
+                console.error("No transcription detected");
               }
             } else {
-              toast.error("Failed to process voice. Please try again.");
+              console.error("Failed to process voice:", await response.text());
             }
           } catch (error) {
             console.error("Voice processing error:", error);
-            toast.error("Failed to process voice. Please try again.");
           } finally {
             setIsLoading(false);
           }
@@ -664,11 +664,9 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
       
       recorder.start();
       setIsRecording(true);
-      toast.info("Recording... Speak now.");
       
     } catch (error) {
       console.error("Error accessing microphone:", error);
-      toast.error("Failed to access microphone. Please check permissions.");
     }
   };
 
@@ -679,7 +677,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
       setMediaRecorder(null);
       setRecordingStream(null);
       setIsRecording(false);
-      toast.info("Recording stopped. Processing your voice...");
     }
   };
 
@@ -698,7 +695,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
       reader.onloadend = () => {
         const base64data = reader.result as string;
         setImageUrl(base64data);
-        toast.success("Image uploaded. Add your question and send.");
       };
       reader.readAsDataURL(file);
     }
@@ -715,7 +711,6 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
             reader.onloadend = () => {
               const base64data = reader.result as string;
               setImageUrl(base64data);
-              toast.success("Image pasted. Add your question and send.");
             };
             reader.readAsDataURL(blob);
           }
@@ -1085,29 +1080,31 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
               </Button>
             </div>
           )}
-          <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex flex-col gap-2">
-            <div className="flex gap-2">
+          <form 
+            onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} 
+            className="flex flex-col gap-2"
+          >
+            <div className="flex items-center gap-2 bg-background rounded-full border border-muted-foreground/20 px-4 py-2">
               <Textarea
                 ref={textareaRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onPaste={handleImagePaste}
-                placeholder="Type your message or paste an image..."
-                className="min-h-[44px] max-h-[150px] resize-none"
+                placeholder="Message ChatGPT..."
+                className="min-h-[20px] max-h-[150px] resize-none bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 shadow-none"
                 disabled={isLoading || isRecording}
               />
-              <div className="flex flex-col gap-2">
-                <Button 
+              <div className="flex items-center gap-2">
+                <button 
                   type="button" 
-                  variant="outline" 
-                  size="icon" 
+                  className="text-muted-foreground hover:text-foreground transition-colors"
                   disabled={isLoading || isRecording}
                   onClick={() => fileInputRef.current?.click()}
                   title="Upload image"
                 >
-                  <ImageIcon className="h-4 w-4" />
-                </Button>
+                  <ImageIcon className="h-5 w-5" />
+                </button>
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -1115,24 +1112,32 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
                   accept="image/*"
                   onChange={handleImageUpload}
                 />
-                <Button 
+                <button 
                   type="button" 
-                  variant={isRecording ? "destructive" : "outline"} 
-                  size="icon" 
+                  className={cn(
+                    "transition-colors",
+                    isRecording 
+                      ? "text-destructive hover:text-destructive/80" 
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
                   disabled={isLoading}
                   onClick={toggleRecording}
                   title={isRecording ? "Stop recording" : "Start voice chat"}
                 >
-                  {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                </Button>
+                  {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isLoading || (!inputValue.trim() && !imageUrl) || isRecording}
+                  className="bg-primary text-primary-foreground rounded-full p-2 disabled:opacity-50"
+                >
+                  {isLoading ? (
+                    <RotateCcw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </button>
               </div>
-              <Button type="submit" disabled={isLoading || (!inputValue.trim() && !imageUrl) || isRecording}>
-                {isLoading ? (
-                  <RotateCcw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
             </div>
           </form>
         </div>

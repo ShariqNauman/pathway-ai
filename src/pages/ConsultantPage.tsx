@@ -3,12 +3,18 @@ import { useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ChatConsultant from "@/components/ChatConsultant";
+import { Helmet } from "react-helmet-async";
 
 const ConsultantPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
+      <Helmet>
+        <title>AI University Consultant | UniAdvisor</title>
+        <meta name="description" content="Get personalized university advice from our AI consultant" />
+      </Helmet>
+      
       <Header />
       
       {/* Main content with padding to avoid navbar overlap */}
