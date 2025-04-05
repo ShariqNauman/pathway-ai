@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -1010,3 +1011,136 @@ const ChatConsultant = ({ initialSidebarOpen = true }: ChatConsultantProps) => {
 
         <div 
           ref={chatContainerRef}
+          className="flex-1 overflow-y-auto p-4"
+        >
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={cn(
+                "flex mb-4",
+                message.sender === "user" ? "justify-end" : "justify-start"
+              )}
+            >
+              <div
+                className={cn(
+                  "max-w-3xl p-4 rounded-lg",
+                  message.sender === "user" 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-muted"
+                )}
+              >
+                {message.imageUrls && message.imageUrls.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {message.imageUrls.map((url, index) => (
+                      <div key={index} className="relative">
+                        <img 
+                          src={url} 
+                          alt={`Uploaded ${index + 1}`} 
+                          className="max-w-xs max-h-48 rounded"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div>
+                  {message.sender === "ai" ? (
+                    <ReactMarkdown className="prose dark:prose-invert">
+                      {message.content}
+                    </ReactMarkdown>
+                  ) : (
+                    <div>{message.content}</div>
+                  )}
+                </div>
+                {message.isStreaming && (
+                  <div className="mt-2">
+                    <div className="bg-primary/20 animate-pulse w-8 h-2 rounded"></div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="p-4 border-t border-border">
+          {imageUrls.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {imageUrls.map((url, index) => (
+                <div key={index} className="relative w-16 h-16">
+                  <img 
+                    src={url} 
+                    alt={`Preview ${index + 1}`} 
+                    className="w-full h-full object-cover rounded"
+                  />
+                  <button
+                    className="absolute -top-2 -right-2 bg-background rounded-full p-0.5 border border-border"
+                    onClick={() => removeImage(index)}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onPaste={handleImagePaste}
+              placeholder="Message UniAdvisor..."
+              className="pr-14 py-3 min-h-[50px] max-h-[200px] resize-none rounded-full"
+              disabled={isLoading}
+            />
+            <div className="absolute bottom-2 right-3 flex items-center gap-1">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                ref={fileInputRef}
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 rounded-full"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading || imageUrls.length >= MAX_IMAGES}
+                title="Attach image"
+              >
+                <ImageIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className={cn(
+                  "h-8 w-8 rounded-full",
+                  isRecording && "bg-destructive text-destructive-foreground"
+                )}
+                onClick={toggleRecording}
+                disabled={isLoading && !isRecording}
+                title={isRecording ? "Stop recording" : "Start voice recording"}
+              >
+                {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </Button>
+              <Button
+                size="icon"
+                disabled={(!inputValue.trim() && imageUrls.length === 0) || isLoading}
+                onClick={() => handleSendMessage()}
+                className="h-8 w-8 rounded-full"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ChatConsultant;
