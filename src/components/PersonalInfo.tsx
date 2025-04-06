@@ -13,7 +13,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { User, Mail, Calendar, Globe, Flag, Phone } from "lucide-react";
+import { User, Calendar, Globe, Flag, Phone } from "lucide-react";
 
 interface PersonalInfoProps {
   onUpdate?: () => void;
@@ -103,6 +103,7 @@ const PersonalInfo: React.FC<PersonalInfoProps> = ({ onUpdate }) => {
 
   useEffect(() => {
     if (currentUser) {
+      // Initialize fields with current user data, ensuring countryOfResidence is set properly
       setPersonalInfo({
         fullName: currentUser.name || "",
         dateOfBirth: currentUser.preferences.dateOfBirth || "",

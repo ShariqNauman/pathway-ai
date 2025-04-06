@@ -18,7 +18,6 @@ import { Card, CardContent } from "@/components/ui/card";
 
 const Hero = () => {
   const { currentUser } = useUser();
-  const [showDemo, setShowDemo] = useState(false);
   
   // Check for missing essential fields
   const getMissingFields = () => {
@@ -39,12 +38,12 @@ const Hero = () => {
   const missingFields = currentUser ? getMissingFields() : [];
   const showWarning = !currentUser || missingFields.length > 0;
 
-  // Sample consultation results for the demo
-  const sampleConsultation = [
-    {
-      question: "Which universities would be good for computer science with a $30,000 annual budget?",
-      answer: "Based on your budget of $30,000 annually, here are some excellent universities for Computer Science:\n\n1. **University of Florida** - Strong CS program with tuition around $28,000 for international students.\n\n2. **Arizona State University** - Renowned engineering school with CS tuition at approximately $29,000.\n\n3. **North Carolina State University** - Excellent tech connections with tuition around $27,500.\n\n4. **University of Minnesota Twin Cities** - Strong research opportunities and falls within your budget.\n\n5. **University of Massachusetts Amherst** - Top-ranked CS program with costs around $30,000."
-    }
+  // Sample consultation for the video demo
+  const demoMessages = [
+    { sender: "user", message: "Hi, I'm looking for universities for computer science with a budget of around $30,000 per year." },
+    { sender: "ai", message: "I'd be happy to help you find universities for computer science within your budget. Could you tell me a bit more about your academic background and preferences? What country are you looking to study in?" },
+    { sender: "user", message: "I'm looking to study in the United States. I have a GPA of 3.7/4.0 and an SAT score of 1380." },
+    { sender: "ai", message: "Based on your academic profile and budget of $30,000 per year, here are some excellent universities for Computer Science in the United States:\n\n1. **Arizona State University** - Strong CS program with tuition around $29,800 for international students.\n\n2. **University of Texas at Arlington** - ABET-accredited CS program with tuition of approximately $28,500.\n\n3. **North Carolina State University** - Excellent tech connections with tuition around $29,200.\n\n4. **University of Massachusetts Amherst** - Top-ranked CS program with costs around $30,500.\n\n5. **Florida State University** - Growing CS department with tuition around $27,800.\n\nWould you like more specific information about any of these universities?" }
   ];
 
   return (
@@ -118,14 +117,11 @@ const Hero = () => {
             >
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-md bg-primary/20 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2a9 9 0 0 1 9 9c0 3.9-3.1 7-7 7h-2a2 2 0 1 0 0 4h7" />
-                    <path d="M12 8a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z" />
-                    <path d="M12 16a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1Z" />
-                    <path d="M10 19a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2h2.5" />
-                    <path d="m2 2 20 20" />
-                    <path d="M13 5.5V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v7.5" />
-                  </svg>
+                  <img 
+                    src="/lovable-uploads/f435c9dd-1598-4f0b-ba4c-29d5a223d58b.png" 
+                    alt="Pathway AI Logo" 
+                    className="h-8 w-8" 
+                  />
                 </div>
                 <h3 className="font-medium text-lg">How Our AI Works</h3>
               </div>
@@ -152,16 +148,10 @@ const Hero = () => {
               <Link to="/consultant" className="px-8 py-3 rounded-md bg-primary text-primary-foreground font-medium shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all w-full sm:w-auto text-center">
                 Get Started
               </Link>
-              <button 
-                onClick={() => setShowDemo(true)} 
-                className="px-8 py-3 rounded-md border border-border bg-white/50 backdrop-blur-sm hover:bg-white/80 transition-all w-full sm:w-auto text-center"
-              >
-                Try Demo
-              </button>
             </motion.div>
           </motion.div>
           
-          {/* Hero image */}
+          {/* Hero image with logo */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -175,6 +165,15 @@ const Hero = () => {
                 className="w-full h-full object-cover" 
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+              
+              {/* Overlay with logo */}
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                <img 
+                  src="/lovable-uploads/f435c9dd-1598-4f0b-ba4c-29d5a223d58b.png" 
+                  alt="Pathway AI Logo" 
+                  className="w-32 h-32 opacity-90"
+                />
+              </div>
               
               {/* Stats badge */}
               <motion.div 
@@ -223,49 +222,66 @@ const Hero = () => {
           </motion.div>
         </div>
       </div>
-
-      {/* Demo Dialog */}
-      <Dialog open={showDemo} onOpenChange={setShowDemo}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">Sample AI Consultation</DialogTitle>
-            <DialogDescription>
-              This is a preview of how our AI consultant provides personalized university recommendations.
-            </DialogDescription>
-          </DialogHeader>
+      
+      {/* Demo Chat Section */}
+      <div className="max-w-7xl mx-auto mt-16 lg:mt-24">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-bold mb-4">See the AI Consultant in Action</h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Watch a quick demo of how our AI consultant helps students find the perfect universities for their academic journey.
+          </p>
+        </div>
+        
+        <div className="bg-card border rounded-xl shadow-lg overflow-hidden">
+          <div className="border-b border-border p-4 bg-muted/30">
+            <div className="flex items-center gap-2">
+              <img 
+                src="/lovable-uploads/f435c9dd-1598-4f0b-ba4c-29d5a223d58b.png" 
+                alt="Pathway AI Logo" 
+                className="h-8 w-8" 
+              />
+              <h3 className="font-bold">AI University Consultant</h3>
+            </div>
+          </div>
           
-          <div className="space-y-6 my-4">
-            {sampleConsultation.map((item, index) => (
-              <div key={index} className="space-y-4">
-                <Card className="bg-muted/20 border-muted">
-                  <CardContent className="p-4">
-                    <p className="font-medium">{item.question}</p>
-                  </CardContent>
-                </Card>
-                
-                <Card className="bg-accent/10 border-accent/20">
-                  <CardContent className="p-4">
-                    <div className="prose max-w-none">
-                      <div dangerouslySetInnerHTML={{ 
-                        __html: item.answer.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n\n/g, '<br /><br />') 
-                      }} />
-                    </div>
-                  </CardContent>
-                </Card>
+          <div className="p-6 max-h-[500px] overflow-y-auto">
+            <div className="space-y-6">
+              {demoMessages.map((item, index) => (
+                <div 
+                  key={index} 
+                  className={`flex ${item.sender === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div 
+                    className={`max-w-2xl p-4 rounded-lg ${
+                      item.sender === "user" 
+                        ? "bg-primary text-primary-foreground" 
+                        : "bg-muted"
+                    }`}
+                  >
+                    {item.sender === "ai" ? (
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <div dangerouslySetInnerHTML={{ 
+                          __html: item.message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n\n/g, '<br /><br />') 
+                        }} />
+                      </div>
+                    ) : (
+                      <p>{item.message}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <div className="flex justify-center mt-6">
+                <Link to="/consultant" className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-md hover:bg-primary/90 transition-colors">
+                  <span>Try it yourself</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </Link>
               </div>
-            ))}
+            </div>
           </div>
-          
-          <div className="flex justify-between mt-6">
-            <DialogClose asChild>
-              <Button variant="outline">Close Preview</Button>
-            </DialogClose>
-            <Link to="/consultant">
-              <Button>Try It Yourself</Button>
-            </Link>
-          </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
     </section>
   );
 };

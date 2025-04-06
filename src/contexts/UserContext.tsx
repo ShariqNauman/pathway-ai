@@ -110,7 +110,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           created_at: string;
           date_of_birth?: string;
           selected_domains?: string[];
-          address?: string;
+          nationality?: string;
+          country_of_residence?: string;
           phone?: string;
         };
         
@@ -141,18 +142,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             curriculumSubjects: typedProfileData.curriculum_subjects || [],
             extracurricularActivities: typedProfileData.extracurricular_activities || [],
             dateOfBirth: typedProfileData.date_of_birth || '',
-            nationality: typedProfileData.address || '', // Using address field for nationality
-            countryOfResidence: typedProfileData.address || '', // Using address field for country of residence
-            countryCode: typedProfileData.phone ? typedProfileData.phone.split(' ')[0] : '', // Extract country code from phone
-            phoneNumber: typedProfileData.phone ? typedProfileData.phone.split(' ').slice(1).join(' ') : '', // Extract phone number
+            nationality: typedProfileData.nationality || '',
+            countryOfResidence: typedProfileData.country_of_residence || '',
+            countryCode: typedProfileData.phone ? typedProfileData.phone.split(' ')[0] : '',
+            phoneNumber: typedProfileData.phone ? typedProfileData.phone.split(' ').slice(1).join(' ') : '',
           },
           createdAt: new Date(typedProfileData.created_at)
         });
         
-        console.log("Loaded user profile:", {
-          ...typedProfileData,
-          selectedDomains: typedProfileData.selected_domains
-        });
+        console.log("Loaded user profile:", typedProfileData);
       }
     } catch (error) {
       console.error("Profile fetch error:", error);
@@ -242,11 +240,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     try {
-      console.log("Updating preferences with:", {
-        selectedDomains: preferences.selectedDomains,
-        nationality: preferences.nationality,
-        countryOfResidence: preferences.countryOfResidence
-      });
+      console.log("Updating preferences with:", preferences);
       
       // Convert extracurricular activities to a format Supabase can handle
       const safeExtracurricularActivities = preferences.extracurricularActivities 
@@ -290,8 +284,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         curriculum_subjects: preferences.curriculumSubjects || [],
         extracurricular_activities: safeExtracurricularActivities,
         date_of_birth: preferences.dateOfBirth || null,
-        address: preferences.nationality || null, // Store nationality in address field
-        phone: formattedPhone // Store country code + phone number
+        nationality: preferences.nationality || null,
+        country_of_residence: preferences.countryOfResidence || null,
+        phone: formattedPhone
       };
       
       console.log("Sending profile update to Supabase:", profileUpdate);
@@ -315,9 +310,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       });
       
-      console.log("Preferences updated successfully:", {
-        selectedDomains: preferences.selectedDomains
-      });
+      console.log("Preferences updated successfully");
       
       toast.success("Preferences updated successfully");
     } catch (error) {

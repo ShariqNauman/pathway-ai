@@ -6,10 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { 
   Send, 
-  RotateCcw, 
   Plus,
   MessageSquare,
-  PanelLeft,
   ChevronLeft,
   MoreVertical,
   Trash2,
@@ -39,7 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from "@/lib/utils";
 import { UserProfile } from "@/types/user";
-import { VoiceRecorder, processVoiceRecording } from "@/utils/voiceUtils";
+import { VoiceRecorder, transcribeAudio } from "@/utils/voiceUtils";
 
 interface Message {
   id: string;
@@ -228,9 +226,9 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   
   const getWelcomeMessage = (user: UserProfile | null) => {
     if (user?.name) {
-      return `Hello ${user.name}! I'm your AI consultant. How can I help with your educational journey today? You can upload images or use voice chat to communicate with me.`;
+      return `Hello ${user.name}! I'm your AI consultant. How can I help with your educational journey today?`;
     }
-    return "Hello! I'm your AI consultant. How can I help with your educational journey today? You can upload images or use voice chat to communicate with me.";
+    return "Hello! I'm your AI consultant. How can I help with your educational journey today?";
   };
 
   const welcomeMessageId = useMemo(() => uuidv4(), []);
@@ -254,9 +252,6 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   const [sidebarOpen, setSidebarOpen] = useState(currentUser ? initialSidebarOpen : false);
   
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -266,7 +261,6 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   const initialLoadRef = useRef(true);
   const voiceRecorder = useRef<VoiceRecorder>(new VoiceRecorder());
 
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [chatToRename, setChatToRename] = useState<SavedChat | null>(null);
   const [newChatTitle, setNewChatTitle] = useState("");
@@ -278,7 +272,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
       setSidebarOpen(false);
     }
   }, [initialSidebarOpen, currentUser]);
-
+  
   const scrollChatToBottom = () => {
     if (messagesEndRef.current && chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
@@ -618,38 +612,27 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
     } catch (error) {
       console.error("Error accessing microphone:", error);
       setIsRecording(false);
-      // Don't show toast here to match requirements
     }
   };
 
   const stopRecording = async () => {
+    if (!isRecording) return;
+    
     try {
-      if (isRecording) {
-        setIsLoading(true);
-        const audioBlob = await voiceRecorder.current.stop();
-        
-        try {
-          const transcription = await processVoiceRecording(audioBlob);
-          
-          if (transcription && transcription.trim() !== '') {
-            setInputValue(transcription);
-            setTimeout(() => {
-              handleSendMessage(transcription);
-            }, 100);
-          } else {
-            console.error("No transcription detected");
-          }
-        } catch (error) {
-          console.error("Voice processing error:", error);
-          // Don't show toast here to match requirements
-        } finally {
-          setIsLoading(false);
-        }
-        
-        setIsRecording(false);
+      setIsLoading(true);
+      const audioBlob = await voiceRecorder.current.stop();
+      
+      const transcription = await transcribeAudio(audioBlob);
+      
+      if (transcription && transcription.trim()) {
+        setInputValue(transcription);
+        setTimeout(() => {
+          handleSendMessage(transcription);
+        }, 100);
       }
     } catch (error) {
-      console.error("Error stopping recording:", error);
+      console.error("Error in voice recording process:", error);
+    } finally {
       setIsRecording(false);
       setIsLoading(false);
     }
@@ -666,12 +649,11 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      // Limit to max number of images
       const remainingSlots = MAX_IMAGES - imageUrls.length;
       const filesToProcess = Math.min(files.length, remainingSlots);
       
       if (filesToProcess <= 0) {
-        return; // Silently fail if we've hit the limit
+        return;
       }
       
       for (let i = 0; i < filesToProcess; i++) {
@@ -701,7 +683,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
               );
             };
             reader.readAsDataURL(blob);
-            break; // Just process one image per paste
+            break;
           }
         }
       }
@@ -1041,7 +1023,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                 )}
                 <div>
                   {message.sender === "ai" ? (
-                    <div className="prose dark:prose-invert">
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
                       <ReactMarkdown>{message.content}</ReactMarkdown>
                     </div>
                   ) : (

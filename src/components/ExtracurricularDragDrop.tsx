@@ -105,6 +105,7 @@ const ExtracurricularDragDrop: React.FC<ExtracurricularDragDropProps> = ({
 }) => {
   const [items, setItems] = useState<ExtracurricularActivity[]>(activities);
   const [isCollapsed, setIsCollapsed] = useState(activities?.length > 3);
+  const [isSectionCollapsed, setIsSectionCollapsed] = useState(false);
   
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -158,57 +159,77 @@ const ExtracurricularDragDrop: React.FC<ExtracurricularDragDropProps> = ({
   return (
     <Card>
       <CardHeader className="relative">
-        <CardTitle className="flex items-center gap-2">
-          <Award className="h-5 w-5 text-primary" />
-          Extracurricular Activities
-        </CardTitle>
-        <CardDescription>Drag and drop to reorder your activities</CardDescription>
-        
-        {items.length > 3 && (
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Award className="h-5 w-5 text-primary" />
+            Extracurricular Activities
+          </CardTitle>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="absolute top-4 right-4 md:right-6"
+            onClick={() => setIsSectionCollapsed(!isSectionCollapsed)}
+            className="h-8 w-8 p-0"
           >
-            {isCollapsed ? 
-              <>Show All ({items.length})</> : 
-              <>Show Less</>
+            {isSectionCollapsed ? 
+              <ChevronDown className="h-5 w-5" /> : 
+              <ChevronUp className="h-5 w-5" />
             }
           </Button>
+        </div>
+        {!isSectionCollapsed && (
+          <>
+            <CardDescription>Drag and drop to reorder your activities</CardDescription>
+            
+            {items.length > 3 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="absolute top-4 right-4 md:right-10"
+              >
+                {isCollapsed ? 
+                  <>Show All ({items.length})</> : 
+                  <>Show Less</>
+                }
+              </Button>
+            )}
+          </>
         )}
       </CardHeader>
-      <CardContent>
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={displayedActivities.map(item => item.id)}
-            strategy={verticalListSortingStrategy}
+      
+      {!isSectionCollapsed && (
+        <CardContent>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
           >
-            {displayedActivities.map((activity) => (
-              <SortableItem 
-                key={activity.id} 
-                id={activity.id} 
-                activity={activity} 
-              />
-            ))}
-          </SortableContext>
-        </DndContext>
-        
-        {isCollapsed && items.length > 3 && (
-          <Button 
-            variant="ghost" 
-            className="w-full mt-2"
-            onClick={() => setIsCollapsed(false)}
-          >
-            <ChevronDown className="mr-2 h-4 w-4" />
-            Show All Activities ({items.length})
-          </Button>
-        )}
-      </CardContent>
+            <SortableContext
+              items={displayedActivities.map(item => item.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {displayedActivities.map((activity) => (
+                <SortableItem 
+                  key={activity.id} 
+                  id={activity.id} 
+                  activity={activity} 
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+          
+          {isCollapsed && items.length > 3 && (
+            <Button 
+              variant="ghost" 
+              className="w-full mt-2"
+              onClick={() => setIsCollapsed(false)}
+            >
+              <ChevronDown className="mr-2 h-4 w-4" />
+              Show All Activities ({items.length})
+            </Button>
+          )}
+        </CardContent>
+      )}
     </Card>
   );
 };
