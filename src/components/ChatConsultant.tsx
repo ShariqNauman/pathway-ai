@@ -272,7 +272,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
       setSidebarOpen(false);
     }
   }, [initialSidebarOpen, currentUser]);
-  
+
   const scrollChatToBottom = () => {
     if (messagesEndRef.current && chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
@@ -499,9 +499,9 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         
         await Promise.all(newMessages.map(msg => 
           supabase
-            .from('chat_messages')
+          .from('chat_messages')
             .insert({
-              conversation_id: currentConversationId,
+            conversation_id: currentConversationId,
               content: msg.content,
               sender: msg.sender,
               id: msg.id,
@@ -541,9 +541,9 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
 
     try {
       const previousMessages = messages.map(msg => ({
-        content: msg.content,
-        role: msg.sender === "user" ? "user" : "model" as "user" | "model"
-      }));
+          content: msg.content,
+          role: msg.sender === "user" ? "user" : "model" as "user" | "model"
+        }));
 
       const tempMessageId = uuidv4();
       setMessages(prev => [...prev, {
@@ -574,7 +574,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         primaryImage,
         additionalImages
       );
-
+      
       if (response.error) {
         toast.error(response.error);
         setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
@@ -584,8 +584,8 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
       setMessages(prev => prev.map(msg =>
         msg.id === tempMessageId ? {
           ...msg,
-          content: response.text,
-          isStreaming: false
+        content: response.text,
+        isStreaming: false
         } : msg
       ));
 
@@ -725,7 +725,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
           sender: msg.sender as "user" | "ai",
           timestamp: new Date(msg.created_at)
         }));
-        
+
         setMessages(loadedMessages);
         setHasUserSentMessage(true);
       }
@@ -899,15 +899,15 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                   <button
                     onClick={() => loadConversation(chat.id)}
                     className="w-full text-left"
-                  >
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="truncate">{chat.title}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {formatDate(chat.lastMessageDate)}
-                    </div>
-                  </button>
+                >
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    <span className="truncate">{chat.title}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {formatDate(chat.lastMessageDate)}
+                  </div>
+                </button>
                   
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -1003,8 +1003,8 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
               <div
                 className={cn(
                   "max-w-3xl p-4 rounded-lg",
-                  message.sender === "user" 
-                    ? "bg-primary text-primary-foreground" 
+                  message.sender === "user"
+                    ? "bg-primary text-primary-foreground"
                     : "bg-muted"
                 )}
               >
@@ -1024,7 +1024,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                 <div>
                   {message.sender === "ai" ? (
                     <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                <ReactMarkdown>{message.content}</ReactMarkdown>
                     </div>
                   ) : (
                     <div>{message.content}</div>
@@ -1105,7 +1105,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                 title={isRecording ? "Stop recording" : "Start voice recording"}
               >
                 {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              </Button>
+            </Button>
               <Button
                 size="icon"
                 disabled={(!inputValue.trim() && imageUrls.length === 0) || isLoading}

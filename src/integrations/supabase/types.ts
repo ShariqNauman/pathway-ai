@@ -115,6 +115,8 @@ export type Database = {
           id: string
           intended_major: string | null
           name: string | null
+          nationality: string | null
+          countryofresidence: string | null
           phone: string | null
           preferred_country: string | null
           preferred_university_type: string | null
@@ -139,6 +141,8 @@ export type Database = {
           id: string
           intended_major?: string | null
           name?: string | null
+          nationality?: string | null
+          countryofresidence?: string | null
           phone?: string | null
           preferred_country?: string | null
           preferred_university_type?: string | null
@@ -163,6 +167,8 @@ export type Database = {
           id?: string
           intended_major?: string | null
           name?: string | null
+          nationality?: string | null
+          countryofresidence?: string | null
           phone?: string | null
           preferred_country?: string | null
           preferred_university_type?: string | null

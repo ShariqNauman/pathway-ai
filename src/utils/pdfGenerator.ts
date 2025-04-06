@@ -216,7 +216,7 @@ export const generatePDF = async (
     pdf.setFontSize(12);
     pdf.text("Essay with Feedback", margin, yPos);
     yPos += lineHeight * 1.5;
-
+    
     // Process segments and draw them with highlights
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(fontSize);
@@ -254,10 +254,10 @@ export const generatePDF = async (
       
       // Render each line
       for (let i = 0; i < lines.length; i++) {
-        if (yPos > pageHeight - lineHeight) {
-          addNewPage();
-        }
-        
+      if (yPos > pageHeight - lineHeight) {
+        addNewPage();
+      }
+      
         const line = lines[i];
         const lineStart = lineStartPositions[i];
         const lineEnd = lineStart + line.length;
@@ -338,7 +338,7 @@ export const generatePDF = async (
       pdf.setFontSize(12);
       pdf.text("Detailed Feedback", margin, yPos);
       yPos += lineHeight * 1.5;
-      
+
       // Process each highlighted segment
       for (let i = 0; i < highlightedSegments.length; i++) {
         const segment = highlightedSegments[i];
@@ -368,7 +368,7 @@ export const generatePDF = async (
           yPos += previewLines.length * lineHeight;
           
           // Add the comment below the preview
-          pdf.setFont("helvetica", "normal");
+        pdf.setFont("helvetica", "normal");
           const commentLines = pdf.splitTextToSize(segment.comment, pageWidth - 10);
           pdf.text(commentLines, margin + 8, yPos);
           yPos += commentLines.length * lineHeight + 5;
@@ -389,7 +389,7 @@ export const generatePDF = async (
       pdf.setFontSize(12);
       pdf.text("Overall Feedback", margin, yPos);
       yPos += lineHeight * 1.5;
-      
+
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(10);
       

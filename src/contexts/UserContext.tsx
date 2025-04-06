@@ -1,9 +1,10 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
+import { User as SupabaseUser } from "@supabase/supabase-js";
+import { toast } from "sonner";
 import { UserProfile, UserCredentials, UserPreferences, ExtracurricularActivity } from "@/types/user";
 import { Session } from "@supabase/supabase-js";
-import { toast } from "sonner";
 
 interface UserContextType {
   currentUser: UserProfile | null;
@@ -77,88 +78,100 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      const { data: profileData, error } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
-        
+
       if (error) {
-        console.error("Error fetching profile:", error);
-        setCurrentUser(null);
-        setIsLoading(false);
-        return;
+        console.error('Error fetching user profile:', error);
+        return null;
       }
-      
-      if (profileData) {
-        type ProfileData = {
-          id: string;
-          name?: string;
-          email?: string;
-          intended_major?: string;
-          budget?: number;
-          preferred_country?: string;
-          preferred_university_type?: string;
-          study_level?: string;
-          sat_score?: number;
-          act_score?: number;
-          english_test_type?: string;
-          english_test_score?: number;
-          high_school_curriculum?: string;
-          curriculum_grades?: Record<string, any>;
-          curriculum_subjects?: string[];
-          extracurricular_activities?: ExtracurricularActivity[];
-          created_at: string;
-          date_of_birth?: string;
-          selected_domains?: string[];
-          nationality?: string;
-          countryofresidence?: string; // This is the correct column name from the database
-          phone?: string;
-        };
-        
-        const typedProfileData = profileData as unknown as ProfileData;
-        
-        // Create user profile with all data from database mapping
-        setCurrentUser({
-          id: userId,
-          email: currentSession?.user.email || '',
-          name: typedProfileData.name || '',
-          preferences: {
-            intendedMajor: typedProfileData.intended_major || '',
-            selectedDomains: typedProfileData.selected_domains || [],
-            budget: typedProfileData.budget || 0,
-            preferredCountry: typedProfileData.preferred_country || '',
-            preferredUniversityType: typedProfileData.preferred_university_type || '',
-            studyLevel: typedProfileData.study_level || '',
-            satScore: typedProfileData.sat_score || undefined,
-            actScore: typedProfileData.act_score || undefined,
-            englishTestType: typedProfileData.english_test_type || undefined,
-            englishTestScore: typedProfileData.english_test_score || undefined,
-            highSchoolCurriculum: typedProfileData.high_school_curriculum || undefined,
-            curriculumGrades: typedProfileData.curriculum_grades ? 
-              Object.entries(typedProfileData.curriculum_grades).reduce((acc, [key, value]) => {
+
+      // Helper functions for phone number parsing
+      const parsePhoneCode = (phone: string | null): string => {
+        if (!phone) return '';
+        // If there's a space, the first part is the country code
+        if (phone.includes(' ')) {
+          return phone.split(' ')[0];
+        }
+        // Try to extract country code (usually starts with + and has 1-4 digits)
+        const match = phone.match(/^(\+\d{1,4})/);
+        return match ? match[1] : '';
+      };
+
+      const parsePhoneNumber = (phone: string | null): string => {
+        if (!phone) return '';
+        // If there's a space, the second part is the phone number
+        if (phone.includes(' ')) {
+          return phone.split(' ').slice(1).join(' ');
+        }
+        // Otherwise try to extract everything after the country code
+        const match = phone.match(/^(\+\d{1,4})(.*)/);
+        return match ? match[2] : phone;
+      };
+
+      if (profile) {
+        // Convert profile data to UserPreferences format
+        const userPreferences: UserPreferences = {
+          intendedMajor: profile.intended_major || '',
+          selectedDomains: profile.selected_domains || [],
+          budget: profile.budget !== null ? String(profile.budget) : '',
+          preferredCountry: profile.preferred_country || '',
+          preferredUniversityType: profile.preferred_university_type || '',
+          studyLevel: profile.study_level || 'undergraduate',
+          satScore: profile.sat_score !== null ? String(profile.sat_score) : '',
+          actScore: profile.act_score !== null ? String(profile.act_score) : '',
+          englishTestType: profile.english_test_type || '',
+          englishTestScore: profile.english_test_score !== null ? String(profile.english_test_score) : '',
+          highSchoolCurriculum: profile.high_school_curriculum || '',
+          curriculumGrades: typeof profile.curriculum_grades === 'object' && profile.curriculum_grades !== null
+            ? Object.entries(profile.curriculum_grades as Record<string, any>).reduce((acc, [key, value]) => {
                 acc[key] = String(value);
                 return acc;
-              }, {} as Record<string, string>) : 
-              {},
-            curriculumSubjects: typedProfileData.curriculum_subjects || [],
-            extracurricularActivities: typedProfileData.extracurricular_activities || [],
-            dateOfBirth: typedProfileData.date_of_birth || '',
-            nationality: typedProfileData.nationality || '',
-            countryOfResidence: typedProfileData.countryofresidence || '', // Map from DB column to our frontend property
-            countryCode: typedProfileData.phone ? typedProfileData.phone.split(' ')[0] : '',
-            phoneNumber: typedProfileData.phone ? typedProfileData.phone.split(' ').slice(1).join(' ') : '',
-          },
-          createdAt: new Date(typedProfileData.created_at)
-        });
-        
-        console.log("Loaded user profile:", typedProfileData);
+              }, {} as Record<string, string>)
+            : {},
+          curriculumSubjects: profile.curriculum_subjects || [],
+          extracurricularActivities: Array.isArray(profile.extracurricular_activities) 
+            ? profile.extracurricular_activities.map((activity: any) => ({
+                id: activity.id || '',
+                name: activity.name || '',
+                position: activity.position || '',
+                organization: activity.organization || '',
+                description: activity.description || '',
+                yearsInvolved: activity.yearsInvolved || '',
+                hoursPerWeek: typeof activity.hoursPerWeek === 'number' ? activity.hoursPerWeek : 0,
+                weeksPerYear: typeof activity.weeksPerYear === 'number' ? activity.weeksPerYear : 0
+              }))
+            : [],
+          dateOfBirth: profile.date_of_birth || '',
+          nationality: profile.nationality || '',
+          countryOfResidence: profile.countryofresidence || '',
+          phoneNumber: parsePhoneNumber(profile.phone),
+          countryCode: parsePhoneCode(profile.phone)
+        };
+
+        // Create user profile
+        const userProfile: UserProfile = {
+          id: userId,
+          email: currentSession?.user.email || '',
+          name: profile.name || '',
+          preferences: userPreferences,
+          createdAt: new Date(profile.created_at)
+        };
+
+        setCurrentUser(userProfile);
+        setIsLoading(false);
+        return userPreferences;
       }
-    } catch (error) {
-      console.error("Profile fetch error:", error);
-      setCurrentUser(null);
-    } finally {
+
       setIsLoading(false);
+      return null;
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+      setIsLoading(false);
+      return null;
     }
   };
 
@@ -236,54 +249,46 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateUserPreferences = async (preferences: UserPreferences) => {
-    if (!currentUser) {
-      toast.error("No user is currently logged in");
-      return;
-    }
-    
     try {
-      console.log("Updating preferences with:", preferences);
+      if (!currentUser) return;
       
-      // Convert extracurricular activities to a format Supabase can handle
-      const safeExtracurricularActivities = preferences.extracurricularActivities 
-        ? preferences.extracurricularActivities.map(activity => ({
-            id: activity.id || "",
-            name: activity.name || "",
-            position: activity.position || "",
-            organization: activity.organization || "",
-            description: activity.description || "",
-            yearsInvolved: activity.yearsInvolved || "",
-            hoursPerWeek: typeof activity.hoursPerWeek === 'number' ? activity.hoursPerWeek : 0,
-            weeksPerYear: typeof activity.weeksPerYear === 'number' ? activity.weeksPerYear : 0
-          }))
-        : [];
-      
-      // Format phone based on countryCode and phoneNumber
+      // Format the phone number if both country code and phone number exist
       let formattedPhone = null;
-      if (preferences.phoneNumber && preferences.phoneNumber.trim() !== '') {
-        if (preferences.countryCode && preferences.countryCode.trim() !== '') {
-          formattedPhone = `${preferences.countryCode} ${preferences.phoneNumber}`;
-        } else {
-          formattedPhone = preferences.phoneNumber;
-        }
+      if (preferences.countryCode && preferences.phoneNumber) {
+        // Store with a space between country code and number for consistent parsing
+        formattedPhone = `${preferences.countryCode} ${preferences.phoneNumber.trim()}`;
       }
       
+      // Process extracurricular activities safely
+      let safeExtracurricularActivities = preferences.extracurricularActivities ? 
+        preferences.extracurricularActivities.map(activity => ({
+          id: activity.id || "",
+          name: activity.name || "",
+          position: activity.position || "",
+          organization: activity.organization || "",
+          description: activity.description || "",
+          yearsInvolved: activity.yearsInvolved || "",
+          hoursPerWeek: typeof activity.hoursPerWeek === 'number' ? activity.hoursPerWeek : 0,
+          weeksPerYear: typeof activity.weeksPerYear === 'number' ? activity.weeksPerYear : 0
+        })) : [];
+      
       // Map frontend field names to database column names
+      // Convert string values to numbers for fields that require numbers in the database
       const profileUpdate = {
         intended_major: preferences.intendedMajor || null,
         selected_domains: preferences.selectedDomains || [],
-        budget: preferences.budget || null,
+        budget: preferences.budget ? parseFloat(preferences.budget) : null,
         preferred_country: preferences.preferredCountry || null,
         preferred_university_type: preferences.preferredUniversityType || null,
         study_level: preferences.studyLevel || 'undergraduate',
-        sat_score: preferences.satScore || null,
-        act_score: preferences.actScore || null,
+        sat_score: preferences.satScore ? parseFloat(preferences.satScore) : null,
+        act_score: preferences.actScore ? parseFloat(preferences.actScore) : null,
         english_test_type: preferences.englishTestType || null,
-        english_test_score: preferences.englishTestScore || null,
+        english_test_score: preferences.englishTestScore ? parseFloat(preferences.englishTestScore) : null,
         high_school_curriculum: preferences.highSchoolCurriculum || null,
         curriculum_grades: preferences.curriculumGrades || {},
         curriculum_subjects: preferences.curriculumSubjects || [],
-        extracurricular_activities: safeExtracurricularActivities,
+        extracurricular_activities: safeExtracurricularActivities as unknown as Json[],
         date_of_birth: preferences.dateOfBirth || null,
         nationality: preferences.nationality || null,
         countryofresidence: preferences.countryOfResidence || null, // Map to correct DB column name
@@ -291,7 +296,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       
       console.log("Sending profile update to Supabase:", profileUpdate);
-      
+
+      // Update strategy:
+      // 1. Try to update only the non-problematic fields first
+      // 2. If that works, great!
+      // 3. If not, check which column is missing and provide guidance
+
+      // Try the update
       const { error } = await supabase
         .from('profiles')
         .update(profileUpdate)
@@ -299,10 +310,79 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
       if (error) {
         console.error('Error updating preferences:', error);
-        toast.error(`Failed to update preferences: ${error.message}`);
-        return;
+        
+        // Check for specific column errors
+        const errorMsg = error.message.toLowerCase();
+        if (errorMsg.includes("column") && errorMsg.includes("schema cache")) {
+          let missingColumns = [];
+          
+          if (errorMsg.includes("countryofresidence")) {
+            missingColumns.push("countryofresidence");
+          }
+          
+          if (errorMsg.includes("nationality")) {
+            missingColumns.push("nationality");
+          }
+          
+          if (missingColumns.length > 0) {
+            // Create a more helpful error message
+            const columnList = missingColumns.join(", ");
+            const message = `Database schema issue: Missing columns (${columnList}). Please contact the database administrator to add these columns.`;
+            console.error(message);
+            toast.error(message);
+            
+            // Try to update without the problematic fields
+            const safeUpdate = {...profileUpdate};
+            missingColumns.forEach(col => {
+              delete safeUpdate[col as keyof typeof safeUpdate];
+            });
+            
+            console.log("Attempting update without missing columns:", safeUpdate);
+            
+            const { error: retryError } = await supabase
+              .from('profiles')
+              .update(safeUpdate)
+              .eq('id', currentUser.id);
+              
+            if (retryError) {
+              console.error("Failed even with safe update:", retryError);
+              toast.error(`Failed to update preferences: ${retryError.message}`);
+              return;
+            } else {
+              // Success with partial update
+              console.log("Partial update successful (without missing columns)");
+              toast.warning("Your preferences were partially updated. Some fields could not be saved due to database configuration.");
+              
+              // Update the current user with what we could save
+              setCurrentUser(prev => {
+                if (!prev) return null;
+                // Create a new preferences object that excludes the fields we couldn't save
+                const updatedPreferences = {...preferences};
+                if (missingColumns.includes("nationality")) {
+                  updatedPreferences.nationality = prev.preferences.nationality;
+                }
+                if (missingColumns.includes("countryofresidence")) {
+                  updatedPreferences.countryOfResidence = prev.preferences.countryOfResidence;
+                }
+                return {
+                  ...prev,
+                  preferences: updatedPreferences
+                };
+              });
+              
+              return;
+            }
+          } else {
+            toast.error(`Failed to update preferences: ${error.message}`);
+          }
+          return;
+        } else {
+          toast.error(`Failed to update preferences: ${error.message}`);
+          return;
+        }
       }
       
+      // Success - full update worked
       setCurrentUser(prev => {
         if (!prev) return null;
         return {
@@ -312,11 +392,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       console.log("Preferences updated successfully");
-      
       toast.success("Preferences updated successfully");
     } catch (error) {
-      console.error('Error updating preferences:', error);
-      toast.error("Failed to update preferences. Please try again.");
+      console.error("Exception during preference update:", error);
+      toast.error("An unexpected error occurred while saving your preferences");
     }
   };
 

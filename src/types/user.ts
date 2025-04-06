@@ -1,4 +1,3 @@
-
 export interface UserCredentials {
   email: string;
   password: string;
@@ -26,14 +25,14 @@ export interface ExtracurricularActivity {
 export interface UserPreferences {
   intendedMajor: string;
   selectedDomains: string[]; // Array of selected domains within the major
-  budget: number;
+  budget: string;  // Changed from number to string for consistent handling
   preferredCountry: string;
   preferredUniversityType: string;
   studyLevel?: string; // Made optional since it will always be "undergraduate"
-  satScore?: number;
-  actScore?: number;
+  satScore?: string;  // Changed from number to string
+  actScore?: string;  // Changed from number to string
   englishTestType?: string;
-  englishTestScore?: number;
+  englishTestScore?: string;  // Changed from number to string
   highSchoolCurriculum?: string;
   curriculumGrades: Record<string, string>; // Changed to Record<string, string> for consistency
   curriculumSubjects?: string[]; // List of selected subjects

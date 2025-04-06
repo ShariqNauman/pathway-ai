@@ -75,7 +75,7 @@ export class VoiceRecorder {
   private audioChunks: BlobPart[] = [];
   private stream: MediaStream | null = null;
   private isInitialized: boolean = false;
-
+  
   async start(): Promise<void> {
     try {
       // Clear previous recording session
@@ -84,10 +84,10 @@ export class VoiceRecorder {
       // Only request new stream if we don't have one initialized already
       if (!this.isInitialized) {
         // Request user media with constraints optimized for voice
-        this.stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
+      this.stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: { 
+          echoCancellation: true,
+          noiseSuppression: true,
             autoGainControl: true
           }
         });
@@ -105,7 +105,7 @@ export class VoiceRecorder {
           this.audioChunks.push(event.data);
         }
       };
-
+      
       this.mediaRecorder.start();
       console.log('Recording started successfully');
     } catch (error) {
@@ -116,14 +116,14 @@ export class VoiceRecorder {
       throw error;
     }
   }
-
+  
   stop(): Promise<Blob> {
     return new Promise((resolve, reject) => {
       if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
         reject(new Error('No recording in progress'));
         return;
       }
-
+      
       this.mediaRecorder.onstop = () => {
         // Use standard audio format for browser compatibility
         const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
@@ -132,16 +132,16 @@ export class VoiceRecorder {
         this.mediaRecorder = null;
         resolve(audioBlob);
       };
-
+      
       this.mediaRecorder.onerror = () => {
         this.releaseResources();
         reject(new Error('Recording error occurred'));
       };
-
+      
       this.mediaRecorder.stop();
     });
   }
-
+  
   private releaseResources(): void {
     if (this.stream) {
       this.stream.getTracks().forEach(track => track.stop());
