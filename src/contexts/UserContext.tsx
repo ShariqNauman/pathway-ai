@@ -112,7 +112,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           date_of_birth?: string;
           selected_domains?: string[];
           nationality?: string;
-          countryofresidence?: string; // Updated to match DB column name
+          countryofresidence?: string; // This is the correct column name from the database
           phone?: string;
         };
         
@@ -144,7 +144,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             extracurricularActivities: typedProfileData.extracurricular_activities || [],
             dateOfBirth: typedProfileData.date_of_birth || '',
             nationality: typedProfileData.nationality || '',
-            countryOfResidence: typedProfileData.countryofresidence || '', // Updated to match DB column name
+            countryOfResidence: typedProfileData.countryofresidence || '', // Map from DB column to our frontend property
             countryCode: typedProfileData.phone ? typedProfileData.phone.split(' ')[0] : '',
             phoneNumber: typedProfileData.phone ? typedProfileData.phone.split(' ').slice(1).join(' ') : '',
           },
@@ -286,7 +286,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         extracurricular_activities: safeExtracurricularActivities,
         date_of_birth: preferences.dateOfBirth || null,
         nationality: preferences.nationality || null,
-        countryofresidence: preferences.countryOfResidence || null, // Updated to match DB column name
+        countryofresidence: preferences.countryOfResidence || null, // Use the correct DB column name
         phone: formattedPhone
       };
       

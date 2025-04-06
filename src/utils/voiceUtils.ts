@@ -1,3 +1,4 @@
+
 /**
  * TypeScript declarations for Web Speech API
  * These are needed because TypeScript doesn't include these by default
@@ -115,7 +116,7 @@ export class VoiceRecorder {
         resolve(audioBlob);
       };
 
-      this.mediaRecorder.onerror = (event) => {
+      this.mediaRecorder.onerror = () => {
         this.releaseResources();
         reject(new Error('Recording error occurred'));
       };
@@ -151,9 +152,6 @@ export const transcribeAudio = (audioBlob: Blob): Promise<string> => {
       recognition.lang = 'en-US';
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
-
-      // We'll manually process the audio without playing it back
-      const audioUrl = URL.createObjectURL(audioBlob);
       
       let recognitionResult = '';
       
@@ -161,15 +159,12 @@ export const transcribeAudio = (audioBlob: Blob): Promise<string> => {
         recognitionResult = event.results[0][0].transcript;
       };
       
-      recognition.onerror = (event) => {
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error('Recognition error:', event.error);
         resolve(""); // Return empty string to gracefully handle the error
       };
       
       recognition.onend = () => {
-        // Clean up URL object to prevent memory leaks
-        URL.revokeObjectURL(audioUrl);
-        
         if (recognitionResult) {
           resolve(recognitionResult);
         } else {
@@ -177,7 +172,8 @@ export const transcribeAudio = (audioBlob: Blob): Promise<string> => {
         }
       };
 
-      // Use the Web Speech API directly without audio playback
+      // Start speech recognition directly without creating an audio element
+      // This prevents any audio playback of the recorded audio
       recognition.start();
       
       // Set a timeout to ensure recognition ends
