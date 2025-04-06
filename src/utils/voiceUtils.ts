@@ -1,5 +1,16 @@
 
 /**
+ * TypeScript declarations for Web Speech API
+ * These are needed because TypeScript doesn't include these by default
+ */
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition;
+    webkitSpeechRecognition: typeof SpeechRecognition;
+  }
+}
+
+/**
  * Simple, optimized voice recording utility for web applications
  * Designed for maximum browser compatibility - especially mobile
  */
