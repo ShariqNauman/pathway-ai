@@ -616,9 +616,13 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   };
 
   const stopRecording = async () => {
-    if (!isRecording) return;
-    
     try {
+      if (!voiceRecorder.current.isCurrentlyRecording()) {
+        console.log("No active recording to stop");
+        setIsRecording(false);
+        return;
+      }
+      
       setIsLoading(true);
       const audioBlob = await voiceRecorder.current.stop();
       
@@ -639,7 +643,9 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   };
 
   const toggleRecording = () => {
-    if (isRecording) {
+    const isActuallyRecording = voiceRecorder.current.isCurrentlyRecording();
+    
+    if (isActuallyRecording || isRecording) {
       stopRecording();
     } else {
       startRecording();

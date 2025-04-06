@@ -75,19 +75,26 @@ export class VoiceRecorder {
   private audioChunks: BlobPart[] = [];
   private stream: MediaStream | null = null;
   private isInitialized: boolean = false;
+  private isRecording: boolean = false;
   
   async start(): Promise<void> {
     try {
+      // Check if already recording
+      if (this.isRecording) {
+        console.log('Already recording, ignoring start request');
+        return;
+      }
+      
       // Clear previous recording session
       this.audioChunks = [];
       
       // Only request new stream if we don't have one initialized already
       if (!this.isInitialized) {
         // Request user media with constraints optimized for voice
-      this.stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: { 
-          echoCancellation: true,
-          noiseSuppression: true,
+        this.stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: { 
+            echoCancellation: true,
+            noiseSuppression: true,
             autoGainControl: true
           }
         });
@@ -107,11 +114,13 @@ export class VoiceRecorder {
       };
       
       this.mediaRecorder.start();
+      this.isRecording = true;
       console.log('Recording started successfully');
     } catch (error) {
       console.error('Error starting recording:', error);
       // Reset state on error
       this.isInitialized = false;
+      this.isRecording = false;
       this.releaseResources();
       throw error;
     }
@@ -119,7 +128,8 @@ export class VoiceRecorder {
   
   stop(): Promise<Blob> {
     return new Promise((resolve, reject) => {
-      if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
+      if (!this.mediaRecorder || !this.isRecording || this.mediaRecorder.state === 'inactive') {
+        this.isRecording = false;
         reject(new Error('No recording in progress'));
         return;
       }
@@ -128,12 +138,15 @@ export class VoiceRecorder {
         // Use standard audio format for browser compatibility
         const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
         this.audioChunks = [];
+        // Reset recording flag
+        this.isRecording = false;
         // Don't fully release resources, just reset the mediaRecorder
         this.mediaRecorder = null;
         resolve(audioBlob);
       };
       
       this.mediaRecorder.onerror = () => {
+        this.isRecording = false;
         this.releaseResources();
         reject(new Error('Recording error occurred'));
       };
@@ -149,6 +162,12 @@ export class VoiceRecorder {
     }
     this.mediaRecorder = null;
     this.isInitialized = false;
+    this.isRecording = false;
+  }
+  
+  // Get recording status
+  isCurrentlyRecording(): boolean {
+    return this.isRecording;
   }
   
   // Cleanup method to be called when recorder is no longer needed
@@ -166,6 +185,7 @@ export const transcribeAudio = (audioBlob: Blob): Promise<string> => {
     // Check for browser compatibility first
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
+      console.log("Speech recognition not available in this browser");
       resolve("Speech recognition not available. Please type your message.");
       return;
     }
@@ -176,6 +196,7 @@ export const transcribeAudio = (audioBlob: Blob): Promise<string> => {
       recognition.lang = 'en-US';
       recognition.interimResults = false;
       recognition.maxAlternatives = 3; // Get multiple alternatives for better accuracy
+      recognition.continuous = false; // Set to true for continuous recognition
       
       let recognitionResult = '';
       
@@ -201,6 +222,27 @@ export const transcribeAudio = (audioBlob: Blob): Promise<string> => {
         } else {
           resolve(""); // Gracefully handle empty results
         }
+      };
+
+      // Make sure audio is played to the recognition service
+      const audioURL = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioURL);
+      audio.onended = () => {
+        console.log("Audio finished playing");
+        try {
+          recognition.stop();
+        } catch (e) {
+          // Ignore errors on stopping
+        }
+      };
+      
+      recognition.onstart = () => {
+        console.log("Recognition started");
+        audio.play().catch(e => {
+          console.error("Error playing audio:", e);
+          recognition.stop();
+          resolve("");
+        });
       };
 
       // Start recognition - no audio playback
