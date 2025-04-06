@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, UserCredentials, UserPreferences, ExtracurricularActivity } from "@/types/user";
@@ -111,7 +112,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           date_of_birth?: string;
           selected_domains?: string[];
           nationality?: string;
-          country_of_residence?: string;
+          countryofresidence?: string; // Updated to match DB column name
           phone?: string;
         };
         
@@ -143,7 +144,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             extracurricularActivities: typedProfileData.extracurricular_activities || [],
             dateOfBirth: typedProfileData.date_of_birth || '',
             nationality: typedProfileData.nationality || '',
-            countryOfResidence: typedProfileData.country_of_residence || '',
+            countryOfResidence: typedProfileData.countryofresidence || '', // Updated to match DB column name
             countryCode: typedProfileData.phone ? typedProfileData.phone.split(' ')[0] : '',
             phoneNumber: typedProfileData.phone ? typedProfileData.phone.split(' ').slice(1).join(' ') : '',
           },
@@ -285,7 +286,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         extracurricular_activities: safeExtracurricularActivities,
         date_of_birth: preferences.dateOfBirth || null,
         nationality: preferences.nationality || null,
-        country_of_residence: preferences.countryOfResidence || null,
+        countryofresidence: preferences.countryOfResidence || null, // Updated to match DB column name
         phone: formattedPhone
       };
       

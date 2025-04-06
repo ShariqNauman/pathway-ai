@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useState } from "react";
@@ -19,7 +18,6 @@ import { Card, CardContent } from "@/components/ui/card";
 const Hero = () => {
   const { currentUser } = useUser();
   
-  // Check for missing essential fields
   const getMissingFields = () => {
     if (!currentUser?.preferences) return [];
     const prefs = currentUser.preferences;
@@ -38,7 +36,6 @@ const Hero = () => {
   const missingFields = currentUser ? getMissingFields() : [];
   const showWarning = !currentUser || missingFields.length > 0;
 
-  // Sample consultation for the video demo
   const demoMessages = [
     { sender: "user", message: "Hi, I'm looking for universities for computer science with a budget of around $30,000 per year." },
     { sender: "ai", message: "I'd be happy to help you find universities for computer science within your budget. Could you tell me a bit more about your academic background and preferences? What country are you looking to study in?" },
@@ -48,10 +45,8 @@ const Hero = () => {
 
   return (
     <section className="relative min-h-screen pt-32 pb-20 px-6 lg:px-10 overflow-hidden">
-      {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-accent/50 via-background to-background -z-10"></div>
       
-      {/* Background pattern */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM5OTk5OTkiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djZoNnYtNmgtNnptMC0xMnY2aDZ2LTZoLTZ6bTAtMTJ2Nmg2di02aC02em0tMTIgMTJ2Nmg2di02aC02em0wLTEydjZoNnYtNmgtNnptMCAxMnYxMmgxMlYyMkgyNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-50 -z-10"></div>
       
       <div className="max-w-7xl mx-auto">
@@ -73,7 +68,6 @@ const Hero = () => {
         )}
 
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Hero content */}
           <motion.div
             className="text-center lg:text-left"
             initial={{ opacity: 0, y: 20 }}
@@ -108,7 +102,6 @@ const Hero = () => {
               <span className="font-medium">100% Free Platform</span>
             </motion.div>
             
-            {/* AI explanation */}
             <motion.div
               className="mb-6 p-4 bg-accent/30 rounded-lg border border-primary/10"
               initial={{ opacity: 0 }}
@@ -118,7 +111,7 @@ const Hero = () => {
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-md bg-primary/20 flex items-center justify-center">
                   <img 
-                    src="/lovable-uploads/f435c9dd-1598-4f0b-ba4c-29d5a223d58b.png" 
+                    src="/lovable-uploads/21edf6cf-d44f-40a4-bb90-00dcc0318c7c.png" 
                     alt="Pathway AI Logo" 
                     className="h-8 w-8" 
                   />
@@ -151,7 +144,6 @@ const Hero = () => {
             </motion.div>
           </motion.div>
           
-          {/* Hero image with logo */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -166,16 +158,14 @@ const Hero = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
               
-              {/* Overlay with logo */}
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                 <img 
-                  src="/lovable-uploads/f435c9dd-1598-4f0b-ba4c-29d5a223d58b.png" 
+                  src="/lovable-uploads/21edf6cf-d44f-40a4-bb90-00dcc0318c7c.png" 
                   alt="Pathway AI Logo" 
-                  className="w-32 h-32 opacity-90"
+                  className="w-40 h-40 opacity-95"
                 />
               </div>
               
-              {/* Stats badge */}
               <motion.div 
                 className="absolute top-6 left-6 glass-card rounded-lg px-4 py-3 shadow-lg"
                 initial={{ opacity: 0, x: -20 }}
@@ -195,7 +185,6 @@ const Hero = () => {
                 </div>
               </motion.div>
               
-              {/* Satisfaction badge */}
               <motion.div 
                 className="absolute bottom-6 right-6 glass-card rounded-lg px-4 py-3 shadow-lg"
                 initial={{ opacity: 0, x: 20 }}
@@ -216,14 +205,12 @@ const Hero = () => {
               </motion.div>
             </div>
             
-            {/* Decorative elements */}
             <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-accent/30 rounded-full blur-3xl -z-10"></div>
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl -z-10"></div>
           </motion.div>
         </div>
       </div>
       
-      {/* Demo Chat Section */}
       <div className="max-w-7xl mx-auto mt-16 lg:mt-24">
         <div className="text-center mb-10">
           <h2 className="text-3xl font-bold mb-4">See the AI Consultant in Action</h2>
@@ -236,9 +223,9 @@ const Hero = () => {
           <div className="border-b border-border p-4 bg-muted/30">
             <div className="flex items-center gap-2">
               <img 
-                src="/lovable-uploads/f435c9dd-1598-4f0b-ba4c-29d5a223d58b.png" 
+                src="/lovable-uploads/21edf6cf-d44f-40a4-bb90-00dcc0318c7c.png" 
                 alt="Pathway AI Logo" 
-                className="h-8 w-8" 
+                className="h-10 w-10" 
               />
               <h3 className="font-bold">AI University Consultant</h3>
             </div>

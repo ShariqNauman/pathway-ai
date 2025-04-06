@@ -140,7 +140,7 @@ const PersonalInfo: React.FC<PersonalInfoProps> = ({ onUpdate }) => {
       ...currentUser.preferences,
       dateOfBirth: personalInfo.dateOfBirth,
       nationality: personalInfo.nationality,
-      countryOfResidence: personalInfo.countryOfResidence,
+      countryOfResidence: personalInfo.countryOfResidence, // This will be mapped to countryofresidence in UserContext
       countryCode: personalInfo.countryCode,
       phoneNumber: personalInfo.phoneNumber
     });

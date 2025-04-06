@@ -36,7 +36,7 @@ interface SpeechRecognition extends EventTarget {
   onaudioend: ((this: SpeechRecognition, ev: Event) => any) | null;
   onaudiostart: ((this: SpeechRecognition, ev: Event) => any) | null;
   onend: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onerror: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any) | null;
   onnomatch: ((this: SpeechRecognition, ev: Event) => any) | null;
   onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
   onsoundend: ((this: SpeechRecognition, ev: Event) => any) | null;
@@ -47,6 +47,11 @@ interface SpeechRecognition extends EventTarget {
   start(): void;
   stop(): void;
   abort(): void;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message: string;
 }
 
 interface SpeechRecognitionConstructor {
@@ -134,24 +139,23 @@ export class VoiceRecorder {
  */
 export const transcribeAudio = (audioBlob: Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
-    // Create an audio element and set the blob as source
-    const audioElement = new Audio();
-    audioElement.src = URL.createObjectURL(audioBlob);
-    
-    // Function to handle recognition results
-    const performRecognition = () => {
-      // Check for browser compatibility
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        resolve("Speech recognition not available. Please type your message.");
-        return;
-      }
+    // Check for browser compatibility first
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      resolve("Speech recognition not available. Please type your message.");
+      return;
+    }
 
+    try {
+      // Create recognition instance
       const recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
 
+      // We'll manually process the audio without playing it back
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
       let recognitionResult = '';
       
       recognition.onresult = (event) => {
@@ -164,6 +168,9 @@ export const transcribeAudio = (audioBlob: Blob): Promise<string> => {
       };
       
       recognition.onend = () => {
+        // Clean up URL object to prevent memory leaks
+        URL.revokeObjectURL(audioUrl);
+        
         if (recognitionResult) {
           resolve(recognitionResult);
         } else {
@@ -171,28 +178,21 @@ export const transcribeAudio = (audioBlob: Blob): Promise<string> => {
         }
       };
 
-      try {
-        recognition.start();
-        
-        // Play the audio to help with recognition
-        audioElement.play().catch(e => console.error('Error playing audio:', e));
-        
-        // Set a timeout to ensure recognition ends
-        setTimeout(() => {
-          try {
-            recognition.stop();
-          } catch (e) {
-            // Ignore errors on stopping
-          }
-        }, 10000);
-      } catch (error) {
-        console.error('Error in speech recognition:', error);
-        resolve("");
-      }
-    };
-
-    audioElement.oncanplaythrough = performRecognition;
-    audioElement.onerror = () => resolve("");
+      // Use the Web Speech API directly without audio playback
+      recognition.start();
+      
+      // Set a timeout to ensure recognition ends
+      setTimeout(() => {
+        try {
+          recognition.stop();
+        } catch (e) {
+          // Ignore errors on stopping
+        }
+      }, 10000);
+    } catch (error) {
+      console.error('Error in speech recognition:', error);
+      resolve("");
+    }
   });
 };
 
