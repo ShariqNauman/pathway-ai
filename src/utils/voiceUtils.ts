@@ -1,4 +1,3 @@
-
 /**
  * TypeScript declarations for Web Speech API
  * These are needed because TypeScript doesn't include these by default
@@ -27,6 +26,11 @@ interface SpeechRecognitionAlternative {
   confidence: number;
 }
 
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message: string;
+}
+
 interface SpeechRecognition extends EventTarget {
   continuous: boolean;
   grammars: any;
@@ -47,11 +51,6 @@ interface SpeechRecognition extends EventTarget {
   start(): void;
   stop(): void;
   abort(): void;
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
-  message: string;
 }
 
 interface SpeechRecognitionConstructor {
