@@ -118,6 +118,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const typedProfileData = profileData as unknown as ProfileData;
         
+        // Create user profile with all data from database mapping
         setCurrentUser({
           id: userId,
           email: currentSession?.user.email || '',
@@ -267,8 +268,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       
-      // Create a sanitized object for the database update
-      // Make sure to map the preferences to the actual column names in the database
+      // Map frontend field names to database column names
       const profileUpdate = {
         intended_major: preferences.intendedMajor || null,
         selected_domains: preferences.selectedDomains || [],
@@ -286,7 +286,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         extracurricular_activities: safeExtracurricularActivities,
         date_of_birth: preferences.dateOfBirth || null,
         nationality: preferences.nationality || null,
-        countryofresidence: preferences.countryOfResidence || null, // Use the correct DB column name
+        countryofresidence: preferences.countryOfResidence || null, // Map to correct DB column name
         phone: formattedPhone
       };
       

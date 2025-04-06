@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -96,22 +95,25 @@ const PersonalInfo: React.FC<PersonalInfoProps> = ({ onUpdate }) => {
     fullName: currentUser?.name || "",
     dateOfBirth: "",
     nationality: "",
-    countryOfResidence: "",
+    countryOfResidence: "", // This is frontend field name
     countryCode: "",
     phoneNumber: ""
   });
 
   useEffect(() => {
     if (currentUser) {
-      // Initialize fields with current user data, ensuring countryOfResidence is set properly
+      // Initialize fields with current user data
       setPersonalInfo({
         fullName: currentUser.name || "",
         dateOfBirth: currentUser.preferences.dateOfBirth || "",
         nationality: currentUser.preferences.nationality || "",
-        countryOfResidence: currentUser.preferences.countryOfResidence || "",
+        countryOfResidence: currentUser.preferences.countryOfResidence || "", // This maps to countryofresidence in DB
         countryCode: currentUser.preferences.countryCode || "",
         phoneNumber: currentUser.preferences.phoneNumber || ""
       });
+      
+      // Debug output to verify correct values
+      console.log("Current user preferences:", currentUser.preferences);
     }
   }, [currentUser]);
 
@@ -135,12 +137,12 @@ const PersonalInfo: React.FC<PersonalInfoProps> = ({ onUpdate }) => {
     
     if (!currentUser) return;
 
-    // Update only the preferences we can via the update preferences method
+    // Update preferences using the countryOfResidence field (will be mapped to countryofresidence in UserContext)
     updateUserPreferences({
       ...currentUser.preferences,
       dateOfBirth: personalInfo.dateOfBirth,
       nationality: personalInfo.nationality,
-      countryOfResidence: personalInfo.countryOfResidence, // This will be mapped to countryofresidence in UserContext
+      countryOfResidence: personalInfo.countryOfResidence, 
       countryCode: personalInfo.countryCode,
       phoneNumber: personalInfo.phoneNumber
     });
