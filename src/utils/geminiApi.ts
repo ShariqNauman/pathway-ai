@@ -1,4 +1,3 @@
-
 interface GeminiResponse {
   text: string;
   error?: string;
@@ -27,6 +26,8 @@ const formatUserPreferences = (userProfile: any) => {
   if (!prefs.preferredCountry) missingFields.push("preferred country");
   if (!prefs.budget) missingFields.push("budget");
   if (!prefs.curriculumSubjects || prefs.curriculumSubjects.length === 0) missingFields.push("curriculum subjects");
+  if (!prefs.nationality) missingFields.push("nationality");
+  if (!prefs.countryOfResidence) missingFields.push("country of residence");
   
   // Add warning message if fields are missing
   const warningMessage = missingFields.length > 0 
@@ -34,6 +35,13 @@ const formatUserPreferences = (userProfile: any) => {
     : '';
 
   const sections = [];
+
+  // Personal Information (moved to top for prominence)
+  const personalInfo = [
+    prefs.nationality && `Nationality: ${prefs.nationality}`,
+    prefs.countryOfResidence && `Country of Residence: ${prefs.countryOfResidence}`,
+    prefs.dateOfBirth && `Date of Birth: ${prefs.dateOfBirth}`,
+  ].filter(Boolean);
 
   // Academic Information
   const academic = [
@@ -74,6 +82,7 @@ const formatUserPreferences = (userProfile: any) => {
     `${activity.name} (${activity.position} at ${activity.organization}, ${activity.yearsInvolved})`
   ) || [];
 
+  if (personalInfo.length) sections.push("Personal Information:\n" + personalInfo.join("\n"));
   if (academic.length) sections.push("Academic Information:\n" + academic.join("\n"));
   if (curriculumDetails.length) sections.push("Curriculum Details:\n" + curriculumDetails.join("\n\n"));
   if (testScores.length) sections.push("Test Scores:\n" + testScores.join("\n"));
