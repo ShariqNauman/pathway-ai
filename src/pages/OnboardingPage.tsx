@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -110,7 +109,8 @@ const OnboardingPage = () => {
     nationality: "",
     countryOfResidence: "",
     countryCode: "",
-    phoneNumber: ""
+    phoneNumber: "",
+    englishTestScore: ""
   });
 
   const availableDomains = preferences.intendedMajor ? majorDomains[preferences.intendedMajor] || [] : [];
