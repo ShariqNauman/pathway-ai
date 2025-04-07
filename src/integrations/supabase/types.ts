@@ -103,6 +103,7 @@ export type Database = {
           act_score: number | null
           address: string | null
           budget: number | null
+          countryofresidence: string | null
           created_at: string
           curriculum_grades: Json | null
           curriculum_subjects: string[] | null
@@ -116,7 +117,6 @@ export type Database = {
           intended_major: string | null
           name: string | null
           nationality: string | null
-          countryofresidence: string | null
           phone: string | null
           preferred_country: string | null
           preferred_university_type: string | null
@@ -129,6 +129,7 @@ export type Database = {
           act_score?: number | null
           address?: string | null
           budget?: number | null
+          countryofresidence?: string | null
           created_at?: string
           curriculum_grades?: Json | null
           curriculum_subjects?: string[] | null
@@ -142,7 +143,6 @@ export type Database = {
           intended_major?: string | null
           name?: string | null
           nationality?: string | null
-          countryofresidence?: string | null
           phone?: string | null
           preferred_country?: string | null
           preferred_university_type?: string | null
@@ -155,6 +155,7 @@ export type Database = {
           act_score?: number | null
           address?: string | null
           budget?: number | null
+          countryofresidence?: string | null
           created_at?: string
           curriculum_grades?: Json | null
           curriculum_subjects?: string[] | null
@@ -168,7 +169,6 @@ export type Database = {
           intended_major?: string | null
           name?: string | null
           nationality?: string | null
-          countryofresidence?: string | null
           phone?: string | null
           preferred_country?: string | null
           preferred_university_type?: string | null
