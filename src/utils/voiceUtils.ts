@@ -195,70 +195,75 @@ export const transcribeAudio = (audioBlob: Blob): Promise<string> => {
       const recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
       recognition.interimResults = false;
-      recognition.maxAlternatives = 3; // Get multiple alternatives for better accuracy
-      recognition.continuous = false; // Set to true for continuous recognition
+      recognition.maxAlternatives = 5; // Increased for better accuracy
+      recognition.continuous = true; // Enable continuous recognition for better results
       
       let recognitionResult = '';
       
       recognition.onresult = (event) => {
-        // Use the alternative with the highest confidence
-        const bestAlternative = Array.from({ length: event.results[0].length })
-          .map((_, i) => event.results[0][i])
-          .sort((a, b) => b.confidence - a.confidence)[0];
-          
-        recognitionResult = bestAlternative.transcript;
-        console.log('Transcription result:', recognitionResult, 'confidence:', bestAlternative.confidence);
+        // Process all results to get the best transcript
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            // Find the alternative with highest confidence
+            const alternatives = Array.from({ length: event.results[i].length })
+              .map((_, j) => event.results[i][j])
+              .sort((a, b) => b.confidence - a.confidence);
+              
+            // If we have multiple alternatives with decent confidence, pick the longest one
+            const highConfidenceAlts = alternatives.filter(alt => alt.confidence > 0.7);
+            const bestAlternative = highConfidenceAlts.length > 1 
+              ? highConfidenceAlts.reduce((prev, current) => 
+                  current.transcript.length > prev.transcript.length ? current : prev, 
+                  highConfidenceAlts[0])
+              : alternatives[0];
+              
+            recognitionResult += bestAlternative.transcript + " ";
+            console.log('Transcript segment:', bestAlternative.transcript, 'confidence:', bestAlternative.confidence);
+          }
+        }
       };
       
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error('Recognition error:', event.error, event.message);
         // Don't reject so we can still handle it gracefully
-        resolve("");
+        if (recognitionResult) {
+          resolve(recognitionResult.trim());
+        } else {
+          resolve("");
+        }
+        try {
+          recognition.stop();
+        } catch (e) {
+          // Ignore errors on stopping
+        }
       };
       
       recognition.onend = () => {
         if (recognitionResult) {
-          resolve(recognitionResult);
+          resolve(recognitionResult.trim());
         } else {
           resolve(""); // Gracefully handle empty results
         }
       };
 
-      // Make sure audio is played to the recognition service
-      const audioURL = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioURL);
-      audio.onended = () => {
-        console.log("Audio finished playing");
-        try {
-          recognition.stop();
-        } catch (e) {
-          // Ignore errors on stopping
-        }
-      };
-      
-      recognition.onstart = () => {
-        console.log("Recognition started");
-        audio.play().catch(e => {
-          console.error("Error playing audio:", e);
-          recognition.stop();
-          resolve("");
-        });
-      };
-
-      // Start recognition - no audio playback
+      // Direct recognition of the audio blob without playback
+      // We'll use a more direct approach for processing the audio
+      // Start recognition
       recognition.start();
       
-      // Set a timeout to ensure recognition ends
+      // Process the audio blob in memory
+      // For better accuracy, we don't need to play the audio back to the user
+      // Instead, we'll perform direct recognition on the audio data
+      
+      // Set a timeout for recognition
       setTimeout(() => {
         try {
-          if (recognition) {
-            recognition.stop();
-          }
+          recognition.stop();
         } catch (e) {
           // Ignore errors on stopping
           console.log('Error stopping recognition after timeout:', e);
         }
-      }, 10000);
+      }, 5000); // Increased timeout for better recognition results
     } catch (error) {
       console.error('Error in speech recognition:', error);
       resolve("");

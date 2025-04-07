@@ -107,7 +107,7 @@ const PersonalInfo: React.FC<PersonalInfoProps> = ({ onUpdate }) => {
         fullName: currentUser.name || "",
         dateOfBirth: currentUser.preferences.dateOfBirth || "",
         nationality: currentUser.preferences.nationality || "",
-        countryOfResidence: currentUser.preferences.countryOfResidence || "", // This maps to countryofresidence in DB
+        countryOfResidence: currentUser.preferences.countryOfResidence || "", 
         countryCode: currentUser.preferences.countryCode || "",
         phoneNumber: currentUser.preferences.phoneNumber || ""
       });
@@ -137,7 +137,7 @@ const PersonalInfo: React.FC<PersonalInfoProps> = ({ onUpdate }) => {
     
     if (!currentUser) return;
 
-    // Update preferences using the countryOfResidence field (will be mapped to countryofresidence in UserContext)
+    // Update preferences using the countryOfResidence field
     updateUserPreferences({
       ...currentUser.preferences,
       dateOfBirth: personalInfo.dateOfBirth,

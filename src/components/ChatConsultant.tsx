@@ -256,6 +256,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const initialLoadRef = useRef(true);
@@ -267,7 +268,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
 
   useEffect(() => {
     if (currentUser) {
-    setSidebarOpen(initialSidebarOpen);
+      setSidebarOpen(initialSidebarOpen);
     } else {
       setSidebarOpen(false);
     }
@@ -607,11 +608,16 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
 
   const startRecording = async () => {
     try {
-      setIsRecording(true);
-      await voiceRecorder.current.start();
+      if (!voiceRecorder.current.isCurrentlyRecording()) {
+        setIsRecording(true);
+        await voiceRecorder.current.start();
+      } else {
+        console.log("Recording is already in progress");
+      }
     } catch (error) {
       console.error("Error accessing microphone:", error);
       setIsRecording(false);
+      toast.error("Could not access microphone. Please check your browser permissions.");
     }
   };
 
@@ -633,9 +639,12 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         setTimeout(() => {
           handleSendMessage(transcription);
         }, 100);
+      } else {
+        toast.error("Could not transcribe audio. Please try again or type your message.");
       }
     } catch (error) {
       console.error("Error in voice recording process:", error);
+      toast.error("Error processing voice recording. Please try again.");
     } finally {
       setIsRecording(false);
       setIsLoading(false);
@@ -885,8 +894,8 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                 variant="ghost"
                 size="icon"
                 className="ml-2"
-              onClick={toggleSidebar}
-            >
+                onClick={toggleSidebar}
+              >
               <ChevronLeft className={cn(
                   "h-4 w-4 transition-transform duration-200",
                 !sidebarOpen && "rotate-180"
@@ -917,13 +926,13 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                   
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
                         className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
+                      >
                         <MoreVertical className="h-4 w-4" />
-            </Button>
+                      </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
@@ -949,9 +958,9 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-          </div>
+                </div>
               ))}
-        </div>
+            </div>
           </div>
         </motion.div>
       )}
@@ -987,7 +996,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
           <Button 
             variant="ghost"
             size="icon"
-            className="absolute left-4 top-6 z-10"
+            className="absolute left-2 top-4 z-10 bg-background/80 backdrop-blur-sm rounded-full"
             onClick={toggleSidebar}
           >
             <ChevronLeft className="h-4 w-4 rotate-180" />
@@ -996,7 +1005,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
 
         <div 
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto p-4"
+          className="flex-1 overflow-y-auto p-4 pt-14"
         >
           {messages.map((message) => (
             <div
@@ -1039,7 +1048,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                 {message.isStreaming && (
                   <div className="mt-2">
                     <div className="bg-primary/20 animate-pulse w-8 h-2 rounded"></div>
-            </div>
+                  </div>
                 )}
                 </div>
               </div>
@@ -1111,7 +1120,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                 title={isRecording ? "Stop recording" : "Start voice recording"}
               >
                 {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-            </Button>
+              </Button>
               <Button
                 size="icon"
                 disabled={(!inputValue.trim() && imageUrls.length === 0) || isLoading}
@@ -1120,7 +1129,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
               >
                 <Send className="h-4 w-4" />
               </Button>
-          </div>
+            </div>
           </div>
         </div>
       </div>

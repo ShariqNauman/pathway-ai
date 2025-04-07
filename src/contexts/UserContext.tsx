@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
-import { User as SupabaseUser } from "@supabase/supabase-js";
-import { toast } from "sonner";
 import { UserProfile, UserCredentials, UserPreferences, ExtracurricularActivity } from "@/types/user";
 import { Session } from "@supabase/supabase-js";
+import { toast } from "sonner";
 
 interface UserContextType {
   currentUser: UserProfile | null;
@@ -113,6 +112,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       if (profile) {
+        console.log('Fetched profile:', profile);
+        
         // Convert profile data to UserPreferences format
         const userPreferences: UserPreferences = {
           intendedMajor: profile.intended_major || '',
@@ -151,6 +152,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           phoneNumber: parsePhoneNumber(profile.phone),
           countryCode: parsePhoneCode(profile.phone)
         };
+
+        console.log('Mapped user preferences:', userPreferences);
 
         // Create user profile
         const userProfile: UserProfile = {
@@ -272,37 +275,31 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           weeksPerYear: typeof activity.weeksPerYear === 'number' ? activity.weeksPerYear : 0
         })) : [];
       
-      // Map frontend field names to database column names
       // Convert string values to numbers for fields that require numbers in the database
       const profileUpdate = {
         intended_major: preferences.intendedMajor || null,
         selected_domains: preferences.selectedDomains || [],
-        budget: preferences.budget ? parseFloat(preferences.budget) : null,
+        budget: preferences.budget ? Number(preferences.budget) : null,
         preferred_country: preferences.preferredCountry || null,
         preferred_university_type: preferences.preferredUniversityType || null,
         study_level: preferences.studyLevel || 'undergraduate',
-        sat_score: preferences.satScore ? parseFloat(preferences.satScore) : null,
-        act_score: preferences.actScore ? parseFloat(preferences.actScore) : null,
+        sat_score: preferences.satScore ? Number(preferences.satScore) : null,
+        act_score: preferences.actScore ? Number(preferences.actScore) : null,
         english_test_type: preferences.englishTestType || null,
-        english_test_score: preferences.englishTestScore ? parseFloat(preferences.englishTestScore) : null,
+        english_test_score: preferences.englishTestScore ? Number(preferences.englishTestScore) : null,
         high_school_curriculum: preferences.highSchoolCurriculum || null,
         curriculum_grades: preferences.curriculumGrades || {},
         curriculum_subjects: preferences.curriculumSubjects || [],
         extracurricular_activities: safeExtracurricularActivities as unknown as Json[],
         date_of_birth: preferences.dateOfBirth || null,
         nationality: preferences.nationality || null,
-        countryofresidence: preferences.countryOfResidence || null, // Map to correct DB column name
+        countryofresidence: preferences.countryOfResidence || null, // Correct DB column name
         phone: formattedPhone
       };
       
       console.log("Sending profile update to Supabase:", profileUpdate);
 
-      // Update strategy:
-      // 1. Try to update only the non-problematic fields first
-      // 2. If that works, great!
-      // 3. If not, check which column is missing and provide guidance
-
-      // Try the update
+      // Update the profile in Supabase
       const { error } = await supabase
         .from('profiles')
         .update(profileUpdate)
@@ -310,79 +307,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
       if (error) {
         console.error('Error updating preferences:', error);
-        
-        // Check for specific column errors
-        const errorMsg = error.message.toLowerCase();
-        if (errorMsg.includes("column") && errorMsg.includes("schema cache")) {
-          let missingColumns = [];
-          
-          if (errorMsg.includes("countryofresidence")) {
-            missingColumns.push("countryofresidence");
-          }
-          
-          if (errorMsg.includes("nationality")) {
-            missingColumns.push("nationality");
-          }
-          
-          if (missingColumns.length > 0) {
-            // Create a more helpful error message
-            const columnList = missingColumns.join(", ");
-            const message = `Database schema issue: Missing columns (${columnList}). Please contact the database administrator to add these columns.`;
-            console.error(message);
-            toast.error(message);
-            
-            // Try to update without the problematic fields
-            const safeUpdate = {...profileUpdate};
-            missingColumns.forEach(col => {
-              delete safeUpdate[col as keyof typeof safeUpdate];
-            });
-            
-            console.log("Attempting update without missing columns:", safeUpdate);
-            
-            const { error: retryError } = await supabase
-              .from('profiles')
-              .update(safeUpdate)
-              .eq('id', currentUser.id);
-              
-            if (retryError) {
-              console.error("Failed even with safe update:", retryError);
-              toast.error(`Failed to update preferences: ${retryError.message}`);
-              return;
-            } else {
-              // Success with partial update
-              console.log("Partial update successful (without missing columns)");
-              toast.warning("Your preferences were partially updated. Some fields could not be saved due to database configuration.");
-              
-              // Update the current user with what we could save
-              setCurrentUser(prev => {
-                if (!prev) return null;
-                // Create a new preferences object that excludes the fields we couldn't save
-                const updatedPreferences = {...preferences};
-                if (missingColumns.includes("nationality")) {
-                  updatedPreferences.nationality = prev.preferences.nationality;
-                }
-                if (missingColumns.includes("countryofresidence")) {
-                  updatedPreferences.countryOfResidence = prev.preferences.countryOfResidence;
-                }
-                return {
-                  ...prev,
-                  preferences: updatedPreferences
-                };
-              });
-              
-              return;
-            }
-          } else {
-            toast.error(`Failed to update preferences: ${error.message}`);
-          }
-          return;
-        } else {
-          toast.error(`Failed to update preferences: ${error.message}`);
-          return;
-        }
+        toast.error(`Failed to update preferences: ${error.message}`);
+        return;
       }
       
-      // Success - full update worked
+      // Update the local user state
       setCurrentUser(prev => {
         if (!prev) return null;
         return {
