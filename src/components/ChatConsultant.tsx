@@ -258,7 +258,6 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
   const initialLoadRef = useRef(true);
   const voiceRecorder = useRef<VoiceRecorder>(new VoiceRecorder());
 
