@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -99,7 +100,7 @@ const OnboardingPage = () => {
   const [preferences, setPreferences] = useState<UserPreferences>({
     intendedMajor: "",
     selectedDomains: [],
-    budget: 0,
+    budget: "",
     preferredCountry: "",
     preferredUniversityType: "",
     studyLevel: "undergraduate",
@@ -160,7 +161,7 @@ const OnboardingPage = () => {
       case 2:
         return preferences.intendedMajor && preferences.studyLevel;
       case 3:
-        return preferences.budget > 0;
+        return preferences.budget !== "";
       case 4:
         return preferences.preferredCountry && preferences.preferredUniversityType;
       default:
@@ -406,7 +407,7 @@ const OnboardingPage = () => {
                   min="0"
                   placeholder="E.g. 30000"
                   value={preferences.budget || ""}
-                  onChange={(e) => updatePreference("budget", parseInt(e.target.value) || 0)}
+                  onChange={(e) => updatePreference("budget", e.target.value)}
                 />
                 <p className="text-sm text-muted-foreground">
                   This helps us recommend programs within your financial reach
