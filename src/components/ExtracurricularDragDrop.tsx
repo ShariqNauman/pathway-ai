@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Award, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
 import { ExtracurricularActivity } from "@/types/user";
-import { toast } from "sonner";
 
 interface SortableItemProps {
   id: string;
@@ -126,7 +124,6 @@ const ExtracurricularDragDrop: React.FC<ExtracurricularDragDropProps> = ({
         
         if (onActivitiesReorder) {
           onActivitiesReorder(newItems);
-          toast("Activities reordered successfully");
         }
         
         return newItems;

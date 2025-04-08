@@ -130,23 +130,27 @@ export const generatePDF = async (
     });
 
     // Set up some variables for positioning
-    const margin = 20;
+    const margin = 15;
     const pageWidth = pdf.internal.pageSize.getWidth() - margin * 2;
     const pageHeight = pdf.internal.pageSize.getHeight() - margin * 2;
     let yPos = margin;
-    const lineHeight = 5; // For tighter text
+    const lineHeight = 5;
     const fontSize = 10;
-    const highlightPadding = 1; // Padding for highlight boxes
+    const highlightPadding = 1;
 
     // Function to add a new page
     const addNewPage = () => {
       pdf.addPage();
       yPos = margin;
+      console.log("Added new page, reset yPos to:", margin);
     };
 
     // Check if we need to add a new page
     const checkPageBreak = (neededSpace: number) => {
-      if (yPos + neededSpace > pageHeight + margin) {
+      const remainingSpace = pageHeight - yPos;
+      console.log("Page break check:", { yPos, pageHeight, remainingSpace, neededSpace });
+      
+      if (yPos + neededSpace > pageHeight - margin) {
         addNewPage();
         return true;
       }
@@ -156,9 +160,9 @@ export const generatePDF = async (
     // Add title
     pdf.setTextColor(0, 0, 0);
     pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(16);
+    pdf.setFontSize(14);
     pdf.text("Essay Analysis Report", margin, yPos);
-    yPos += 10;
+    yPos += 8;
 
     // Add essay type and prompt if available
     if (essayType) {
@@ -383,22 +387,70 @@ export const generatePDF = async (
 
     // Add overall feedback at the end
     if (feedback) {
-      checkPageBreak(20);
+      // Calculate needed space for feedback section
+      const cleanFeedback = feedback
+        .replace(/<\/?p>/g, '\n')
+        .replace(/<\/?[^>]+(>|$)/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/[""]/g, '"')
+        .replace(/['']/g, "'")
+        .replace(/\n\s*\n/g, '\n\n')
+        .trim();
+
+      const sections = cleanFeedback.split(/\d+\.\s+/).filter(Boolean);
+      
+      // Only add a new page if we don't have enough space
+      const estimatedLines = sections.length > 1 
+        ? sections.reduce((acc, section) => {
+            const sectionLines = pdf.splitTextToSize(section, pageWidth);
+            return acc + sectionLines.length;
+          }, 0)
+        : pdf.splitTextToSize(cleanFeedback, pageWidth).length;
+      
+      const neededSpace = (estimatedLines * lineHeight) + (lineHeight * 3); // Text + margins
+      const remainingSpace = pageHeight - yPos;
+      
+      console.log("Feedback space calculation:", {
+        estimatedLines,
+        neededSpace,
+        remainingSpace,
+        currentYPos: yPos
+      });
+
+      if (remainingSpace < neededSpace) {
+        addNewPage();
+      }
       
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(12);
       pdf.text("Overall Feedback", margin, yPos);
-      yPos += lineHeight * 1.5;
+      yPos += lineHeight * 2;
 
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(10);
       
-      // Remove HTML tags if present
-      const cleanFeedback = feedback.replace(/<\/?p>/g, '').replace(/<\/?[^>]+(>|$)/g, '');
-      const feedbackLines = pdf.splitTextToSize(cleanFeedback, pageWidth);
-      
-      pdf.text(feedbackLines, margin, yPos);
-      yPos += feedbackLines.length * lineHeight + 10;
+      if (sections.length > 1) {
+        sections.forEach((section, index) => {
+          const sectionText = `${index + 1}. ${section.trim()}`;
+          const sectionLines = pdf.splitTextToSize(sectionText, pageWidth);
+          
+          if (yPos + (sectionLines.length * lineHeight) > pageHeight - margin) {
+            addNewPage();
+          }
+          
+          pdf.text(sectionLines, margin, yPos);
+          yPos += sectionLines.length * lineHeight + 3;
+        });
+      } else {
+        const feedbackLines = pdf.splitTextToSize(cleanFeedback, pageWidth);
+        
+        if (yPos + (feedbackLines.length * lineHeight) > pageHeight - margin) {
+          addNewPage();
+        }
+        
+        pdf.text(feedbackLines, margin, yPos);
+        yPos += feedbackLines.length * lineHeight;
+      }
     }
 
     // Save the PDF

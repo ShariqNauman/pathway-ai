@@ -68,43 +68,60 @@ export async function analyzeEssay(
 ): Promise<EssayAnalysisResult> {
   try {
     const promptForAI = `
-You are an experienced college admissions officer evaluating the following ${essayType}.
+You are an experienced college admissions officer with 15+ years of experience at top universities. You are evaluating the following ${essayType}.
 
 ESSAY PROMPT: "${prompt}"
 
 ESSAY: "${essay}"
 
-Please analyze this essay line by line and provide specific feedback. Your response MUST follow this exact format:
+Analyze this essay as if you were making an actual admissions decision. Your response MUST follow this exact format with NO DEVIATIONS:
 
 ---HIGHLIGHTED_PARTS---
-[exact text that needs improvement]||[your specific comment about this text]
+[exact text that needs improvement]||[your specific comment about this text and how it could be improved to strengthen the application]
 [next text part]||[your specific comment]
 ...add more highlighted parts as needed
 
 ---OVERALL_FEEDBACK---
-[provide detailed feedback on the entire essay's strengths and weaknesses in 400-500 words]
+[Write a comprehensive evaluation in paragraph form, approximately 500 words. Begin with a one-sentence overall assessment. Then, analyze the following aspects in flowing paragraphs:
+
+First Impression & Memorability: Evaluate how the essay stands out among thousands of applications.
+
+Personal Growth & Self-Reflection: Discuss evidence of maturity and self-awareness demonstrated in the essay.
+
+Character & Values: Analyze what the essay reveals about the applicant's personality and principles.
+
+Writing Quality: Assess the technical writing ability and storytelling effectiveness.
+
+Authenticity: Evaluate how genuine and unique the voice feels.
+
+Impact: Describe the lasting impression on the admissions committee.
+
+Fit for Higher Education: Explain how the demonstrated qualities align with college success.
+
+End with 3-4 specific, actionable recommendations for improvement.]
 
 ---RATINGS---
-Overall: [score from 1-100]
-Uniqueness: [score from 1-100]
-Hook: [score from 1-100]
-Voice: [score from 1-100]
-Flow: [score from 1-100]
-Authenticity: [score from 1-100]
-Conciseness: [score from 1-100]
+Overall: [score from 1-100, based on actual admissions standards]
+Uniqueness: [score 1-100, evaluating distinctiveness among typical applications]
+Hook: [score 1-100, assessing how well it captures attention in first 30 seconds]
+Voice: [score 1-100, rating authenticity and personal tone]
+Flow: [score 1-100, evaluating narrative coherence and transitions]
+Authenticity: [score 1-100, measuring genuineness and self-reflection]
+Conciseness: [score 1-100, assessing efficiency and impact of language]
 
 CRITICAL INSTRUCTIONS:
-1. You MUST include 5-10 specific text excerpts that need improvement
-2. Each highlighted text MUST be an EXACT match to text in the original essay
-3. Never leave the HIGHLIGHTED_PARTS section empty - always find at least 5 areas to provide feedback on
-4. For each highlighted part, select a meaningful text chunk (typically 5-20 words) that can stand alone with your comment
-5. Keep comments concise and actionable (1-2 sentences)
-6. Ensure your highlighted sections don't overlap
-7. Make sure to cover different aspects of the essay when highlighting (don't focus only on one issue)
-8. For overall feedback, be constructive but honest about areas for improvement
-9. ONLY use the format above with the exact section headers
-10. Rate each category from 1-100, with higher numbers being better
-`;
+1. Write the feedback in flowing paragraphs - DO NOT use numbered sections
+2. Ensure smooth transitions between different aspects of the evaluation
+3. Include all required aspects (First Impression through Recommendations) in a natural, flowing narrative
+4. End with clear, bullet-pointed recommendations
+5. Evaluate with the same rigor you would use for actual college applications
+6. Each highlighted text MUST be an EXACT match to text in the original essay
+7. For each highlight, explain both the impact on the application and how to improve
+8. Focus on elements that influence admission decisions (character, growth, potential)
+9. Rate based on actual admission standards, not general writing quality
+10. Maintain clear paragraph breaks between major topics
+
+Remember: Write in a natural, flowing style while covering all required aspects of the evaluation.`;
     
     const response = await getGeminiResponse(promptForAI);
     console.log("Gemini API Response:", response);
@@ -124,17 +141,18 @@ CRITICAL INSTRUCTIONS:
       const highlightedPartSection = highlightedMatch?.[1]?.trim() || "";
       
       // Look for the overall feedback section
-      const feedbackMatch = response.text.match(/---OVERALL_FEEDBACK---\s*([\s\S]*?)(?:---RATINGS---|$)/);
+      const feedbackMatch = response.text.match(/---OVERALL_FEEDBACK---\s*([\s\S]*?)(?=---RATINGS---|$)/);
       const overallFeedbackSection = feedbackMatch?.[1]?.trim() || "";
       
       // Look for the ratings section
       const ratingsMatch = response.text.match(/---RATINGS---\s*([\s\S]*?)$/);
       const ratingsSection = ratingsMatch?.[1]?.trim() || "";
       
+      console.log("Full response text:", response.text);
       console.log("Parsed sections:", { 
         highlightedPartSection: highlightedPartSection.substring(0, 100) + "...", 
-        overallFeedbackSection: overallFeedbackSection.substring(0, 100) + "...",
-        ratingsSection: ratingsSection
+        overallFeedbackSection,
+        ratingsSection
       });
       
       // Improved handling for missing highlighted parts
@@ -296,9 +314,22 @@ CRITICAL INSTRUCTIONS:
       // Process and set overall feedback
       let finalFeedback = "";
       if (overallFeedbackSection) {
-        finalFeedback = await renderMarkdown(overallFeedbackSection);
+        // Clean up the feedback to ensure consistent formatting
+        const cleanedFeedback = overallFeedbackSection
+          .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
+          .replace(/^\s+|\s+$/g, '') // Trim whitespace
+          .split('\n')
+          .map(line => {
+            // Ensure numbered sections are properly formatted
+            if (/^\d+\./.test(line)) {
+              return `\n${line}`;
+            }
+            return line;
+          })
+          .join('\n');
+        
+        finalFeedback = await renderMarkdown(cleanedFeedback);
       } else {
-        // If no overall feedback section was found, display what we got
         finalFeedback = await renderMarkdown(response.text);
       }
       

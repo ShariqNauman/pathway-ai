@@ -1,4 +1,3 @@
-
 import React from "react";
 import { FileText, Loader2, Download, AlertCircle } from "lucide-react";
 import { EssaySegment } from "./HighlightedEssay";
@@ -135,7 +134,7 @@ const FeedbackDisplay = ({
         <div className="mt-6 border-t pt-6">
           <h4 className="font-medium mb-2 text-sm">Overall Feedback:</h4>
           <div 
-            className="prose dark:prose-invert prose-sm max-w-none" 
+            className="prose dark:prose-invert prose-sm max-w-none whitespace-pre-wrap break-words" 
             dangerouslySetInnerHTML={{ __html: feedback }} 
           />
         </div>

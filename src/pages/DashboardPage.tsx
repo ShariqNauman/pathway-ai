@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -11,7 +11,7 @@ import PersonalInfoDisplay from "@/components/PersonalInfoDisplay";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, Settings, LogOut, Award, BookOpen, GraduationCap } from "lucide-react";
+import { Loader2, Settings, LogOut, Award, BookOpen, GraduationCap, Book, ChevronDown, ChevronUp } from "lucide-react";
 import { ExtracurricularActivity } from "@/types/user";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -20,6 +20,8 @@ const DashboardPage = () => {
   const { currentUser, logout, isLoading, updateUserPreferences } = useUser();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isTestScoresCollapsed, setIsTestScoresCollapsed] = useState(false);
+  const [isCurriculumCollapsed, setIsCurriculumCollapsed] = useState(false);
 
   // Check for missing essential fields
   const getMissingFields = () => {
@@ -62,17 +64,8 @@ const DashboardPage = () => {
         ...currentUser.preferences,
         extracurricularActivities: activities
       });
-      
-      toast({
-        title: "Activities reordered",
-        description: "Your activities have been reordered successfully"
-      });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to reorder activities. Please try again.",
-        variant: "destructive"
-      });
+      console.error('Failed to reorder activities:', error);
     }
   };
 
@@ -153,11 +146,36 @@ const DashboardPage = () => {
           </div>
 
           <div className="mb-10">
-            <CurriculumDisplay 
-              curriculum={currentUser.preferences.highSchoolCurriculum || ""} 
-              subjects={currentUser.preferences.curriculumSubjects} 
-              grades={currentUser.preferences.curriculumGrades} 
-            />
+            <Card>
+              <CardHeader className="relative">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Book className="h-5 w-5 text-primary" />
+                    High School Curriculum
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsCurriculumCollapsed(!isCurriculumCollapsed)}
+                    className="h-8 w-8 p-0"
+                  >
+                    {isCurriculumCollapsed ? 
+                      <ChevronDown className="h-5 w-5" /> : 
+                      <ChevronUp className="h-5 w-5" />
+                    }
+                  </Button>
+                </div>
+              </CardHeader>
+              {!isCurriculumCollapsed && (
+                <CardContent>
+                  <CurriculumDisplay 
+                    curriculum={currentUser.preferences.highSchoolCurriculum || ""} 
+                    subjects={currentUser.preferences.curriculumSubjects} 
+                    grades={currentUser.preferences.curriculumGrades} 
+                  />
+                </CardContent>
+              )}
+            </Card>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -230,55 +248,70 @@ const DashboardPage = () => {
 
           <div className="mb-10">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-primary" />
-                  Test Scores
-                </CardTitle>
+              <CardHeader className="relative">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="h-5 w-5 text-primary" />
+                    Test Scores
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsTestScoresCollapsed(!isTestScoresCollapsed)}
+                    className="h-8 w-8 p-0"
+                  >
+                    {isTestScoresCollapsed ? 
+                      <ChevronDown className="h-5 w-5" /> : 
+                      <ChevronUp className="h-5 w-5" />
+                    }
+                  </Button>
+                </div>
                 <CardDescription>Your standardized test results</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-muted/30 p-4 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <BookOpen className="h-4 w-4 text-muted-foreground" />
-                      <h3 className="font-medium">SAT</h3>
+              {!isTestScoresCollapsed && (
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-muted/30 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <BookOpen className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="font-medium">SAT</h3>
+                      </div>
+                      {currentUser.preferences.satScore ? (
+                        <p className="text-2xl font-bold">{currentUser.preferences.satScore}</p>
+                      ) : (
+                        <p className="text-muted-foreground">Not provided</p>
+                      )}
                     </div>
-                    {currentUser.preferences.satScore ? (
-                      <p className="text-2xl font-bold">{currentUser.preferences.satScore}</p>
-                    ) : (
-                      <p className="text-muted-foreground">Not provided</p>
-                    )}
-                  </div>
 
-                  <div className="bg-muted/30 p-4 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <BookOpen className="h-4 w-4 text-muted-foreground" />
-                      <h3 className="font-medium">ACT</h3>
+                    <div className="bg-muted/30 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <BookOpen className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="font-medium">ACT</h3>
+                      </div>
+                      {currentUser.preferences.actScore ? (
+                        <p className="text-2xl font-bold">{currentUser.preferences.actScore}</p>
+                      ) : (
+                        <p className="text-muted-foreground">Not provided</p>
+                      )}
                     </div>
-                    {currentUser.preferences.actScore ? (
-                      <p className="text-2xl font-bold">{currentUser.preferences.actScore}</p>
-                    ) : (
-                      <p className="text-muted-foreground">Not provided</p>
-                    )}
-                  </div>
 
-                  <div className="bg-muted/30 p-4 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                      <h3 className="font-medium">English Proficiency</h3>
+                    <div className="bg-muted/30 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="font-medium">English Proficiency</h3>
+                      </div>
+                      {currentUser.preferences.englishTestType ? (
+                        <>
+                          <p className="text-sm text-muted-foreground">{currentUser.preferences.englishTestType}</p>
+                          <p className="text-2xl font-bold">{currentUser.preferences.englishTestScore}</p>
+                        </>
+                      ) : (
+                        <p className="text-muted-foreground">Not provided</p>
+                      )}
                     </div>
-                    {currentUser.preferences.englishTestType ? (
-                      <>
-                        <p className="text-sm text-muted-foreground">{currentUser.preferences.englishTestType}</p>
-                        <p className="text-2xl font-bold">{currentUser.preferences.englishTestScore}</p>
-                      </>
-                    ) : (
-                      <p className="text-muted-foreground">Not provided</p>
-                    )}
                   </div>
-                </div>
-              </CardContent>
+                </CardContent>
+              )}
             </Card>
           </div>
         </div>

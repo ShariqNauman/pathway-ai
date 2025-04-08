@@ -82,24 +82,24 @@ const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen = false 
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Essay Analysis</h2>
-                <Button
+            <Button 
                   variant="outline"
                   onClick={startNewAnalysis}
                   className="ml-4"
                 >
                   Analyze New Essay
                 </Button>
-              </div>
-              
+          </div>
+          
               {ratings && (
                 <EssayRating ratings={ratings} />
               )}
               
-              <FeedbackDisplay
-                highlightedEssay={highlightedEssay}
-                feedback={feedback}
-                isAnalyzing={isAnalyzing}
-                ratings={ratings}
+                      <FeedbackDisplay
+                        highlightedEssay={highlightedEssay}
+                        feedback={feedback}
+                        isAnalyzing={isAnalyzing}
+                        ratings={ratings}
                 essayType={currentFormValues.essayType}
                 prompt={currentFormValues.prompt}
               />
