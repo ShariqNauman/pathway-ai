@@ -1,4 +1,3 @@
-
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -10,7 +9,6 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import EssayAnalyzerPage from "./pages/EssayAnalyzerPage";
 import ConsultantPage from "./pages/ConsultantPage";
-import ContactPage from "./pages/ContactPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import LoginPage from "./pages/LoginPage";
@@ -65,7 +63,6 @@ const App = () => (
                 <Route path="/profile/edit" element={<ProfileEditPage />} />
                 <Route path="/essay-analyzer" element={<EssayAnalyzerPage />} />
                 <Route path="/consultant" element={<ConsultantPage />} />
-                <Route path="/contact" element={<ContactPage />} />
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/donations" element={<DonationsPage />} />

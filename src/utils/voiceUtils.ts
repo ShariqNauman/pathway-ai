@@ -1,4 +1,3 @@
-
 /**
  * TypeScript declarations for Web Speech API
  * These are needed because TypeScript doesn't include these by default
@@ -91,10 +90,10 @@ export class VoiceRecorder {
       // Only request new stream if we don't have one initialized already
       if (!this.isInitialized) {
         // Request user media with constraints optimized for voice
-        this.stream = await navigator.mediaDevices.getUserMedia({ 
-          audio: { 
-            echoCancellation: true,
-            noiseSuppression: true,
+      this.stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: { 
+          echoCancellation: true,
+          noiseSuppression: true,
             autoGainControl: true
           }
         });
@@ -194,38 +193,33 @@ export const transcribeAudio = (audioBlob: Blob): Promise<string> => {
       // Create recognition instance with optimized settings
       const recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 5; // Increased for better accuracy
-      recognition.continuous = true; // Enable continuous recognition for better results
+      recognition.interimResults = true; // Enable interim results for faster feedback
+      recognition.maxAlternatives = 1; // Reduce alternatives for faster processing
+      recognition.continuous = false; // Disable continuous mode for faster completion
       
       let recognitionResult = '';
+      let hasFinalResult = false;
       
       recognition.onresult = (event) => {
         // Process all results to get the best transcript
         for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          
           if (event.results[i].isFinal) {
-            // Find the alternative with highest confidence
-            const alternatives = Array.from({ length: event.results[i].length })
-              .map((_, j) => event.results[i][j])
-              .sort((a, b) => b.confidence - a.confidence);
-              
-            // If we have multiple alternatives with decent confidence, pick the longest one
-            const highConfidenceAlts = alternatives.filter(alt => alt.confidence > 0.7);
-            const bestAlternative = highConfidenceAlts.length > 1 
-              ? highConfidenceAlts.reduce((prev, current) => 
-                  current.transcript.length > prev.transcript.length ? current : prev, 
-                  highConfidenceAlts[0])
-              : alternatives[0];
-              
-            recognitionResult += bestAlternative.transcript + " ";
-            console.log('Transcript segment:', bestAlternative.transcript, 'confidence:', bestAlternative.confidence);
+            hasFinalResult = true;
+            recognitionResult = transcript;
+            console.log('Final transcript:', transcript);
+            recognition.stop(); // Stop recognition once we have a final result
+          } else {
+            // For interim results, update the transcript
+            recognitionResult = transcript;
+            console.log('Interim transcript:', transcript);
           }
         }
       };
       
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error('Recognition error:', event.error, event.message);
-        // Don't reject so we can still handle it gracefully
         if (recognitionResult) {
           resolve(recognitionResult.trim());
         } else {
@@ -241,29 +235,26 @@ export const transcribeAudio = (audioBlob: Blob): Promise<string> => {
       recognition.onend = () => {
         if (recognitionResult) {
           resolve(recognitionResult.trim());
-        } else {
+        } else if (!hasFinalResult) {
           resolve(""); // Gracefully handle empty results
         }
       };
 
-      // Direct recognition of the audio blob without playback
-      // We'll use a more direct approach for processing the audio
       // Start recognition
       recognition.start();
       
-      // Process the audio blob in memory
-      // For better accuracy, we don't need to play the audio back to the user
-      // Instead, we'll perform direct recognition on the audio data
-      
-      // Set a timeout for recognition
+      // Set a reasonable timeout to prevent hanging
       setTimeout(() => {
-        try {
+        if (!hasFinalResult) {
           recognition.stop();
-        } catch (e) {
-          // Ignore errors on stopping
-          console.log('Error stopping recognition after timeout:', e);
+          if (recognitionResult) {
+            resolve(recognitionResult.trim());
+          } else {
+            resolve("");
+          }
         }
-      }, 5000); // Increased timeout for better recognition results
+      }, 10000); // 10 second timeout
+      
     } catch (error) {
       console.error('Error in speech recognition:', error);
       resolve("");

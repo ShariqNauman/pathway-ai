@@ -15,7 +15,8 @@ import {
   Image as ImageIcon,
   Mic,
   MicOff,
-  X
+  X,
+  Square
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -38,6 +39,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { cn } from "@/lib/utils";
 import { UserProfile } from "@/types/user";
 import { VoiceRecorder, transcribeAudio } from "@/utils/voiceUtils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Message {
   id: string;
@@ -265,6 +272,9 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   const [chatToRename, setChatToRename] = useState<SavedChat | null>(null);
   const [newChatTitle, setNewChatTitle] = useState("");
 
+  const [isStreaming, setIsStreaming] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
     if (currentUser) {
       setSidebarOpen(initialSidebarOpen);
@@ -377,12 +387,12 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
             created_at: userMessage.timestamp.toISOString()
           }
         ];
-        
+
         if (aiMessage) {
           messagesToSave.push({
             conversation_id: newConvId,
-              content: aiMessage.content,
-              sender: aiMessage.sender,
+            content: aiMessage.content,
+            sender: aiMessage.sender,
             id: aiMessage.id,
             created_at: aiMessage.timestamp.toISOString()
           });
@@ -559,6 +569,10 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
       const additionalImages = userMessage.imageUrls && userMessage.imageUrls.length > 1 ? 
         userMessage.imageUrls.slice(1) : [];
 
+      // Create a new AbortController for this request
+      abortControllerRef.current = new AbortController();
+      setIsStreaming(true);
+
       const response = await getGeminiResponse(
         textToSend,
         undefined,
@@ -572,7 +586,8 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         },
         currentUser,
         primaryImage,
-        additionalImages
+        additionalImages,
+        abortControllerRef.current.signal
       );
       
       if (response.error) {
@@ -580,7 +595,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
         return;
       }
-      
+
       setMessages(prev => prev.map(msg =>
         msg.id === tempMessageId ? {
           ...msg,
@@ -593,15 +608,48 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         await saveConversation([...messages, userMessage, {
           id: tempMessageId,
           content: response.text,
-        sender: "ai",
+          sender: "ai",
           timestamp: new Date()
         }]);
       }
     } catch (error) {
-      console.error('Error sending message:', error);
-      toast.error('Failed to send message. Please try again.');
+      if (error.name === 'AbortError') {
+        console.log('Request was aborted');
+        // Don't show an error toast for user-initiated cancellations
+      } else {
+        console.error('Error sending message:', error);
+        toast.error('Failed to send message. Please try again.');
+      }
     } finally {
       setIsLoading(false);
+      setIsStreaming(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const stopStreaming = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsStreaming(false);
+      
+      // Update the last AI message to remove the streaming indicator
+      // but keep the current partial content
+      setMessages(prev => prev.map(msg => 
+        msg.isStreaming ? { ...msg, isStreaming: false } : msg
+      ));
+      
+      // Save the conversation with the partial message
+      if (currentUser && messages.length > 0) {
+        const lastUserMessage = messages.find(m => m.sender === "user");
+        const lastAIMessage = messages.find(m => m.sender === "ai" && m.isStreaming);
+        
+        if (lastUserMessage && lastAIMessage) {
+          saveConversation([...messages.filter(m => !m.isStreaming), {
+            ...lastAIMessage,
+            isStreaming: false
+          }]);
+        }
+      }
     }
   };
 
@@ -638,7 +686,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         setTimeout(() => {
           handleSendMessage(transcription);
         }, 100);
-      } else {
+        } else {
         toast.error("Could not transcribe audio. Please try again or type your message.");
       }
     } catch (error) {
@@ -739,7 +787,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
           sender: msg.sender as "user" | "ai",
           timestamp: new Date(msg.created_at)
         }));
-        
+
         setMessages(loadedMessages);
         setHasUserSentMessage(true);
       }
@@ -754,7 +802,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
       id: welcomeMessageId,
       content: getWelcomeMessage(currentUser),
       sender: "ai" as const,
-        timestamp: new Date(),
+      timestamp: new Date(),
     };
 
     setMessages([welcomeMessage]);
@@ -881,8 +929,8 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         >
           <div className="h-full flex flex-col">
             <div className="p-4 border-b border-border flex items-center justify-between">
-            <Button 
-              variant="ghost" 
+              <Button
+                variant="ghost"
                 className="flex-1 justify-start gap-2"
                 onClick={startNewChat}
               >
@@ -895,20 +943,20 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                 className="ml-2"
                 onClick={toggleSidebar}
               >
-              <ChevronLeft className={cn(
+                <ChevronLeft className={cn(
                   "h-4 w-4 transition-transform duration-200",
-                !sidebarOpen && "rotate-180"
-              )} />
-            </Button>
-          </div>
+                  !sidebarOpen && "rotate-180"
+                )} />
+              </Button>
+            </div>
             <div className="flex-1 overflow-y-auto">
-                {savedChats.map((chat) => (
+              {savedChats.map((chat) => (
                 <div
-                    key={chat.id}
-                    className={cn(
+                  key={chat.id}
+                  className={cn(
                     "group relative w-full text-left px-4 py-2 hover:bg-muted/80 transition-colors",
                     currentConversationId === chat.id && "bg-muted"
-                    )}
+                  )}
                 >
                   <button
                     onClick={() => loadConversation(chat.id)}
@@ -919,8 +967,8 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                     <span className="truncate">{chat.title}</span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                        {formatDate(chat.lastMessageDate)}
-                    </div>
+                    {formatDate(chat.lastMessageDate)}
+                  </div>
                 </button>
                   
                   <DropdownMenu>
@@ -992,7 +1040,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
 
       <div className="flex-1 flex flex-col h-full relative">
         {currentUser && !sidebarOpen && (
-          <Button 
+          <Button
             variant="ghost"
             size="icon"
             className="absolute left-2 top-4 z-10 bg-background/80 backdrop-blur-sm rounded-full"
@@ -1014,10 +1062,10 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                 message.sender === "user" ? "justify-end" : "justify-start"
               )}
             >
-              <div 
+              <div
                 className={cn(
                   "max-w-3xl p-4 rounded-lg",
-                  message.sender === "user" 
+                  message.sender === "user"
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted"
                 )}
@@ -1042,19 +1090,19 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                   </div>
                 ) : (
                     <div>{message.content}</div>
-                )}
-              </div>
+                  )}
+                </div>
                 {message.isStreaming && (
                   <div className="mt-2">
                     <div className="bg-primary/20 animate-pulse w-8 h-2 rounded"></div>
                   </div>
                 )}
-                </div>
               </div>
+            </div>
           ))}
           <div ref={messagesEndRef} />
         </div>
-        
+
         <div className="p-4 border-t border-border">
           {imageUrls.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-3">
@@ -1095,39 +1143,76 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                 onChange={handleImageUpload}
                 className="hidden"
               />
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 rounded-full"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isLoading || imageUrls.length >= MAX_IMAGES}
-                title="Attach image"
-              >
-                <ImageIcon className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className={cn(
-                  "h-8 w-8 rounded-full",
-                  isRecording && "bg-destructive text-destructive-foreground"
-                )}
-                onClick={toggleRecording}
-                disabled={isLoading && !isRecording}
-                title={isRecording ? "Stop recording" : "Start voice recording"}
-              >
-                {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              </Button>
-              <Button
-                size="icon"
-                disabled={(!inputValue.trim() && imageUrls.length === 0) || isLoading}
-                onClick={() => handleSendMessage()}
-                className="h-8 w-8 rounded-full"
-              >
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 rounded-full"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isLoading || imageUrls.length >= MAX_IMAGES}
+                    >
+                      <ImageIcon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Add up to 3 images</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className={cn(
+                        "h-8 w-8 rounded-full",
+                        isRecording && "bg-destructive text-destructive-foreground"
+                      )}
+                      onClick={toggleRecording}
+                      disabled={isLoading && !isRecording}
+                    >
+                      {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Click twice to start recording</p>
+                    <p className="text-xs text-yellow-500 mt-1">⚠️ Experimental feature - may not work as expected</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              {isStreaming ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 rounded-full bg-destructive text-destructive-foreground"
+                        onClick={stopStreaming}
+                      >
+                        <Square className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Stop AI response</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <Button
+                  size="icon"
+                  disabled={(!inputValue.trim() && imageUrls.length === 0) || isLoading}
+                  onClick={() => handleSendMessage()}
+                  className="h-8 w-8 rounded-full"
+                >
                 <Send className="h-4 w-4" />
-              </Button>
+            </Button>
+              )}
             </div>
           </div>
         </div>

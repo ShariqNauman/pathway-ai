@@ -152,6 +152,14 @@ const DashboardPage = () => {
             <PersonalInfoDisplay userProfile={currentUser} />
           </div>
 
+          <div className="mb-10">
+            <CurriculumDisplay 
+              curriculum={currentUser.preferences.highSchoolCurriculum || ""} 
+              subjects={currentUser.preferences.curriculumSubjects} 
+              grades={currentUser.preferences.curriculumGrades} 
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <Card>
               <CardHeader>
@@ -213,16 +221,6 @@ const DashboardPage = () => {
             </Card>
           </div>
 
-          {currentUser.preferences.highSchoolCurriculum && (
-            <div className="mb-10">
-              <CurriculumDisplay 
-                curriculum={currentUser.preferences.highSchoolCurriculum || ""} 
-                subjects={currentUser.preferences.curriculumSubjects} 
-                grades={currentUser.preferences.curriculumGrades} 
-              />
-            </div>
-          )}
-
           <div className="mb-10">
             <ExtracurricularDragDrop 
               activities={currentUser.preferences.extracurricularActivities}
@@ -282,18 +280,6 @@ const DashboardPage = () => {
                 </div>
               </CardContent>
             </Card>
-          </div>
-
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Recommendations</h2>
-            <div className="bg-muted/50 p-8 rounded-lg text-center">
-              <p className="text-lg text-muted-foreground">
-                Based on your preferences, we'll be providing personalized university recommendations soon.
-              </p>
-              <Button className="mt-4" onClick={() => navigate("/consultant")}>
-                Talk to AI Consultant
-              </Button>
-            </div>
           </div>
         </div>
       </main>

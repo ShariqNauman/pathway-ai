@@ -50,23 +50,6 @@ const Hero = () => {
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM5OTk5OTkiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djZoNnYtNmgtNnptMC0xMnY2aDZ2LTZoLTZ6bTAtMTJ2Nmg2di02aC02em0tMTIgMTJ2Nmg2di02aC02em0wLTEydjZoNnYtNmgtNnptMCAxMnYxMmgxMlYyMkgyNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-50 -z-10"></div>
       
       <div className="max-w-7xl mx-auto">
-        {!currentUser && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-8"
-          >
-            <Alert variant="destructive" className="bg-destructive/10 text-destructive border-destructive/20">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Please <Link to="/login" className="font-medium underline hover:text-destructive/90">sign in</Link> or{' '}
-                <Link to="/signup" className="font-medium underline hover:text-destructive/90">create an account</Link> to receive personalized university recommendations.
-              </AlertDescription>
-            </Alert>
-          </motion.div>
-        )}
-
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <motion.div
             className="text-center lg:text-left"
@@ -145,9 +128,15 @@ const Hero = () => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, ease: "easeOut", delay: 0.4 }}
             >
-              <Link to="/consultant" className="px-8 py-3 rounded-md bg-primary text-primary-foreground font-medium shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all w-full sm:w-auto text-center">
-                Get Started
-              </Link>
+              {currentUser ? (
+                <Link to="/consultant" className="px-8 py-3 rounded-md bg-primary text-primary-foreground font-medium shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all w-full sm:w-auto text-center">
+                  Start Consultation
+                </Link>
+              ) : (
+                <Link to="/signup" className="px-8 py-3 rounded-md bg-primary text-primary-foreground font-medium shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all w-full sm:w-auto text-center">
+                  Get Started
+                </Link>
+              )}
             </motion.div>
           </motion.div>
           

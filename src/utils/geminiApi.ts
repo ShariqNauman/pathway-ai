@@ -190,7 +190,8 @@ export async function getGeminiResponse(
   streamingOptions?: StreamingOptions,
   userProfile?: any,
   imageData?: string | null,
-  additionalImages?: string[] // Support for multiple images
+  additionalImages?: string[], // Support for multiple images
+  signal?: AbortSignal
 ): Promise<GeminiResponse> {
   try {
     // Format user profile information if available
@@ -342,6 +343,7 @@ export async function getGeminiResponse(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
+      signal // Add the abort signal to the fetch request
     });
 
     if (!response.ok) {
@@ -370,6 +372,13 @@ export async function getGeminiResponse(
       let partialText = '';
       
       for (const word of words) {
+        // Check if the request has been aborted
+        if (signal?.aborted) {
+          console.log('Streaming aborted by user');
+          // Return the partial text instead of the full text when aborted
+          return { text: partialText.trim() };
+        }
+        
         partialText += word + ' ';
         streamingOptions.onTextUpdate(partialText.trim());
         // Add a small delay to simulate streaming
