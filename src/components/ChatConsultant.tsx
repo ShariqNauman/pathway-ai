@@ -68,6 +68,7 @@ interface ChatConsultantProps {
 const DEFAULT_CHAT_TITLE = "New Chat";
 const MIN_USER_MESSAGES_FOR_TITLE = 5;
 const MAX_IMAGES = 3;
+const MAX_DAILY_MESSAGES = 30;
 
 const ABBREVIATIONS = {
   // Degrees and Levels
@@ -274,6 +275,9 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
 
   const [isStreaming, setIsStreaming] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const [messageCount, setMessageCount] = useState<number>(0);
+  const [isLimitReached, setIsLimitReached] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -487,7 +491,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
             conversation_id: newConvId,
             content: msg.content,
             sender: msg.sender,
-            id: msg.id,
+            id: uuidv4(), // Ensure unique ID for each message
             created_at: msg.timestamp.toISOString()
           }));
 
@@ -504,6 +508,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
           await fetchSavedChats();
         }
       } else {
+        // Handle existing conversation
         const existingMessageIds = new Set(messages.map(m => m.id));
         const newMessages = messagesToSave.filter(msg => !existingMessageIds.has(msg.id));
         
@@ -514,7 +519,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
             conversation_id: currentConversationId,
               content: msg.content,
               sender: msg.sender,
-              id: msg.id,
+              id: uuidv4(), // Ensure unique ID for each message
               created_at: msg.timestamp.toISOString()
             })
         ));
@@ -524,14 +529,152 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         }
       }
     } catch (error) {
-      console.error('Error saving conversation:', error);
-      toast.error('Failed to save conversation');
+      if (error.code === '23505') {
+        console.error('Duplicate key error while saving conversation:', error);
+        toast.error('A duplicate message was detected. Please try again.');
+      } else {
+        console.error('Error saving conversation:', error);
+        toast.error('Failed to save conversation');
+      }
     } finally {
       setIsChatSavingInProgress(false);
     }
   };
 
+  const checkMessageLimit = async (userId: string) => {
+    try {
+      // Get current message limit record
+      const { data: limitData, error: limitError } = await supabase
+        .from('message_limits')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (limitError && limitError.code !== 'PGRST116') {
+        console.error('Error checking message limit:', limitError);
+        return false;
+      }
+
+      const now = new Date();
+      const resetTime = new Date(now.toISOString().split('T')[0] + 'T00:00:00.000Z');
+
+      if (!limitData) {
+        // Create new record if none exists
+        const { error } = await supabase
+          .from('message_limits')
+          .insert({
+            user_id: userId,
+            message_count: 1,
+            last_reset: resetTime.toISOString()
+          });
+
+        if (error) {
+          console.error('Error creating message limit:', error);
+          return false;
+        }
+
+        setMessageCount(1);
+        return true;
+      }
+
+      // Check if we need to reset the counter
+      const lastReset = new Date(limitData.last_reset);
+      if (now > lastReset && now.getUTCDate() !== lastReset.getUTCDate()) {
+        // Reset counter at UTC midnight
+        const { error } = await supabase
+          .from('message_limits')
+          .update({
+            message_count: 1,
+            last_reset: resetTime.toISOString()
+          })
+          .eq('user_id', userId);
+
+        if (error) {
+          console.error('Error resetting message limit:', error);
+          return false;
+        }
+
+        setMessageCount(1);
+        return true;
+      }
+
+      // Check if limit is reached
+      if (limitData.message_count >= MAX_DAILY_MESSAGES) {
+        setIsLimitReached(true);
+        return false;
+      }
+
+      // Increment counter
+      const { error } = await supabase
+        .from('message_limits')
+        .update({
+          message_count: limitData.message_count + 1
+        })
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error updating message count:', error);
+        return false;
+      }
+
+      setMessageCount(limitData.message_count + 1);
+      return true;
+    } catch (error) {
+      console.error('Error in checkMessageLimit:', error);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    const fetchMessageCount = async () => {
+      if (!currentUser?.id) return;
+
+      const { data, error } = await supabase
+        .from('message_limits')
+        .select('message_count, last_reset')
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching message count:', error);
+        return;
+      }
+
+      if (data) {
+        const now = new Date();
+        const lastReset = new Date(data.last_reset);
+        
+        if (now > lastReset && now.getUTCDate() !== lastReset.getUTCDate()) {
+          setMessageCount(0);
+          setIsLimitReached(false);
+        } else {
+          setMessageCount(data.message_count);
+          setIsLimitReached(data.message_count >= MAX_DAILY_MESSAGES);
+        }
+      }
+    };
+
+    fetchMessageCount();
+  }, [currentUser?.id]);
+
   const handleSendMessage = async (overrideText?: string) => {
+    if (!currentUser?.id) {
+      toast.error("Please sign in to send messages");
+      return;
+    }
+
+    if (isLimitReached) {
+      toast.error(`You've reached your daily limit of ${MAX_DAILY_MESSAGES} messages. Please try again tomorrow at UTC midnight.`);
+      return;
+    }
+
+    // Check message limit before sending
+    const canSendMessage = await checkMessageLimit(currentUser.id);
+    if (!canSendMessage) {
+      toast.error(`You've reached your daily limit of ${MAX_DAILY_MESSAGES} messages. Please try again tomorrow at UTC midnight.`);
+      return;
+    }
+
     const textToSend = overrideText || inputValue.trim();
     if (!textToSend && imageUrls.length === 0) return;
     
@@ -547,7 +690,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
     setInputValue("");
     setIsLoading(true);
     setHasUserSentMessage(true);
-    setImageUrls([]); // Clear images after sending
+    setImageUrls([]);
 
     try {
       const previousMessages = messages.map(msg => ({
@@ -599,8 +742,8 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
       setMessages(prev => prev.map(msg =>
         msg.id === tempMessageId ? {
           ...msg,
-        content: response.text,
-        isStreaming: false
+          content: response.text,
+          isStreaming: false
         } : msg
       ));
 
@@ -612,7 +755,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
           timestamp: new Date()
         }]);
       }
-    } catch (error) {
+    } catch (error: any) {
       if (error.name === 'AbortError') {
         console.log('Request was aborted');
         // Don't show an error toast for user-initiated cancellations
@@ -919,6 +1062,16 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
     }
   };
 
+  const messageCountDisplay = (
+    <div className="text-sm text-muted-foreground text-center mt-2">
+      {isLimitReached ? (
+        <span className="text-destructive">Daily message limit reached ({MAX_DAILY_MESSAGES}/{MAX_DAILY_MESSAGES})</span>
+      ) : (
+        <span>Messages remaining today: {MAX_DAILY_MESSAGES - messageCount}/{MAX_DAILY_MESSAGES}</span>
+      )}
+    </div>
+  );
+
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {currentUser && (
@@ -1132,7 +1285,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
               onPaste={handleImagePaste}
               placeholder="Message AI Consultant..."
               className="pr-14 py-3 min-h-[50px] max-h-[200px] resize-none rounded-full"
-              disabled={isLoading}
+              disabled={isLoading || isLimitReached}
             />
             <div className="absolute bottom-2 right-3 flex items-center gap-1">
               <input
@@ -1152,7 +1305,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                       variant="ghost"
                       className="h-8 w-8 rounded-full"
                       onClick={() => fileInputRef.current?.click()}
-                      disabled={isLoading || imageUrls.length >= MAX_IMAGES}
+                      disabled={isLoading || imageUrls.length >= MAX_IMAGES || isLimitReached}
                     >
                       <ImageIcon className="h-4 w-4" />
                     </Button>
@@ -1174,7 +1327,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                         isRecording && "bg-destructive text-destructive-foreground"
                       )}
                       onClick={toggleRecording}
-                      disabled={isLoading && !isRecording}
+                      disabled={isLoading && !isRecording || isLimitReached}
                     >
                       {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                     </Button>
@@ -1206,7 +1359,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
               ) : (
                 <Button
                   size="icon"
-                  disabled={(!inputValue.trim() && imageUrls.length === 0) || isLoading}
+                  disabled={(!inputValue.trim() && imageUrls.length === 0) || isLoading || isLimitReached}
                   onClick={() => handleSendMessage()}
                   className="h-8 w-8 rounded-full"
                 >
@@ -1215,6 +1368,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
               )}
           </div>
           </div>
+          {messageCountDisplay}
         </div>
       </div>
     </div>

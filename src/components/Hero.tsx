@@ -1,6 +1,6 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -43,8 +43,45 @@ const Hero = () => {
     { sender: "ai", message: "Based on your academic profile and budget of $30,000 per year, here are some excellent universities for Computer Science in the United States:\n\n1. **Arizona State University** - Strong CS program with tuition around $29,800 for international students.\n\n2. **University of Texas at Arlington** - ABET-accredited CS program with tuition of approximately $28,500.\n\n3. **North Carolina State University** - Excellent tech connections with tuition around $29,200.\n\n4. **University of Massachusetts Amherst** - Top-ranked CS program with costs around $30,500.\n\n5. **Florida State University** - Growing CS department with tuition around $27,800.\n\nWould you like more specific information about any of these universities?" }
   ];
 
+  const headingVariants = [
+    {
+      text: "Find your perfect educational pathway"
+    },
+    {
+      text: "Discover your ideal university match"
+    },
+    {
+      text: "Plan your future academic success"
+    },
+    {
+      text: "Choose your dream university today"
+    }
+  ];
+
+  const [displayText, setDisplayText] = useState("");
+  const [currentHeadingIndex, setCurrentHeadingIndex] = useState(0);
+  const [isTyping, setIsTyping] = useState(true);
+
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    const currentText = headingVariants[currentHeadingIndex].text;
+    
+    if (isTyping && displayText !== currentText) {
+      timeout = setTimeout(() => {
+        setDisplayText(currentText.slice(0, displayText.length + 1));
+      }, 50); // Adjust typing speed here
+    } else if (displayText === currentText) {
+      timeout = setTimeout(() => {
+        setDisplayText("");
+        setCurrentHeadingIndex((prev) => (prev + 1) % headingVariants.length);
+      }, 2000); // Wait before starting next text
+    }
+
+    return () => clearTimeout(timeout);
+  }, [displayText, currentHeadingIndex, isTyping]);
+
   return (
-    <section className="relative min-h-screen pt-32 pb-20 px-6 lg:px-10 overflow-hidden">
+    <section className="relative min-h-screen pt-20 pb-20 px-6 lg:px-10 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-accent/50 via-background to-background -z-10"></div>
       
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM5OTk5OTkiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djZoNnYtNmgtNnptMC0xMnY2aDZ2LTZoLTZ6bTAtMTJ2Nmg2di02aC02em0tMTIgMTJ2Nmg2di02aC02em0wLTEydjZoNnYtNmgtNnptMCAxMnYxMmgxMlYyMkgyNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-50 -z-10"></div>
@@ -57,33 +94,14 @@ const Hero = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
           >
-            <motion.span 
-              className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-accent text-accent-foreground mb-6"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
-            >
-              AI-Powered Education Guidance
-            </motion.span>
-            
-            <motion.h1 
-              className="text-4xl md:text-5xl lg:text-6xl font-display font-bold leading-tight mb-6"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
-            >
-              Find your <span className="text-primary">perfect</span> 
-              <br />educational pathway
-            </motion.h1>
-            
-            <motion.div
-              className="inline-block bg-primary/10 text-primary px-4 py-2 rounded-full mb-6"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: "easeOut", delay: 0.3 }}
-            >
-              <span className="font-medium">100% Free Platform</span>
-            </motion.div>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold leading-[1.1] mb-6 h-[120px] lg:h-[160px]">
+              <span className="relative">
+                <span className="bg-gradient-to-r from-foreground to-[#4B7BF5] bg-clip-text text-transparent">
+                  {displayText}
+                </span>
+                <span className="absolute -right-1 top-[15%] h-[70%] w-[3px] bg-[#4B7BF5] animate-blink"></span>
+              </span>
+            </h1>
             
             <motion.div
               className="mb-6 p-4 bg-accent/30 rounded-lg border border-primary/10"

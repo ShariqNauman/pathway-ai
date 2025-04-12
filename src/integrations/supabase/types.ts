@@ -179,6 +179,32 @@ export type Database = {
         }
         Relationships: []
       }
+      message_limits: {
+        Row: {
+          user_id: string
+          message_count: number
+          last_reset: string
+        }
+        Insert: {
+          user_id: string
+          message_count?: number
+          last_reset?: string
+        }
+        Update: {
+          user_id?: string
+          message_count?: number
+          last_reset?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_limits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
