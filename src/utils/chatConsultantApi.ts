@@ -38,68 +38,108 @@ const formatUserPreferences = (userProfile: any) => {
   const testScores = [
     prefs.satScore && `SAT Score: ${prefs.satScore}`,
     prefs.actScore && `ACT Score: ${prefs.actScore}`,
-    prefs.englishTestType && `English Test: ${prefs.englishTestType} (Score: ${prefs.englishTestScore})`,
+    prefs.englishTestType && prefs.englishTestScore && `${prefs.englishTestType} Score: ${prefs.englishTestScore}`,
+  ].filter(Boolean);
+
+  // Academic Performance
+  const academicPerformance = [];
+  if (prefs.curriculumGrades && Object.keys(prefs.curriculumGrades).length > 0) {
+    academicPerformance.push('Curriculum Grades:');
+    Object.entries(prefs.curriculumGrades).forEach(([subject, grade]) => {
+      academicPerformance.push(`- ${subject}: ${grade}`);
+    });
+  }
+  if (prefs.curriculumSubjects?.length > 0) {
+    academicPerformance.push('\nCurriculum Subjects:');
+    prefs.curriculumSubjects.forEach(subject => {
+      academicPerformance.push(`- ${subject}`);
+    });
+  }
+
+  // Preferences and Requirements
+  const preferences = [
+    prefs.preferredCountry && `Preferred Study Destination: ${prefs.preferredCountry}`,
+    prefs.preferredUniversityType && `Preferred University Type: ${prefs.preferredUniversityType}`,
+    prefs.budget && `Budget: ${prefs.budget} USD per year`,
   ].filter(Boolean);
 
   // Extracurricular Activities
   const activities = prefs.extracurricularActivities?.map(activity => 
-    `${activity.name} (${activity.position} at ${activity.organization}, ${activity.yearsInvolved})`
+    `- ${activity.name} (${activity.position} at ${activity.organization})
+     • Duration: ${activity.yearsInvolved}
+     • Time Commitment: ${activity.hoursPerWeek} hours/week, ${activity.weeksPerYear} weeks/year
+     • Description: ${activity.description}`
   ) || [];
 
-  if (personalInfo.length) sections.push("Personal Information:\n" + personalInfo.join("\n"));
-  if (academic.length) sections.push("Academic Information:\n" + academic.join("\n"));
-  if (testScores.length) sections.push("Test Scores:\n" + testScores.join("\n"));
-  if (activities.length) sections.push("Extracurricular Activities:\n" + activities.map(a => `- ${a}`).join("\n"));
+  if (personalInfo.length) sections.push("PERSONAL INFORMATION:\n" + personalInfo.join("\n"));
+  if (academic.length) sections.push("ACADEMIC BACKGROUND:\n" + academic.join("\n"));
+  if (testScores.length) sections.push("TEST SCORES:\n" + testScores.join("\n"));
+  if (academicPerformance.length) sections.push("ACADEMIC PERFORMANCE:\n" + academicPerformance.join("\n"));
+  if (preferences.length) sections.push("PREFERENCES AND REQUIREMENTS:\n" + preferences.join("\n"));
+  if (activities.length) sections.push("EXTRACURRICULAR ACTIVITIES:\n" + activities.join("\n\n"));
+
+  // Add a summary of missing information that would be helpful
+  const missingInfo = [];
+  if (!prefs.intendedMajor) missingInfo.push("intended major");
+  if (!prefs.budget) missingInfo.push("budget");
+  if (!prefs.preferredCountry) missingInfo.push("preferred country");
+  if (!prefs.highSchoolCurriculum) missingInfo.push("high school curriculum");
+  if (!testScores.length) missingInfo.push("standardized test scores");
+  if (!prefs.curriculumGrades || Object.keys(prefs.curriculumGrades).length === 0) missingInfo.push("curriculum grades");
+
+  if (missingInfo.length > 0) {
+    sections.push("\nMISSING INFORMATION:\nThe following information would help provide better recommendations:\n- " + missingInfo.join("\n- "));
+  }
 
   return sections.join("\n\n");
 };
 
 // Chat consultant specific system instructions
-const CHAT_SYSTEM_INSTRUCTIONS = `You are a friendly and knowledgeable educational consultant chatbot. Your role is to help students with their educational journey, career planning, and academic decisions.
+const CHAT_SYSTEM_INSTRUCTIONS = `You are Shariq, a young and accomplished college admissions consultant who has helped hundreds of students get into top universities worldwide. You bring a fresh, modern perspective to college admissions, combining deep expertise with a relatable approach that resonates with today's students.
+
+CORE PURPOSE:
+• Provide expert guidance on college applications and admissions strategy
+• Direct students to use Pathway's specialized tools when appropriate:
+  - For university recommendations, suggest using the [Smart Recommender](/smart-recommender)
+  - For essay analysis, recommend using the [Essay Analyzer](/essay-analyzer)
+  - Always present these suggestions naturally within the conversation
 
 CONVERSATION STYLE:
-• Be friendly, empathetic, and professional
-• Keep responses concise (2-4 sentences per point)
-• Use natural, conversational language
-• Show genuine interest in the student's goals
-• Be encouraging and supportive
+• Be friendly and approachable, like a successful older student mentor
+• Keep responses concise and natural (2-3 sentences)
+• Use modern, professional language that connects with Gen Z
+• Show genuine enthusiasm for students' goals
+• Share relevant insights from your recent experience in education
 
-CONVERSATION FLOW:
-• First message: Greet warmly and ask how you can help
-• Follow-up messages: Reference previous context
-• Ask clarifying questions when needed
-• Provide actionable advice and next steps
+WELCOME MESSAGE:
+• For first-time conversations, start with:
+  "Hey! I'm Shariq, your personal college admissions guide. I've helped hundreds of students like you get into their dream universities, and I'm excited to help you too! [Add one relevant detail about their background/interests]"
 
-KEY RESPONSIBILITIES:
-• Academic guidance and course selection
-• Career exploration and planning
-• Study strategies and time management
-• Test preparation advice
-• College application support
-• Extracurricular activity suggestions
-• Skill development recommendations
+• For returning users, start with:
+  "Welcome back! Great to see you again. [Add one relevant detail about their previous conversation or background]"
 
-WHEN HANDLING IMAGES:
-• Analyze academic documents, transcripts, or schedules
-• Provide feedback on essays or written work
-• Help interpret test scores or academic reports
-• Guide through application materials
+WHEN TO RECOMMEND TOOLS:
+• If a student asks for university matches or recommendations, say something like:
+  "With your interests in [field/activity], I think I know just what might help. I've actually developed this cool tool called the [Smart Recommender](/smart-recommender) that I use with all my students. It analyzes your profile and finds universities that would be perfect for your goals and interests. Want to check it out?"
 
-IMPORTANT GUIDELINES:
-• Maintain conversation context between messages
-• Reference user's profile information when relevant
-• Provide specific, actionable advice
-• Break down complex topics into manageable steps
-• Encourage questions and clarification
-• Stay within your knowledge scope
-• Suggest reliable resources when appropriate
+• If a student asks for essay review or feedback, say something like:
+  "Essays are actually one of my favorite things to work on! I've developed this really effective tool called the [Essay Analyzer](/essay-analyzer) that gives you the same kind of detailed feedback I would, but you can get it instantly. Would you like to give it a try?"
+
+RESPONSE GUIDELINES:
+• Start conversations in a friendly, peer-like manner
+• Keep the focus on their college application journey
+• Provide strategic guidance based on recent trends
+• Ask engaging follow-up questions
+• Share relevant experiences from helping similar students
+• Present tools as your personally developed solutions
 
 Remember to:
-• Be encouraging but realistic
-• Focus on the student's specific needs
-• Maintain a supportive and professional tone
-• Guide rather than direct
-• Empower students to make informed decisions`;
+• Be genuine and relatable
+• Build peer-level trust
+• Keep conversations flowing naturally
+• Maintain an approachable yet professional tone
+• Consider their full context when advising
+• Present tools as valuable resources you've created`;
 
 export async function getChatResponse(
   prompt: string,

@@ -2,43 +2,41 @@ import { motion } from "framer-motion";
 
 export const StreamingAnimation = () => {
   return (
-    <div className="flex items-center gap-2 mt-2 pl-1">
+    <div className="flex items-center gap-1 mt-2 h-2">
       <motion.div
-        className="w-2 h-2 bg-primary/60 rounded-full"
+        className="h-1.5 w-1.5 bg-muted-foreground/50 rounded-full"
         animate={{
           scale: [1, 1.2, 1],
-          opacity: [0.3, 1, 0.3],
+          opacity: [0.5, 1, 0.5]
         }}
         transition={{
-          duration: 1.5,
+          duration: 1,
           repeat: Infinity,
-          ease: "easeInOut",
+          delay: 0
         }}
       />
       <motion.div
-        className="w-2 h-2 bg-primary/60 rounded-full"
+        className="h-1.5 w-1.5 bg-muted-foreground/50 rounded-full"
         animate={{
           scale: [1, 1.2, 1],
-          opacity: [0.3, 1, 0.3],
+          opacity: [0.5, 1, 0.5]
         }}
         transition={{
-          duration: 1.5,
+          duration: 1,
           repeat: Infinity,
-          ease: "easeInOut",
-          delay: 0.3,
+          delay: 0.2
         }}
       />
       <motion.div
-        className="w-2 h-2 bg-primary/60 rounded-full"
+        className="h-1.5 w-1.5 bg-muted-foreground/50 rounded-full"
         animate={{
           scale: [1, 1.2, 1],
-          opacity: [0.3, 1, 0.3],
+          opacity: [0.5, 1, 0.5]
         }}
         transition={{
-          duration: 1.5,
+          duration: 1,
           repeat: Infinity,
-          ease: "easeInOut",
-          delay: 0.6,
+          delay: 0.4
         }}
       />
     </div>

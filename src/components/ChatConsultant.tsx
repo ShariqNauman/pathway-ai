@@ -235,10 +235,22 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   const { currentUser } = useUser();
   
   const getWelcomeMessage = (user: UserProfile | null) => {
-    if (user?.name) {
-      return `Hello ${user.name}! I'm your AI consultant. How can I help with your educational journey today?`;
+    if (!user) {
+      return "Hey! I'm Shariq, your personal college admissions guide. I've helped hundreds of students get into their dream universities. Sign in to get started with personalized guidance!";
     }
-    return "Hello! I'm your AI consultant. How can I help with your educational journey today?";
+
+    const prefs = user.preferences;
+    let relevantDetail = "";
+
+    if (prefs.intendedMajor && prefs.selectedDomains?.length > 0) {
+      relevantDetail = ` I see you're interested in ${prefs.intendedMajor}, particularly ${prefs.selectedDomains.join(" and ")}. That's actually one of my favorite fields to work with!`;
+    } else if (prefs.intendedMajor) {
+      relevantDetail = ` I see you're interested in ${prefs.intendedMajor}. That's actually one of my favorite fields to work with!`;
+    } else if (prefs.preferredCountry) {
+      relevantDetail = ` I notice you're interested in studying in ${prefs.preferredCountry}. Great choice!`;
+    }
+
+    return `Hey! I'm Shariq, your personal college admissions guide. I've helped hundreds of students like you get into their dream universities, and I'm excited to help you too!${relevantDetail}`;
   };
 
   const welcomeMessageId = useMemo(() => uuidv4(), []);
@@ -283,7 +295,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
 
   useEffect(() => {
     if (currentUser) {
-      setSidebarOpen(initialSidebarOpen);
+    setSidebarOpen(initialSidebarOpen);
     } else {
       setSidebarOpen(false);
     }
@@ -393,12 +405,12 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
             created_at: userMessage.timestamp.toISOString()
           }
         ];
-
+        
         if (aiMessage) {
           messagesToSave.push({
             conversation_id: newConvId,
-            content: aiMessage.content,
-            sender: aiMessage.sender,
+              content: aiMessage.content,
+              sender: aiMessage.sender,
             id: aiMessage.id,
             created_at: aiMessage.timestamp.toISOString()
           });
@@ -760,7 +772,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
         return;
       }
-
+      
       setMessages(prev => prev.map(msg =>
         msg.id === tempMessageId ? {
           ...msg,
@@ -774,7 +786,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         await saveConversation([...messages, userMessage, {
           id: tempMessageId,
           content: response.text,
-          sender: "ai",
+        sender: "ai",
           timestamp: new Date()
         }]);
       }
@@ -953,7 +965,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
           sender: msg.sender as "user" | "ai",
           timestamp: new Date(msg.created_at)
         }));
-
+        
         setMessages(loadedMessages);
         setHasUserSentMessage(true);
       }
@@ -968,7 +980,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
       id: welcomeMessageId,
       content: getWelcomeMessage(currentUser),
       sender: "ai" as const,
-      timestamp: new Date(),
+        timestamp: new Date(),
     };
 
     setMessages([welcomeMessage]);
@@ -1105,8 +1117,8 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         >
           <div className="h-full flex flex-col">
             <div className="p-4 border-b border-border flex items-center justify-between">
-              <Button
-                variant="ghost"
+            <Button 
+              variant="ghost" 
                 className="flex-1 justify-start gap-2"
                 onClick={startNewChat}
               >
@@ -1117,22 +1129,22 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                 variant="ghost"
                 size="icon"
                 className="ml-2"
-                onClick={toggleSidebar}
-              >
-                <ChevronLeft className={cn(
+              onClick={toggleSidebar}
+            >
+              <ChevronLeft className={cn(
                   "h-4 w-4 transition-transform duration-200",
-                  !sidebarOpen && "rotate-180"
-                )} />
-              </Button>
-            </div>
+                !sidebarOpen && "rotate-180"
+              )} />
+            </Button>
+          </div>
             <div className="flex-1 overflow-y-auto">
-              {savedChats.map((chat) => (
+                {savedChats.map((chat) => (
                 <div
-                  key={chat.id}
-                  className={cn(
+                    key={chat.id}
+                    className={cn(
                     "group relative w-full text-left px-4 py-2 hover:bg-muted/80 transition-colors",
                     currentConversationId === chat.id && "bg-muted"
-                  )}
+                    )}
                 >
                   <button
                     onClick={() => loadConversation(chat.id)}
@@ -1143,8 +1155,8 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                     <span className="truncate">{chat.title}</span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {formatDate(chat.lastMessageDate)}
-                  </div>
+                        {formatDate(chat.lastMessageDate)}
+                    </div>
                 </button>
                   
                   <DropdownMenu>
@@ -1183,7 +1195,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                   </DropdownMenu>
           </div>
               ))}
-            </div>
+        </div>
           </div>
         </motion.div>
       )}
@@ -1216,7 +1228,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
 
       <div className="flex-1 flex flex-col h-full relative">
         {currentUser && !sidebarOpen && (
-          <Button
+          <Button 
             variant="ghost"
             size="icon"
             className="absolute left-2 top-4 z-10 bg-background/80 backdrop-blur-sm rounded-full"
@@ -1230,192 +1242,196 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
           ref={chatContainerRef}
           className="flex-1 overflow-y-auto p-4 pt-14"
         >
+          <div className="max-w-3xl mx-auto px-8 py-6 space-y-6">
           {messages.map((message) => (
             <div
               key={message.id}
-              className={cn(
-                "flex gap-3",
-                message.sender === "user" ? "justify-end" : "justify-start"
-              )}
-            >
-              {message.sender === "ai" && (
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/new-logo.png" alt="AI Consultant" className="p-1" />
-                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500">
-                    <MessageSquare className="h-4 w-4 text-white" />
-                  </AvatarFallback>
-                </Avatar>
-              )}
-              <div
                 className={cn(
-                  "max-w-[80%] rounded-lg p-4",
-                  message.sender === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
+                  "flex gap-3",
+                  message.sender === "user" ? "justify-end" : "justify-start"
                 )}
               >
-                {message.sender === "ai" && message.isStreaming ? (
-                  <div className="flex flex-col">
-                    <div className="prose dark:prose-invert max-w-none min-h-[24px]">
-                      <ReactMarkdown>
-                        {message.content || "Thinking..."}
-                      </ReactMarkdown>
-                    </div>
-                    <StreamingAnimation />
+                {message.sender === "ai" && (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src="/chatbot-logo.svg" alt="AI Consultant" />
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500">
+                      <MessageSquare className="h-4 w-4 text-white" />
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+                <div
+                  className={cn(
+                    "max-w-[80%] rounded-lg p-4",
+                  message.sender === "user" 
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
+                  )}
+                >
+                  {message.sender === "ai" && message.isStreaming ? (
+                    <div className="flex flex-col">
+                      <div className="prose dark:prose-invert max-w-none min-h-[24px] whitespace-pre-wrap break-words">
+                    <ReactMarkdown>
+                          {message.content || ""}
+                    </ReactMarkdown>
+                      </div>
+                      <StreamingAnimation />
                   </div>
                 ) : (
-                  <div className="prose dark:prose-invert max-w-none">
-                    <ReactMarkdown>
-                      {message.content}
-                    </ReactMarkdown>
-                  </div>
-                )}
-                {message.imageUrls && message.imageUrls.length > 0 && (
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    {message.imageUrls.map((url, index) => (
-                      <img
-                        key={index}
-                        src={url}
-                        alt={`Uploaded image ${index + 1}`}
-                        className="rounded-lg max-w-full h-auto"
+                    <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap break-words">
+                      <ReactMarkdown>
+                        {message.content}
+                      </ReactMarkdown>
+              </div>
+                  )}
+                  {message.imageUrls && message.imageUrls.length > 0 && (
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      {message.imageUrls.map((url, index) => (
+                        <img
+                          key={index}
+                          src={url}
+                          alt={`Uploaded image ${index + 1}`}
+                          className="rounded-lg max-w-full h-auto"
+                        />
+                      ))}
+                </div>
+                  )}
+              </div>
+                {message.sender === "user" && (
+                  <Avatar className="h-8 w-8">
+                    {currentUser?.profilePicture ? (
+                      <AvatarImage 
+                        src={currentUser.profilePicture} 
+                        alt={currentUser.name || "User"} 
+                        className="object-cover"
                       />
-                    ))}
-                  </div>
+                    ) : (
+                      <AvatarFallback className="bg-primary text-primary-foreground font-medium">
+                        {currentUser?.name?.[0]?.toUpperCase() || "U"}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
                 )}
               </div>
-              {message.sender === "user" && (
-                <Avatar className="h-8 w-8">
-                  {currentUser?.profilePicture ? (
-                    <AvatarImage 
-                      src={currentUser.profilePicture} 
-                      alt={currentUser.name || "User"} 
-                      className="object-cover"
-                    />
-                  ) : (
-                    <AvatarFallback className="bg-primary text-primary-foreground font-medium">
-                      {currentUser?.name?.[0]?.toUpperCase() || "U"}
-                    </AvatarFallback>
-                  )}
-                </Avatar>
-              )}
-            </div>
-          ))}
+            ))}
           <div ref={messagesEndRef} />
+          </div>
         </div>
-
+        
         <div className="p-4 border-t border-border">
-          {imageUrls.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3">
-              {imageUrls.map((url, index) => (
-                <div key={index} className="relative w-16 h-16">
-                  <img 
-                    src={url} 
-                    alt={`Preview ${index + 1}`} 
-                    className="w-full h-full object-cover rounded"
-                  />
-                  <button
-                    className="absolute -top-2 -right-2 bg-background rounded-full p-0.5 border border-border"
-                    onClick={() => removeImage(index)}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="relative">
+          <div className="max-w-2xl mx-auto">
+            {imageUrls.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {imageUrls.map((url, index) => (
+                  <div key={index} className="relative w-16 h-16">
+                    <img 
+                      src={url} 
+                      alt={`Preview ${index + 1}`} 
+                      className="w-full h-full object-cover rounded"
+                    />
+                    <button
+                      className="absolute -top-2 -right-2 bg-background rounded-full p-0.5 border border-border"
+                      onClick={() => removeImage(index)}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="relative">
             <Textarea
               ref={textareaRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              onPaste={handleImagePaste}
-              placeholder="Message AI Consultant..."
-              className="pr-14 py-3 min-h-[50px] max-h-[200px] resize-none rounded-full"
-              disabled={isLoading || isLimitReached}
-            />
-            <div className="absolute bottom-2 right-3 flex items-center gap-1">
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                ref={fileInputRef}
-                onChange={handleImageUpload}
-                className="hidden"
+                onPaste={handleImagePaste}
+                placeholder="Message AI Consultant..."
+                className="pr-14 py-3 min-h-[50px] max-h-[200px] resize-none rounded-full"
+                disabled={isLoading || isLimitReached}
               />
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 rounded-full"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isLoading || imageUrls.length >= MAX_IMAGES || isLimitReached}
-                    >
-                      <ImageIcon className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Add up to 3 images</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className={cn(
-                        "h-8 w-8 rounded-full",
-                        isRecording && "bg-destructive text-destructive-foreground"
-                      )}
-                      onClick={toggleRecording}
-                      disabled={isLoading && !isRecording || isLimitReached}
-                    >
-                      {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Click twice to start recording</p>
-                    <p className="text-xs text-yellow-500 mt-1">⚠️ Experimental feature - may not work as expected</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              {isStreaming ? (
+              <div className="absolute bottom-2 right-3 flex items-center gap-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
+                        type="button"
                         size="icon"
                         variant="ghost"
-                        className="h-8 w-8 rounded-full bg-destructive text-destructive-foreground"
-                        onClick={stopStreaming}
+                        className="h-8 w-8 rounded-full"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isLoading || imageUrls.length >= MAX_IMAGES || isLimitReached}
                       >
-                        <Square className="h-4 w-4" />
+                        <ImageIcon className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Stop AI response</p>
+                      <p>Add up to 3 images</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              ) : (
-                <Button
-                  size="icon"
-                  disabled={(!inputValue.trim() && imageUrls.length === 0) || isLoading || isLimitReached}
-                  onClick={() => handleSendMessage()}
-                  className="h-8 w-8 rounded-full"
-                >
-                <Send className="h-4 w-4" />
-            </Button>
-              )}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className={cn(
+                          "h-8 w-8 rounded-full",
+                          isRecording && "bg-destructive text-destructive-foreground"
+                        )}
+                        onClick={toggleRecording}
+                        disabled={isLoading && !isRecording || isLimitReached}
+                      >
+                        {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Click twice to start recording</p>
+                      <p className="text-xs text-yellow-500 mt-1">⚠️ Experimental feature - may not work as expected</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                {isStreaming ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 rounded-full bg-destructive text-destructive-foreground"
+                          onClick={stopStreaming}
+                        >
+                          <Square className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Stop AI response</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <Button
+                    size="icon"
+                    disabled={(!inputValue.trim() && imageUrls.length === 0) || isLoading || isLimitReached}
+                    onClick={() => handleSendMessage()}
+                    className="h-8 w-8 rounded-full"
+                  >
+                  <Send className="h-4 w-4" />
+              </Button>
+                )}
           </div>
+            </div>
+            {messageCountDisplay}
           </div>
-          {messageCountDisplay}
         </div>
       </div>
     </div>
