@@ -45,6 +45,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { StreamingAnimation } from "@/components/StreamingAnimation";
 
 interface Message {
   id: string;
@@ -1232,46 +1234,70 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
             <div
               key={message.id}
               className={cn(
-                "flex mb-4",
+                "flex gap-3",
                 message.sender === "user" ? "justify-end" : "justify-start"
               )}
             >
+              {message.sender === "ai" && (
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src="/new-logo.png" alt="AI Consultant" className="p-1" />
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500">
+                    <MessageSquare className="h-4 w-4 text-white" />
+                  </AvatarFallback>
+                </Avatar>
+              )}
               <div
                 className={cn(
-                  "max-w-3xl p-4 rounded-lg",
+                  "max-w-[80%] rounded-lg p-4",
                   message.sender === "user"
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted"
                 )}
               >
+                {message.sender === "ai" && message.isStreaming ? (
+                  <div className="flex flex-col">
+                    <div className="prose dark:prose-invert max-w-none min-h-[24px]">
+                      <ReactMarkdown>
+                        {message.content || "Thinking..."}
+                      </ReactMarkdown>
+                    </div>
+                    <StreamingAnimation />
+                  </div>
+                ) : (
+                  <div className="prose dark:prose-invert max-w-none">
+                    <ReactMarkdown>
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                )}
                 {message.imageUrls && message.imageUrls.length > 0 && (
-                  <div className="mb-2 flex flex-wrap gap-2">
+                  <div className="mt-2 grid grid-cols-2 gap-2">
                     {message.imageUrls.map((url, index) => (
-                      <div key={index} className="relative">
-                        <img 
-                          src={url} 
-                          alt={`Uploaded ${index + 1}`} 
-                          className="max-w-xs max-h-48 rounded"
-                        />
-                      </div>
+                      <img
+                        key={index}
+                        src={url}
+                        alt={`Uploaded image ${index + 1}`}
+                        className="rounded-lg max-w-full h-auto"
+                      />
                     ))}
                   </div>
                 )}
-                <div>
-                {message.sender === "ai" ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown>{message.content}</ReactMarkdown>
-                  </div>
-                ) : (
-                    <div>{message.content}</div>
-                  )}
-                </div>
-                {message.isStreaming && (
-                  <div className="mt-2">
-                    <div className="bg-primary/20 animate-pulse w-8 h-2 rounded"></div>
-            </div>
-                )}
               </div>
+              {message.sender === "user" && (
+                <Avatar className="h-8 w-8">
+                  {currentUser?.profilePicture ? (
+                    <AvatarImage 
+                      src={currentUser.profilePicture} 
+                      alt={currentUser.name || "User"} 
+                      className="object-cover"
+                    />
+                  ) : (
+                    <AvatarFallback className="bg-primary text-primary-foreground font-medium">
+                      {currentUser?.name?.[0]?.toUpperCase() || "U"}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+              )}
             </div>
           ))}
           <div ref={messagesEndRef} />

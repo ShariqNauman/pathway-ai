@@ -7,6 +7,7 @@ export interface UserProfile {
   id: string;
   email: string;
   name: string;
+  profilePicture?: string;
   preferences: UserPreferences;
   createdAt: Date;
 }
