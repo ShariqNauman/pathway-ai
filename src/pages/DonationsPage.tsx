@@ -4,8 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Heart, Coffee, GraduationCap, Sparkles } from "lucide-react";
+import { useEffect } from "react";
 
 const DonationsPage = () => {
+  useEffect(() => {
+    document.title = "Support Pathway | Keep Education Accessible";
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}

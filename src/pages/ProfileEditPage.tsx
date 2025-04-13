@@ -76,6 +76,10 @@ const ProfileEditPage = () => {
     }
   }, [preferences.intendedMajor]);
 
+  useEffect(() => {
+    document.title = "Edit Profile | Pathway";
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateUserPreferences(preferences);

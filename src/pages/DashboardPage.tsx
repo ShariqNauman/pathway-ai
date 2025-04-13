@@ -28,6 +28,10 @@ const DashboardPage = () => {
   const { savedUniversities, removeSavedUniversity } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
 
+  useEffect(() => {
+    document.title = "Dashboard | Pathway - Your College Journey";
+  }, []);
+
   // Check for missing essential fields
   const getMissingFields = () => {
     if (!currentUser?.preferences) return [];
@@ -193,65 +197,65 @@ const DashboardPage = () => {
                       </Card>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                        <Card>
-                          <CardHeader>
-                            <CardTitle>Study Preferences</CardTitle>
-                            <CardDescription>Your academic preferences</CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <dl className="space-y-4">
-                              <div>
-                                <dt className="text-sm font-medium text-muted-foreground">Field of Study</dt>
-                                <dd className="text-base">{currentUser.preferences.intendedMajor || "Not specified"}</dd>
-                              </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Study Preferences</CardTitle>
+                <CardDescription>Your academic preferences</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-4">
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">Field of Study</dt>
+                    <dd className="text-base">{currentUser.preferences.intendedMajor || "Not specified"}</dd>
+                  </div>
                               {currentUser.preferences.selectedDomains && currentUser.preferences.selectedDomains.length > 0 && (
-                              <div>
+                  <div>
                                   <dt className="text-sm font-medium text-muted-foreground">Specializations</dt>
                                   <dd className="text-base">
                                     {currentUser.preferences.selectedDomains.join(", ")}
                                   </dd>
-                              </div>
+                  </div>
                               )}
-                            </dl>
-                          </CardContent>
-                        </Card>
+                </dl>
+              </CardContent>
+            </Card>
 
-                        <Card>
-                          <CardHeader>
-                            <CardTitle>Financial Information</CardTitle>
-                            <CardDescription>Your budget information</CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <dl className="space-y-4">
-                              <div>
-                                <dt className="text-sm font-medium text-muted-foreground">Yearly Budget</dt>
-                                <dd className="text-base">
-                                  {currentUser.preferences.budget ? `$${currentUser.preferences.budget.toLocaleString()}` : "Not specified"}
-                                </dd>
-                              </div>
-                              <div>
-                                <dt className="text-sm font-medium text-muted-foreground">Institution Type</dt>
-                                <dd className="text-base capitalize">{currentUser.preferences.preferredUniversityType || "Not specified"}</dd>
-                              </div>
-                            </dl>
-                          </CardContent>
-                        </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Financial Information</CardTitle>
+                <CardDescription>Your budget information</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-4">
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">Yearly Budget</dt>
+                    <dd className="text-base">
+                      {currentUser.preferences.budget ? `$${currentUser.preferences.budget.toLocaleString()}` : "Not specified"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">Institution Type</dt>
+                    <dd className="text-base capitalize">{currentUser.preferences.preferredUniversityType || "Not specified"}</dd>
+                  </div>
+                </dl>
+              </CardContent>
+            </Card>
 
-                        <Card>
-                          <CardHeader>
-                            <CardTitle>Location Preferences</CardTitle>
-                            <CardDescription>Your location preferences</CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <dl className="space-y-4">
-                              <div>
-                                <dt className="text-sm font-medium text-muted-foreground">Preferred Country</dt>
-                                <dd className="text-base">{currentUser.preferences.preferredCountry || "Not specified"}</dd>
-                              </div>
-                            </dl>
-                          </CardContent>
-                        </Card>
-                      </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Location Preferences</CardTitle>
+                <CardDescription>Your location preferences</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-4">
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">Preferred Country</dt>
+                    <dd className="text-base">{currentUser.preferences.preferredCountry || "Not specified"}</dd>
+                  </div>
+                </dl>
+              </CardContent>
+            </Card>
+          </div>
 
                       <Card className="mb-6">
                         <CardHeader className="relative">
@@ -396,8 +400,8 @@ const DashboardPage = () => {
                                     }}
                                   >
                                     Remove
-                                  </Button>
-                                </div>
+              </Button>
+            </div>
                               </div>
                             </CardContent>
                           </Card>

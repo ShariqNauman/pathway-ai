@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate, Link } from "react-router-dom";
@@ -34,6 +33,10 @@ const LoginPage = () => {
       navigate("/dashboard");
     }
   }, [currentUser, navigate]);
+
+  useEffect(() => {
+    document.title = "Login | Pathway";
+  }, []);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),

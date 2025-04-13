@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -9,6 +8,7 @@ const NotFound = () => {
   const location = useLocation();
 
   useEffect(() => {
+    document.title = "404 | Page Not Found | Pathway";
     console.error(
       "404 Error: User attempted to access non-existent route:",
       location.pathname

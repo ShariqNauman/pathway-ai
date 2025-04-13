@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate, Link } from "react-router-dom";
@@ -36,6 +35,10 @@ const SignupPage = () => {
       navigate("/dashboard");
     }
   }, [currentUser, navigate]);
+
+  useEffect(() => {
+    document.title = "Sign Up | Join Pathway";
+  }, []);
 
   const form = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),

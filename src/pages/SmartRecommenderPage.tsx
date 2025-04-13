@@ -69,8 +69,30 @@ export default function SmartRecommenderPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentAnswer, setCurrentAnswer] = useState<any>('');
   const [academicProfile, setAcademicProfile] = useState<any>(null);
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+
+  const fadeIn = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const slideIn = {
+    hidden: { x: -20, opacity: 0 },
+    visible: { x: 0, opacity: 1 }
+  };
 
   const generateQuestions = async () => {
+    setIsGeneratingQuestions(true);
     try {
       const prompt = `Generate a comprehensive set of questions to recommend universities to a student.
       Consider the user's profile data: ${JSON.stringify(currentUser?.preferences, null, 2)}
@@ -110,6 +132,8 @@ export default function SmartRecommenderPage() {
     } catch (err) {
       console.error('Failed to generate questions:', err);
       setError('Failed to generate questions. Please try again.');
+    } finally {
+      setIsGeneratingQuestions(false);
     }
   };
 
@@ -138,6 +162,10 @@ export default function SmartRecommenderPage() {
       });
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    document.title = "Smart University Recommender | Pathway";
+  }, []);
 
   const handleAnswer = () => {
     if (!currentAnswer) return;
@@ -348,8 +376,29 @@ Return a JSON array in this exact format, nothing else:
     return (
       <div className="flex flex-col min-h-screen">
         <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <main className="flex-1">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50"
+          >
+            <div className="text-center space-y-6">
+              <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ 
+                  duration: 0.5,
+                  repeat: Infinity,
+                  repeatType: "reverse"
+                }}
+                className="space-y-2"
+              >
+                <p className="text-2xl font-medium">Finding Your Perfect Matches</p>
+                <p className="text-muted-foreground">Analyzing universities based on your preferences...</p>
+              </motion.div>
+            </div>
+          </motion.div>
         </main>
         <Footer />
       </div>
@@ -357,166 +406,289 @@ Return a JSON array in this exact format, nothing else:
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 py-24">
-        <div className="max-w-2xl mx-auto px-4">
-          {error ? (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center text-destructive">{error}</div>
-                <Button className="w-full mt-4" onClick={() => window.location.reload()}>
-                  Try Again
-                </Button>
-              </CardContent>
-            </Card>
-          ) : currentStep === 'profile' ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Smart University Recommender</CardTitle>
-                <CardDescription>
-                  Get personalized university recommendations based on your profile and preferences.
-                  {currentUser?.preferences ? 
-                    ` We found ${Object.keys(answers).length} preferences in your profile.` : 
-                    ' Please sign in to use your profile information.'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  className="w-full"
-                  onClick={generateQuestions}
+      <main className="flex-grow py-20 px-4">
+        <div className="max-w-5xl mx-auto">
+          {isGeneratingQuestions ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50"
+            >
+              <div className="text-center space-y-6">
+                <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    duration: 0.5,
+                    repeat: Infinity,
+                    repeatType: "reverse"
+                  }}
+                  className="space-y-2"
                 >
-                  Continue to Questions
+                  <p className="text-2xl font-medium">Analyzing Your Profile</p>
+                  <p className="text-muted-foreground">Preparing personalized questions...</p>
+                </motion.div>
+              </div>
+            </motion.div>
+          ) : null}
+
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={fadeIn}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-12"
+          >
+            <h1 className="text-4xl font-bold mb-4">Smart University Recommender</h1>
+            <p className="text-muted-foreground text-lg">
+              Get personalized university recommendations based on your profile and preferences
+            </p>
+          </motion.div>
+
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mb-8 p-4 bg-destructive/10 text-destructive rounded-lg"
+            >
+              {error}
+            </motion.div>
+          )}
+
+          {currentStep === 'profile' && (
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={staggerContainer}
+              className="space-y-6"
+            >
+              <motion.div variants={fadeIn} className="text-center">
+                <h2 className="text-2xl font-semibold mb-4">Let's Find Your Perfect University Match</h2>
+                <p className="text-muted-foreground mb-8">
+                  We'll use your profile information and ask a few additional questions to find the best universities for you.
+                </p>
+                <Button
+                  size="lg"
+                  onClick={generateQuestions}
+                  className="bg-primary hover:bg-primary/90 text-white"
+                >
+                  Start Recommendation Process
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
-              </CardContent>
-            </Card>
-          ) : currentStep === 'questions' && questions.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Question {currentQuestionIndex + 1} of {questions.length}</CardTitle>
-                <CardDescription>
-                  {questions[currentQuestionIndex].question}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {currentStep === 'questions' && questions.length > 0 && (
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={fadeIn}
+              className="max-w-2xl mx-auto"
+            >
+              <motion.div
+                key={currentQuestionIndex}
+                initial={{ x: 50, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -50, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 100 }}
+                className="bg-card rounded-lg p-8 shadow-lg border border-border"
+              >
+                <div className="mb-8">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-sm text-muted-foreground">
+                      Question {currentQuestionIndex + 1} of {questions.length}
+                    </span>
+                    <span className="text-sm font-medium text-primary">
+                      {Math.round(((currentQuestionIndex + 1) / questions.length) * 100)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <motion.div
+                      className="bg-primary h-2 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  </div>
+                </div>
+
+                <h3 className="text-xl font-semibold mb-6">{questions[currentQuestionIndex].question}</h3>
                 {renderQuestion(questions[currentQuestionIndex])}
-              </CardContent>
-            </Card>
-          ) : currentStep === 'results' ? (
-            <div className="space-y-4">
-              {universities.map((university) => (
-                <motion.div
-                  key={university.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
+              </motion.div>
+            </motion.div>
+          )}
+
+          {currentStep === 'results' && (
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={staggerContainer}
+              className="space-y-6"
+            >
+              <motion.h2
+                variants={fadeIn}
+                className="text-2xl font-semibold text-center mb-8"
+              >
+                Your Recommended Universities
+              </motion.h2>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="flex justify-center mb-8"
+              >
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setCurrentStep('profile');
+                    setQuestions([]);
+                    setCurrentQuestionIndex(0);
+                    setUniversities([]);
+                    setCurrentAnswer('');
+                    setError(null);
+                  }}
+                  className="hover:scale-105 transition-transform"
                 >
-                  <Card>
-                    <CardHeader>
-                      <div>
-                        <CardTitle>{university.name}</CardTitle>
-                        <CardDescription className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-1" />
-                          {university.location}
-                        </CardDescription>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">
-                            <DollarSign className="h-4 w-4 inline mr-1" />
-                            Tuition: {university.tuitionRange}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            <Star className="h-4 w-4 inline mr-1" />
-                            Match: {university.programMatch}%
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {university.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="space-y-2">
-                          <h3 className="font-semibold">Requirements:</h3>
-                          <ul className="text-sm space-y-1">
-                            {university.requirements.map((req, index) => (
-                              <li key={index} className="flex items-center">
-                                <GraduationCap className="h-4 w-4 mr-2 text-primary" />
-                                {req}
-                              </li>
+                  Start Over
+                </Button>
+              </motion.div>
+
+              <motion.div
+                variants={staggerContainer}
+                className="grid gap-6"
+              >
+                {universities.map((university, index) => (
+                  <motion.div
+                    key={university.id}
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      visible: { opacity: 1, y: 0 }
+                    }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col space-y-4">
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="flex items-start justify-between"
+                          >
+                            <div className="space-y-1">
+                              <h3 className="text-xl font-semibold">{university.name}</h3>
+                              <div className="flex items-center text-muted-foreground">
+                                <MapPin className="h-4 w-4 mr-1" />
+                                <span>{university.location}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center">
+                              <Star className="h-5 w-5 text-yellow-400 mr-1" />
+                              <span className="font-medium">{university.programMatch}% Match</span>
+                            </div>
+                          </motion.div>
+
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.3 }}
+                            className="flex items-center text-muted-foreground"
+                          >
+                            <DollarSign className="h-4 w-4 mr-1" />
+                            <span>{university.tuitionRange}</span>
+                          </motion.div>
+
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.4 }}
+                            className="space-y-2"
+                          >
+                            <h4 className="font-medium">Requirements:</h4>
+                            <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                              {university.requirements.map((req, index) => (
+                                <motion.li
+                                  key={index}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: 0.5 + index * 0.1 }}
+                                >
+                                  {req}
+                                </motion.li>
+                              ))}
+                            </ul>
+                          </motion.div>
+
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.6 }}
+                            className="flex flex-wrap gap-2"
+                          >
+                            {university.tags.map((tag, index) => (
+                              <motion.span
+                                key={tag}
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.7 + index * 0.1 }}
+                                className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary/10 text-primary hover:bg-primary/20"
+                              >
+                                {tag}
+                              </motion.span>
                             ))}
-                          </ul>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button 
-                            variant="outline" 
-                            className="flex-1"
-                            onClick={() => {
-                              try {
-                                const url = new URL(university.website);
-                                window.open(url.toString(), '_blank', 'noopener,noreferrer');
-                              } catch (e) {
-                                console.error('Invalid URL:', university.website);
-                                const searchQuery = `${university.name} ${academicProfile.studyLevel} admissions`;
-                                window.open(`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`, '_blank', 'noopener,noreferrer');
-                              }
-                            }}
+                          </motion.div>
+
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.8 }}
+                            className="flex gap-3 mt-4"
                           >
-                            Learn More
-                          </Button>
-                          <Button 
-                            className="flex-1"
-                            onClick={async () => {
-                              try {
-                                // Ensure all required fields are present
-                                const universityData: UniversityData = {
-                                  id: university.id,
-                                  name: university.name,
-                                  location: university.location,
-                                  tuitionRange: university.tuitionRange,
-                                  programMatch: university.programMatch,
-                                  requirements: university.requirements,
-                                  rankings: university.rankings,
-                                  tags: university.tags,
-                                  website: university.website,
-                                  applicationDeadline: university.applicationDeadline,
-                                  scholarshipInfo: university.scholarshipInfo
-                                };
-                                await saveUniversity(universityData);
-                                toast({
-                                  title: "University saved!",
-                                  description: "You can view it in your dashboard.",
-                                  duration: 3000,
-                                });
-                              } catch (error) {
-                                console.error('Error saving university:', error);
-                                toast({
-                                  title: "Failed to save university",
-                                  description: "Please try again later.",
-                                  variant: "destructive",
-                                  duration: 3000,
-                                });
-                              }
-                            }}
-                          >
-                            Save
-                          </Button>
+                            <Button 
+                              variant="outline" 
+                              className="flex-1 hover:scale-105 transition-transform"
+                              onClick={() => {
+                                window.open(university.website, '_blank', 'noopener,noreferrer');
+                              }}
+                            >
+                              Learn More
+                            </Button>
+                            <Button 
+                              className="flex-1 hover:scale-105 transition-transform"
+                              onClick={async () => {
+                                try {
+                                  await saveUniversity(university);
+                                  toast({
+                                    title: "University saved!",
+                                    description: "You can view it in your dashboard.",
+                                    duration: 3000,
+                                  });
+                                } catch (error) {
+                                  toast({
+                                    title: "Failed to save university",
+                                    description: "Please try again later.",
+                                    variant: "destructive",
+                                    duration: 3000,
+                                  });
+                                }
+                              }}
+                            >
+                              Save
+                            </Button>
+                          </motion.div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-          ) : null}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </motion.div>
+          )}
         </div>
       </main>
       <Footer />

@@ -6,9 +6,15 @@ import Logo from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { LogIn, User } from "lucide-react";
-import { NavigationMenuItem, NavigationMenuList } from "@/components/ui/navigation-menu";
-import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
+import { LogIn, User, ChevronDown, Sparkles, PenLine, MessageSquare } from "lucide-react";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -16,11 +22,29 @@ const Header = () => {
   const location = useLocation();
   const { currentUser } = useUser();
 
+  const toolsItems = [
+    {
+      name: "Smart Recommender",
+      href: "/recommender",
+      description: "Get personalized university recommendations based on your profile",
+      icon: Sparkles
+    },
+    {
+      name: "Essay Analyzer",
+      href: "/essay-analyzer",
+      description: "Analyze and improve your college application essays",
+      icon: PenLine
+    },
+    {
+      name: "Consultant",
+      href: "/consultant",
+      description: "Get expert guidance for your college applications",
+      icon: MessageSquare
+    }
+  ];
+
   const navItems = [
     { name: "Home", href: "/" },
-    { name: "Smart Recommender", href: "/recommender" },
-    { name: "Essay Analyzer", href: "/essay-analyzer" },
-    { name: "Consultant", href: "/consultant" },
     { name: "Support Us", href: "/donations" }
   ];
 
@@ -60,19 +84,78 @@ const Header = () => {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
-          <ul className="flex space-x-8">
-            {navItems.map((item) => (
-              <li key={item.name}>
-                <Link
-                  to={item.href}
-                  className={`text-sm font-medium transition-colors ${
-                    location.pathname === item.href ? "text-primary font-semibold" : "hover:text-primary"
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              </li>
-            ))}
+          <ul className="flex items-center space-x-8">
+            <li>
+              <Link
+                to="/"
+                className={`text-sm font-medium transition-colors ${
+                  location.pathname === "/" ? "text-primary font-semibold" : "hover:text-primary"
+                }`}
+              >
+                Home
+              </Link>
+            </li>
+
+            <NavigationMenu>
+              <NavigationMenuList>
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger
+                    className={`text-sm font-medium transition-colors group ${
+                      ["/recommender", "/essay-analyzer", "/consultant"].includes(location.pathname)
+                        ? "text-primary font-semibold"
+                        : "hover:text-primary"
+                    }`}
+                  >
+                    <span>Tools & Services</span>
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="w-[400px] p-4"
+                    >
+                      <ul className="grid gap-3">
+                        {toolsItems.map((item) => (
+                          <motion.li
+                            key={item.name}
+                            whileHover={{ scale: 1.02 }}
+                            className="group"
+                          >
+                            <Link
+                              to={item.href}
+                              className={`block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground ${
+                                location.pathname === item.href
+                                  ? "bg-accent text-accent-foreground"
+                                  : ""
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <item.icon className="h-4 w-4" />
+                                <span className="text-sm font-medium">{item.name}</span>
+                              </div>
+                              <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                                {item.description}
+                              </p>
+                            </Link>
+                          </motion.li>
+                        ))}
+                      </ul>
+                    </motion.div>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
+
+            <li>
+              <Link
+                to="/donations"
+                className={`text-sm font-medium transition-colors ${
+                  location.pathname === "/donations" ? "text-primary font-semibold" : "hover:text-primary"
+                }`}
+              >
+                Support Us
+              </Link>
+            </li>
           </ul>
           
           <div className="flex items-center space-x-4">
@@ -163,20 +246,34 @@ const Header = () => {
             <nav className="px-4 py-5 space-y-4">
               <div className="border-b border-border pb-2 mb-2">
                 <span className="text-sm text-muted-foreground">
-                  100% Free Platform
+                  Tools & Services
                 </span>
               </div>
-              {navItems.map((item) => (
+              {toolsItems.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`block py-2 transition-colors ${
+                  className={`flex items-center gap-2 py-2 transition-colors ${
                     location.pathname === item.href ? "text-primary font-semibold" : "text-foreground hover:text-primary"
                   }`}
                 >
+                  <item.icon className="h-4 w-4" />
                   {item.name}
                 </Link>
               ))}
+              <div className="border-t border-border pt-2 mt-2">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={`block py-2 transition-colors ${
+                      location.pathname === item.href ? "text-primary font-semibold" : "text-foreground hover:text-primary"
+                    }`}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
               
               {!currentUser && (
                 <div className="flex flex-col space-y-2 pt-4 border-t border-border">
@@ -200,6 +297,6 @@ const Header = () => {
       </AnimatePresence>
     </motion.header>
   );
-};
+}
 
 export default Header;

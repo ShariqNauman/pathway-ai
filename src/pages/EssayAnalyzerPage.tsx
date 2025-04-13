@@ -1,11 +1,14 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import EssayChecker from "@/components/EssayChecker";
 
 const EssayAnalyzerPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    document.title = "Essay Analyzer | AI-Powered Essay Feedback";
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">

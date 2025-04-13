@@ -1,9 +1,13 @@
-
 import { motion } from "framer-motion";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useEffect } from "react";
 
 const PrivacyPage = () => {
+  useEffect(() => {
+    document.title = "Privacy Policy | Pathway";
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}

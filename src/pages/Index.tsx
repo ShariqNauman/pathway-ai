@@ -4,8 +4,13 @@ import Hero from "@/components/Hero";
 import Features from "@/components/Features";
 import Testimonials from "@/components/Testimonials";
 import Footer from "@/components/Footer";
+import { useEffect } from "react";
 
 const Index = () => {
+  useEffect(() => {
+    document.title = "Pathway - Your AI-Powered College Application Guide";
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}

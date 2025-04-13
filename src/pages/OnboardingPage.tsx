@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -137,6 +136,10 @@ const OnboardingPage = () => {
       setPreferences(prev => ({ ...prev, selectedDomains: [] }));
     }
   }, [preferences.intendedMajor]);
+
+  useEffect(() => {
+    document.title = "Welcome to Pathway | Complete Your Profile";
+  }, []);
 
   const handleNextStep = () => {
     if (validateCurrentStep()) {
