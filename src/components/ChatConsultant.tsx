@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { getGeminiResponse } from "@/utils/geminiApi";
+import { getChatResponse } from "@/utils/chatConsultantApi";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { 
@@ -658,26 +658,36 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   }, [currentUser?.id]);
 
   const handleSendMessage = async (overrideText?: string) => {
+    console.log("handleSendMessage called", { overrideText, inputValue: inputValue.trim() });
+
     if (!currentUser?.id) {
+      console.log("No user ID found");
       toast.error("Please sign in to send messages");
       return;
     }
 
     if (isLimitReached) {
+      console.log("Message limit reached");
       toast.error(`You've reached your daily limit of ${MAX_DAILY_MESSAGES} messages. Please try again tomorrow at UTC midnight.`);
       return;
     }
 
     // Check message limit before sending
+    console.log("Checking message limit");
     const canSendMessage = await checkMessageLimit(currentUser.id);
     if (!canSendMessage) {
+      console.log("Cannot send message due to limit");
       toast.error(`You've reached your daily limit of ${MAX_DAILY_MESSAGES} messages. Please try again tomorrow at UTC midnight.`);
       return;
     }
 
     const textToSend = overrideText || inputValue.trim();
-    if (!textToSend && imageUrls.length === 0) return;
+    if (!textToSend && imageUrls.length === 0) {
+      console.log("No text or images to send");
+      return;
+    }
     
+    console.log("Creating user message");
     const userMessage: Message = {
       id: uuidv4(),
       content: textToSend,
@@ -693,12 +703,14 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
     setImageUrls([]);
 
     try {
+      console.log("Preparing previous messages");
       const previousMessages = messages.map(msg => ({
           content: msg.content,
           role: msg.sender === "user" ? "user" : "model" as "user" | "model"
         }));
       
       const tempMessageId = uuidv4();
+      console.log("Setting up temporary AI message");
       setMessages(prev => [...prev, {
         id: tempMessageId,
         content: "",
@@ -716,9 +728,14 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
       abortControllerRef.current = new AbortController();
       setIsStreaming(true);
 
-      const response = await getGeminiResponse(
+      console.log("Calling Gemini API", {
         textToSend,
-        undefined,
+        previousMessagesCount: previousMessages.length,
+        hasImages: !!primaryImage
+      });
+
+      const response = await getChatResponse(
+        textToSend,
         previousMessages,
         {
           onTextUpdate: (text) => {
@@ -733,7 +750,10 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         abortControllerRef.current.signal
       );
       
+      console.log("Gemini API response received", { hasError: !!response.error });
+      
       if (response.error) {
+        console.error("Gemini API error:", response.error);
         toast.error(response.error);
         setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
         return;
@@ -748,10 +768,11 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
       ));
 
       if (currentUser) {
+        console.log("Saving conversation");
         await saveConversation([...messages, userMessage, {
           id: tempMessageId,
           content: response.text,
-        sender: "ai",
+          sender: "ai",
           timestamp: new Date()
         }]);
       }
