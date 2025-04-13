@@ -281,7 +281,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
 
   useEffect(() => {
     if (currentUser) {
-    setSidebarOpen(initialSidebarOpen);
+      setSidebarOpen(initialSidebarOpen);
     } else {
       setSidebarOpen(false);
     }
@@ -391,12 +391,12 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
             created_at: userMessage.timestamp.toISOString()
           }
         ];
-        
+
         if (aiMessage) {
           messagesToSave.push({
             conversation_id: newConvId,
-              content: aiMessage.content,
-              sender: aiMessage.sender,
+            content: aiMessage.content,
+            sender: aiMessage.sender,
             id: aiMessage.id,
             created_at: aiMessage.timestamp.toISOString()
           });
@@ -555,7 +555,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         return false;
       }
 
-      const now = new Date();
+    const now = new Date();
       const resetTime = new Date(now.toISOString().split('T')[0] + 'T00:00:00.000Z');
 
       if (!limitData) {
@@ -738,12 +738,12 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
         return;
       }
-      
+
       setMessages(prev => prev.map(msg =>
         msg.id === tempMessageId ? {
           ...msg,
-          content: response.text,
-          isStreaming: false
+        content: response.text,
+        isStreaming: false
         } : msg
       ));
 
@@ -930,7 +930,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
           sender: msg.sender as "user" | "ai",
           timestamp: new Date(msg.created_at)
         }));
-        
+
         setMessages(loadedMessages);
         setHasUserSentMessage(true);
       }
@@ -945,7 +945,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
       id: welcomeMessageId,
       content: getWelcomeMessage(currentUser),
       sender: "ai" as const,
-        timestamp: new Date(),
+      timestamp: new Date(),
     };
 
     setMessages([welcomeMessage]);
@@ -1082,8 +1082,8 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         >
           <div className="h-full flex flex-col">
             <div className="p-4 border-b border-border flex items-center justify-between">
-            <Button 
-              variant="ghost" 
+              <Button
+                variant="ghost"
                 className="flex-1 justify-start gap-2"
                 onClick={startNewChat}
               >
@@ -1094,22 +1094,22 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                 variant="ghost"
                 size="icon"
                 className="ml-2"
-              onClick={toggleSidebar}
-            >
-              <ChevronLeft className={cn(
+                onClick={toggleSidebar}
+              >
+                <ChevronLeft className={cn(
                   "h-4 w-4 transition-transform duration-200",
-                !sidebarOpen && "rotate-180"
-              )} />
-            </Button>
-          </div>
+                  !sidebarOpen && "rotate-180"
+                )} />
+              </Button>
+            </div>
             <div className="flex-1 overflow-y-auto">
-                {savedChats.map((chat) => (
+              {savedChats.map((chat) => (
                 <div
-                    key={chat.id}
-                    className={cn(
+                  key={chat.id}
+                  className={cn(
                     "group relative w-full text-left px-4 py-2 hover:bg-muted/80 transition-colors",
                     currentConversationId === chat.id && "bg-muted"
-                    )}
+                  )}
                 >
                   <button
                     onClick={() => loadConversation(chat.id)}
@@ -1120,8 +1120,8 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                     <span className="truncate">{chat.title}</span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                        {formatDate(chat.lastMessageDate)}
-                    </div>
+                    {formatDate(chat.lastMessageDate)}
+                  </div>
                 </button>
                   
                   <DropdownMenu>
@@ -1160,7 +1160,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                   </DropdownMenu>
           </div>
               ))}
-        </div>
+            </div>
           </div>
         </motion.div>
       )}
@@ -1193,7 +1193,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
 
       <div className="flex-1 flex flex-col h-full relative">
         {currentUser && !sidebarOpen && (
-          <Button 
+          <Button
             variant="ghost"
             size="icon"
             className="absolute left-2 top-4 z-10 bg-background/80 backdrop-blur-sm rounded-full"
@@ -1215,10 +1215,10 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                 message.sender === "user" ? "justify-end" : "justify-start"
               )}
             >
-              <div 
+              <div
                 className={cn(
                   "max-w-3xl p-4 rounded-lg",
-                  message.sender === "user" 
+                  message.sender === "user"
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted"
                 )}
@@ -1243,19 +1243,19 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
                   </div>
                 ) : (
                     <div>{message.content}</div>
-                )}
-              </div>
+                  )}
+                </div>
                 {message.isStreaming && (
                   <div className="mt-2">
                     <div className="bg-primary/20 animate-pulse w-8 h-2 rounded"></div>
             </div>
                 )}
-                </div>
               </div>
+            </div>
           ))}
           <div ref={messagesEndRef} />
         </div>
-        
+
         <div className="p-4 border-t border-border">
           {imageUrls.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-3">

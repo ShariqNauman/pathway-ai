@@ -190,24 +190,28 @@ export async function getGeminiResponse(
   streamingOptions?: StreamingOptions,
   userProfile?: any,
   imageData?: string | null,
-  additionalImages?: string[], // Support for multiple images
+  additionalImages?: string[],
   signal?: AbortSignal
 ): Promise<GeminiResponse> {
   try {
-    // Format user profile information if available
     const userProfileInfo = userProfile ? formatUserPreferences(userProfile) : '';
     const enhancedSystemInstructions = userProfileInfo ? 
       `${systemInstructions}\n\nUser Profile Information:\n${userProfileInfo}` : 
       systemInstructions;
 
-    // Using Gemini Pro Vision model if image is provided, otherwise use Gemini Flash
-    const model = imageData ? "gemini-1.5-flash-latest" : "gemini-2.0-flash";
-    
+    const model = "gemini-2.0-flash";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
     
-    // Prepare the request body
-    let requestBody: any = {
-      contents: [],
+    const requestBody = {
+      contents: [
+        {
+          parts: [
+            {
+              text: `${enhancedSystemInstructions}\n\n${prompt}`
+            }
+          ]
+        }
+      ],
       generationConfig: {
         temperature: 0.7,
         topK: 40,
@@ -225,173 +229,42 @@ export async function getGeminiResponse(
         }
       ]
     };
-    
-    // If there are no previous messages, use the standard format
-    if (!previousMessages || previousMessages.length === 0) {
-      // If image is provided, set up multipart content
-      if (imageData) {
-        const parts: any[] = [
-          {
-            text: enhancedSystemInstructions
-          }
-        ];
-        
-        // Add the primary image
-        parts.push({
-          inline_data: {
-            mime_type: "image/jpeg",
-            data: imageData.split(',')[1] // Remove the data URL prefix
-          }
-        });
-        
-        // Add any additional images if provided
-        if (additionalImages && additionalImages.length > 0) {
-          additionalImages.forEach(img => {
-            parts.push({
-              inline_data: {
-                mime_type: "image/jpeg",
-                data: img.split(',')[1]
-              }
-            });
-          });
-        }
-        
-        // Add the prompt text
-        parts.push({
-          text: prompt
-        });
-        
-        requestBody.contents = [{
-          role: "user",
-          parts: parts
-        }];
-      } else {
-        // Standard text request
-        requestBody.contents = [{
-          role: "user",
-          parts: [
-            {
-              text: enhancedSystemInstructions ? 
-                `${enhancedSystemInstructions}\n\n${prompt}` : 
-                prompt
-            }
-          ]
-        }];
-      }
-    } else {
-      // Start with system instructions
-      requestBody.contents = [{
-        role: "user",
-        parts: [{ text: enhancedSystemInstructions }]
-      }];
-      
-      // Add all previous messages in sequence
-      requestBody.contents.push(...previousMessages.map(msg => ({
-        role: msg.role === "user" ? "user" : "model",
-        parts: [{ text: msg.content }]
-      })));
-      
-      // If there's an image, add it before the current message
-      if (imageData) {
-        // Create parts array for the current message with images
-        const parts: any[] = [];
-        
-        // Add the primary image
-        parts.push({
-          inline_data: {
-            mime_type: "image/jpeg",
-            data: imageData.split(',')[1] // Remove the data URL prefix
-          }
-        });
-        
-        // Add any additional images if provided
-        if (additionalImages && additionalImages.length > 0) {
-          additionalImages.forEach(img => {
-            parts.push({
-              inline_data: {
-                mime_type: "image/jpeg",
-                data: img.split(',')[1]
-              }
-            });
-          });
-        }
-        
-        // Add the prompt text
-        parts.push({
-          text: prompt
-        });
-        
-        // Add the current message with images at the end
-        requestBody.contents.push({
-          role: "user",
-          parts: parts
-        });
-      } else {
-        // Add the current text message
-        requestBody.contents.push({
-          role: "user",
-          parts: [{ text: prompt }]
-        });
-      }
-    }
 
-    console.log('Gemini API Request:', JSON.stringify(requestBody, null, 2));
-    
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
-      signal // Add the abort signal to the fetch request
+      signal,
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("Gemini API Error Response:", errorData);
-      const errorMessage = errorData.error?.message || 
-        errorData.error?.details?.[0]?.message ||
-        `API Error (${response.status}): ${response.statusText}`;
-      return { text: "", error: errorMessage };
+      console.error('Gemini API Error Response:', errorData);
+      throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('Gemini API Response:', JSON.stringify(data, null, 2));
     
-    if (data.error) {
-      console.error("Gemini API Response Error:", data.error);
-      return { text: "", error: data.error.message || "An error occurred with the Gemini API" };
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error('No response generated');
     }
 
-    // Extract the response text from the Gemini API response
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    
-    // If streaming is enabled, simulate streaming with chunks
-    if (streamingOptions?.onTextUpdate) {
-      const words = text.split(' ');
-      let partialText = '';
-      
-      for (const word of words) {
-        // Check if the request has been aborted
-        if (signal?.aborted) {
-          console.log('Streaming aborted by user');
-          // Return the partial text instead of the full text when aborted
-          return { text: partialText.trim() };
-        }
-        
-        partialText += word + ' ';
-        streamingOptions.onTextUpdate(partialText.trim());
-        // Add a small delay to simulate streaming
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
+    const content = data.candidates[0];
+    if (!content || !content.content || !content.content.parts || content.content.parts.length === 0) {
+      throw new Error('Invalid response format');
     }
 
-    return { text };
+    return {
+      text: content.content.parts[0].text || '',
+      error: undefined
+    };
   } catch (error) {
-    console.error("Error calling Gemini API:", error);
-    return { 
-      text: "", 
-      error: error instanceof Error ? error.message : "An unknown error occurred" 
+    console.error('Gemini API Error:', error);
+    return {
+      text: '',
+      error: error instanceof Error ? error.message : 'An unknown error occurred'
     };
   }
 }

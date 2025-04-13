@@ -18,6 +18,8 @@ import DashboardPage from "./pages/DashboardPage";
 import ProfileEditPage from "./pages/ProfileEditPage";
 import { ThemeProvider } from "./components/ThemeProvider";
 import DonationsPage from "./pages/DonationsPage";
+import SmartRecommenderPage from './pages/SmartRecommenderPage';
+import { AuthProvider } from './contexts/AuthContext';
 
 // Create a new queryClient with proper configuration for auth persistence
 const queryClient = new QueryClient({
@@ -48,30 +50,33 @@ const App = () => (
   <HelmetProvider>
     <ThemeProvider defaultTheme="light">
       <UserProvider>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            {/* Show toast notifications */}
-            <Toaster position="bottom-right" closeButton={true} />
-            <BrowserRouter>
-              <ScrollToTop />
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/signup" element={<SignupPage />} />
-                <Route path="/onboarding" element={<OnboardingPage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/profile/edit" element={<ProfileEditPage />} />
-                <Route path="/essay-analyzer" element={<EssayAnalyzerPage />} />
-                <Route path="/consultant" element={<ConsultantPage />} />
-                <Route path="/terms" element={<TermsPage />} />
-                <Route path="/privacy" element={<PrivacyPage />} />
-                <Route path="/donations" element={<DonationsPage />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </QueryClientProvider>
+        <AuthProvider>
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+              {/* Show toast notifications */}
+              <Toaster position="bottom-right" closeButton={true} />
+              <BrowserRouter>
+                <ScrollToTop />
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/signup" element={<SignupPage />} />
+                  <Route path="/onboarding" element={<OnboardingPage />} />
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/profile/edit" element={<ProfileEditPage />} />
+                  <Route path="/essay-analyzer" element={<EssayAnalyzerPage />} />
+                  <Route path="/consultant" element={<ConsultantPage />} />
+                  <Route path="/terms" element={<TermsPage />} />
+                  <Route path="/privacy" element={<PrivacyPage />} />
+                  <Route path="/donations" element={<DonationsPage />} />
+                  <Route path="/recommender" element={<SmartRecommenderPage />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </QueryClientProvider>
+        </AuthProvider>
       </UserProvider>
     </ThemeProvider>
   </HelmetProvider>
