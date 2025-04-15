@@ -37,10 +37,14 @@ const Hero = () => {
   const showWarning = !currentUser || missingFields.length > 0;
 
   const demoMessages = [
-    { sender: "user", message: "Hi, I'm looking for universities for computer science with a budget of around $30,000 per year." },
-    { sender: "ai", message: "I'd be happy to help you find universities for computer science within your budget. Could you tell me a bit more about your academic background and preferences? What country are you looking to study in?" },
-    { sender: "user", message: "I'm looking to study in the United States. I have a GPA of 3.7/4.0 and an SAT score of 1380." },
-    { sender: "ai", message: "Based on your academic profile and budget of $30,000 per year, here are some excellent universities for Computer Science in the United States:\n\n1. **Arizona State University** - Strong CS program with tuition around $29,800 for international students.\n\n2. **University of Texas at Arlington** - ABET-accredited CS program with tuition of approximately $28,500.\n\n3. **North Carolina State University** - Excellent tech connections with tuition around $29,200.\n\n4. **University of Massachusetts Amherst** - Top-ranked CS program with costs around $30,500.\n\n5. **Florida State University** - Growing CS department with tuition around $27,800.\n\nWould you like more specific information about any of these universities?" }
+    { sender: "user", message: "Hi, I need help with my college application essay." },
+    { sender: "ai", message: "Of course! Could you share the essay topic or prompt you're working on?" },
+    { sender: "user", message: "The topic is 'Describe a challenge you overcame and what you learned from it.'" },
+    { sender: "ai", message: `That's a great topic! Start by briefly describing the challenge you faced. Then, focus on the actions you took to overcome it and the lessons you learned. Would you like me to help you outline your essay or review a draft?` },
+    { sender: "user", message: "I think I need help with the outline first." },
+    { sender: "ai", message: `Sure! Here's a suggested outline:\n1. Introduction: Briefly introduce the challenge.\n2. Body Paragraph 1: Describe the challenge in detail.\n3. Body Paragraph 2: Explain the steps you took to overcome it.\n4. Body Paragraph 3: Reflect on the lessons you learned and how they shaped you.\n5. Conclusion: Summarize your experience and its impact on your future goals.\nDoes this structure work for you?` },
+    { sender: "user", message: "Yes, it does. Thank you!" },
+    { sender: "ai", message: "You're welcome! Let me know if you'd like help drafting any specific section." }
   ];
 
   const headingVariants = [
@@ -152,7 +156,7 @@ const Hero = () => {
                 </Link>
               ) : (
                 <Link to="/signup" className="px-8 py-3 rounded-md bg-primary text-primary-foreground font-medium shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all w-full sm:w-auto text-center">
-                  Get Started
+                  Try it for free
                 </Link>
               )}
             </motion.div>
@@ -244,9 +248,9 @@ const Hero = () => {
       
       <div className="max-w-7xl mx-auto mt-16 lg:mt-24">
         <div className="text-center mb-10">
-          <h2 className="text-3xl font-bold mb-4">See the AI Consultant in Action</h2>
+          <h2 className="text-3xl font-bold mb-4">Experience Expert Guidance</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Watch a quick demo of how our AI consultant helps students find the perfect universities for their academic journey.
+            Discover how our AI consultant provides personalized advice to help you excel in your college or university applications.
           </p>
         </div>
         
@@ -265,7 +269,7 @@ const Hero = () => {
                 <path d="M101 63.4C102.657 63.4 104 62.057 104 60.4V46.5L96 51.1V60.4C96 62.057 97.343 63.4 99 63.4H101Z" fill="#0d55c8"/>
                 <path d="M98.1 100.4C96.4 92.3 94 82.3 94 74.3C94 70.4 90.4 67.6 86.7 68.7C83.7 69.5 82 72.3 82 75.4C82 83.4 85.4 97.3 87.5 105.4C88.1 107.7 86.5 110 84.1 110H84.1C82.5 110 81.1 108.9 80.6 107.4C78.2 99.4 74.6 87.2 74 79.1C73.8 77.3 72.3 76 70.5 76H70.5C68.4 76 66.8 77.7 67 79.8C67.7 87.9 71.3 100.1 73.7 108.1C74.9 112.2 78.7 115 83 115H85C90.1 115 94.3 111 95.1 105.9L98.1 100.4Z" fill="#65b2ff"/>
               </svg>
-              <h3 className="font-bold">AI University Consultant</h3>
+              <h3 className="font-bold">AI Application Consultant</h3>
             </div>
           </div>
           
@@ -296,8 +300,8 @@ const Hero = () => {
                 </div>
               ))}
               <div className="flex justify-center mt-6">
-                <Link to="/consultant" className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-md hover:bg-primary/90 transition-colors">
-                  <span>Try it yourself</span>
+                <Link to="/signup" className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-md hover:bg-primary/90 transition-colors">
+                  <span>Try it for free</span>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>

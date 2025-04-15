@@ -192,7 +192,9 @@ const OnboardingPage = () => {
 
   const countryOptions = [
     "United States", "United Kingdom", "Canada", "Australia", 
-    "Germany", "France", "Japan", "South Korea", "China", "Pakistan", "Other"
+    "Germany", "France", "Japan", "South Korea", "China", "Pakistan", 
+    "Netherlands", "Sweden", "Switzerland", "Singapore", "New Zealand", "Italy", "Spain", "Ireland", "Norway", "Denmark", 
+    "United Arab Emirates", "Saudi Arabia", "Qatar", "Kuwait", "Oman", "Jordan", "Lebanon", "Egypt", "Other"
   ];
 
   return (
