@@ -17,9 +17,9 @@ import OnboardingPage from "./pages/OnboardingPage";
 import DashboardPage from "./pages/DashboardPage";
 import ProfileEditPage from "./pages/ProfileEditPage";
 import { ThemeProvider } from "./components/ThemeProvider";
-import DonationsPage from "./pages/DonationsPage";
 import SmartRecommenderPage from './pages/SmartRecommenderPage';
 import { AuthProvider } from './contexts/AuthContext';
+import PricingPage from "./pages/PricingPage";
 
 // Create a new queryClient with proper configuration for auth persistence
 const queryClient = new QueryClient({
@@ -68,7 +68,7 @@ const App = () => (
                   <Route path="/consultant" element={<ConsultantPage />} />
                   <Route path="/terms" element={<TermsPage />} />
                   <Route path="/privacy" element={<PrivacyPage />} />
-                  <Route path="/donations" element={<DonationsPage />} />
+                  <Route path="/pricing" element={<PricingPage />} />
                   <Route path="/recommender" element={<SmartRecommenderPage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />

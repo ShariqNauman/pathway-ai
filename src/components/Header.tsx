@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import Logo from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
@@ -20,6 +20,7 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { currentUser } = useUser();
 
   const toolsItems = [
@@ -45,7 +46,7 @@ const Header = () => {
 
   const navItems = [
     { name: "Home", href: "/" },
-    { name: "Support Us", href: "/donations" }
+    { name: "Pricing", href: "/pricing" }
   ];
 
   useEffect(() => {
@@ -68,6 +69,19 @@ const Header = () => {
       .map(n => n[0])
       .join("")
       .toUpperCase();
+  };
+
+  // Handler for Tools & Services scroll
+  const handleToolsClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (location.pathname === "/") {
+      const section = document.getElementById("learn-more");
+      if (section) {
+        section.scrollIntoView({ behavior: "smooth" });
+      }
+    } else {
+      navigate("/#learn-more");
+    }
   };
 
   return (
@@ -105,6 +119,8 @@ const Header = () => {
                         ? "text-primary font-semibold"
                         : "hover:text-primary"
                     }`}
+                    onClick={handleToolsClick}
+                    asChild={false}
                   >
                     <span>Tools & Services</span>
                   </NavigationMenuTrigger>
@@ -148,12 +164,12 @@ const Header = () => {
 
             <li>
               <Link
-                to="/donations"
+                to="/pricing"
                 className={`text-sm font-medium transition-colors ${
-                  location.pathname === "/donations" ? "text-primary font-semibold" : "hover:text-primary"
+                  location.pathname === "/pricing" ? "text-primary font-semibold" : "hover:text-primary"
                 }`}
               >
-                Support Us
+                Pricing
               </Link>
             </li>
           </ul>
