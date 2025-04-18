@@ -234,18 +234,14 @@ const analyzeConversationTitle = (messages: Message[]): string => {
 const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => {
   const { currentUser } = useUser();
   
-  const getWelcomeMessage = (user: UserProfile | null, isNewChat: boolean) => {
-    if (!isNewChat) {
-      return ""; // No welcome message for old chats
-    }
-  
+  const getWelcomeMessage = (user: UserProfile | null) => {
     if (!user) {
       return "Hey! I'm Shariq, your personal college admissions guide. I've helped hundreds of students get into their dream universities. Sign in to get started with personalized guidance!";
     }
-  
+
     const prefs = user.preferences;
     let relevantDetail = "";
-  
+
     if (prefs.intendedMajor && prefs.selectedDomains?.length > 0) {
       relevantDetail = ` I see you're interested in ${prefs.intendedMajor}, particularly ${prefs.selectedDomains.join(" and ")}. That's actually one of my favorite fields to work with!`;
     } else if (prefs.intendedMajor) {
@@ -253,24 +249,24 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
     } else if (prefs.preferredCountry) {
       relevantDetail = ` I notice you're interested in studying in ${prefs.preferredCountry}. Great choice!`;
     }
-  
+
     return `Hey! I'm Shariq, your personal college admissions guide. I've helped hundreds of students like you get into their dream universities, and I'm excited to help you too!${relevantDetail}`;
   };
 
   const welcomeMessageId = useMemo(() => uuidv4(), []);
 
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
       id: welcomeMessageId,
-      content: getWelcomeMessage(currentUser, !currentConversationId),
+      content: getWelcomeMessage(currentUser),
       sender: "ai",
       timestamp: new Date(),
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
   
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [hasShownPreferencesReminder, setHasShownPreferencesReminder] = useState(false);
   const [savedChats, setSavedChats] = useState<SavedChat[]>([]);
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
@@ -304,20 +300,6 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
       setSidebarOpen(false);
     }
   }, [initialSidebarOpen, currentUser]);
-
-  useEffect(() => {
-    const storedConversationId = localStorage.getItem("currentConversationId");
-    if (storedConversationId) {
-      setCurrentConversationId(storedConversationId);
-      loadConversation(storedConversationId);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (currentConversationId) {
-      localStorage.setItem("currentConversationId", currentConversationId);
-    }
-  }, [currentConversationId]);
 
   const scrollChatToBottom = () => {
     if (messagesEndRef.current && chatContainerRef.current) {
@@ -401,7 +383,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         
         const welcomeMessage = {
           id: welcomeMessageId,
-          content: getWelcomeMessage(currentUser, true),
+          content: getWelcomeMessage(currentUser),
           sender: "ai" as const,
           timestamp: new Date(Date.now() - 2000),
           created_at: new Date(Date.now() - 2000).toISOString()
@@ -996,7 +978,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   const startNewChat = async () => {
     const welcomeMessage = {
       id: welcomeMessageId,
-      content: getWelcomeMessage(currentUser, true),
+      content: getWelcomeMessage(currentUser),
       sender: "ai" as const,
         timestamp: new Date(),
     };

@@ -10,7 +10,7 @@ import { Loader2, ChevronRight, Star, MapPin, DollarSign, GraduationCap } from '
 import { getGeminiResponse } from '../utils/geminiApi';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { toast } from '../components/ui/use-toast';
+import { toast } from "sonner";
 
 interface Question {
   id: string;
@@ -38,6 +38,7 @@ interface University {
   applicationDeadline?: string;
   scholarshipInfo?: string;
   website: string;
+  isSaving?: boolean;
 }
 
 interface UniversityData {
@@ -59,7 +60,7 @@ interface UniversityData {
 }
 
 export default function SmartRecommenderPage() {
-  const { currentUser, saveUniversity } = useAuth();
+  const { currentUser, saveUniversity, savedUniversities } = useAuth();
   const [currentStep, setCurrentStep] = useState<'profile' | 'questions' | 'results'>('profile');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -661,20 +662,31 @@ Return a JSON array in this exact format, nothing else:
                             <Button 
                               className="flex-1 hover:scale-105 transition-transform"
                               onClick={async () => {
+                                // Throttle save requests
+                                if (university.isSaving) return;
+                                university.isSaving = true;
+
                                 try {
+                                  // Debug: log savedUniversities
+                                  console.log('Saved universities:', savedUniversities);
+
+                                  // Check if the university is already saved
+                                  const isAlreadySaved = savedUniversities?.some(
+                                    (saved) => saved.university_data.id === university.id
+                                  );
+
+                                  if (isAlreadySaved) {
+                                    toast("This university is already in your dashboard.");
+                                    return;
+                                  }
+
+                                  // Save the university
                                   await saveUniversity(university);
-                                  toast({
-                                    title: "University saved!",
-                                    description: "You can view it in your dashboard.",
-                                    duration: 3000,
-                                  });
+                                  toast("University saved! You can view it in your dashboard.");
                                 } catch (error) {
-                                  toast({
-                                    title: "Failed to save university",
-                                    description: "Please try again later.",
-                                    variant: "destructive",
-                                    duration: 3000,
-                                  });
+                                  toast("Failed to save university. Please try again later.");
+                                } finally {
+                                  university.isSaving = false;
                                 }
                               }}
                             >
@@ -694,4 +706,4 @@ Return a JSON array in this exact format, nothing else:
       <Footer />
     </div>
   );
-} 
+}

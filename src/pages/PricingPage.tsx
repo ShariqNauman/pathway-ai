@@ -97,8 +97,8 @@ const PricingPage = () => {
                     <li className="min-h-[40px] flex items-center justify-center">3 essays/month</li>
                     <li className="min-h-[40px] flex items-center justify-center">
                       <div className="flex flex-col">
-                        <span>5 questions/day</span>
-                        <span className="text-sm text-muted-foreground/80">Max 100 questions/month</span>
+                        <span>10 messages/day</span>
+                        <span className="text-sm text-muted-foreground/80">Max 100 messages/month</span>
                       </div>
                     </li>
                     <li className="min-h-[40px] flex items-center justify-center">-</li>
@@ -124,7 +124,7 @@ const PricingPage = () => {
                   <ul className="space-y-[42px] text-muted-foreground">
                     <li className="min-h-[40px] flex items-center justify-center">60 uses/month</li>
                     <li className="min-h-[40px] flex items-center justify-center">30 essays/month</li>
-                    <li className="min-h-[40px] flex items-center justify-center">20 questions/day</li>
+                    <li className="min-h-[40px] flex items-center justify-center">30 messages/day</li>
                     <li className="min-h-[40px] flex items-center justify-center">-</li>
                   </ul>
                   <Button size="lg" className="w-full mt-8 bg-gradient-to-r from-primary to-primary/90">Choose Pro</Button>
@@ -146,7 +146,7 @@ const PricingPage = () => {
                   <ul className="space-y-[42px] text-muted-foreground">
                     <li className="min-h-[40px] flex items-center justify-center">Unlimited</li>
                     <li className="min-h-[40px] flex items-center justify-center">360 essays/year</li>
-                    <li className="min-h-[40px] flex items-center justify-center">30 questions/day</li>
+                    <li className="min-h-[40px] flex items-center justify-center">50 messages/day</li>
                     <li className="min-h-[40px] flex items-center justify-center">
                       Priority support + 1 personalized Zoom/Chat consult
                     </li>
