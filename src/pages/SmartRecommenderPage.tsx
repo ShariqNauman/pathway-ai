@@ -62,9 +62,9 @@ const SmartRecommenderPage = () => {
     
     setIsLoading(true);
     
-    // Navigate to recommender dashboard
     try {
-      navigate("/consultant?feature=recommender");
+      // Pass the feature parameter properly to the consultant page
+      navigate("/consultant?feature=recommender&mode=startup");
     } finally {
       setIsLoading(false);
     }

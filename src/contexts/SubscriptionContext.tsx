@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from './UserContext';
@@ -77,44 +76,43 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         return;
       }
       
-      if (data?.subscription) {
-        setSubscription({
-          planType: data.subscription.plan_type,
-          currentPeriodEnd: data.subscription.current_period_end 
-            ? new Date(data.subscription.current_period_end) 
-            : null
-        });
-        
-        // Fetch usage limits from message_limits table
-        const { data: limitsData } = await supabase
-          .from('message_limits')
-          .select('*')
-          .eq('user_id', currentUser.id)
-          .single();
-          
-        // Set limits based on plan type
-        const newLimits = {
-          recommender: {
-            limit: subscription.planType === 'basic' ? 5 : 
-                   subscription.planType === 'pro' ? 60 : Infinity,
-            used: limitsData?.recommender_count || 0
-          },
-          essayAnalyzer: {
-            limit: subscription.planType === 'basic' ? 3 : 
-                   subscription.planType === 'pro' ? 30 : 360,
-            used: limitsData?.essay_count || 0
-          },
-          consultant: {
-            limit: subscription.planType === 'basic' ? 100 : 
-                   subscription.planType === 'pro' ? Infinity : Infinity,
-            used: limitsData?.message_count || 0,
-            messagesPerDay: subscription.planType === 'basic' ? 10 : 
-                          subscription.planType === 'pro' ? 30 : 50
-          }
-        };
-        
-        setLimits(newLimits);
-      }
+      const planType = data?.subscription?.plan_type || 'basic';
+      setSubscription({
+        planType,
+        currentPeriodEnd: data?.subscription?.current_period_end 
+          ? new Date(data.subscription.current_period_end) 
+          : null
+      });
+      
+      // Fetch usage limits from message_limits table
+      const { data: limitsData } = await supabase
+        .from('message_limits')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+      
+      // Set limits based on plan type
+      const newLimits = {
+        recommender: {
+          limit: planType === 'basic' ? 5 : 
+                planType === 'pro' ? 60 : Infinity,
+          used: limitsData?.recommender_count || 0
+        },
+        essayAnalyzer: {
+          limit: planType === 'basic' ? 3 : 
+                planType === 'pro' ? 30 : 360,
+          used: limitsData?.essay_count || 0
+        },
+        consultant: {
+          limit: planType === 'basic' ? 100 : 
+                planType === 'pro' ? Infinity : Infinity,
+          used: limitsData?.message_count || 0,
+          messagesPerDay: planType === 'basic' ? 10 : 
+                        planType === 'pro' ? 30 : 50
+        }
+      };
+      
+      setLimits(newLimits);
     } catch (err) {
       console.error("Exception during subscription check:", err);
       toast.error("Failed to check subscription status");

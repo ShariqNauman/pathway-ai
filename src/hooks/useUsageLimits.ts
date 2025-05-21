@@ -45,7 +45,7 @@ export function useUsageLimits() {
         .from('message_limits')
         .select('*')
         .eq('user_id', currentUser.id)
-        .single();
+        .maybeSingle();
 
       if (fetchError && fetchError.code !== 'PGRST116') {
         console.error("Error fetching usage limits:", fetchError);
@@ -56,7 +56,7 @@ export function useUsageLimits() {
       const now = new Date();
       let shouldReset = false;
       
-      if (limitsData) {
+      if (limitsData && limitsData[resetKey]) {
         const lastReset = new Date(limitsData[resetKey]);
         // Reset if it's been more than a month
         const monthDiff = (now.getFullYear() - lastReset.getFullYear()) * 12 + 
@@ -65,35 +65,21 @@ export function useUsageLimits() {
       }
 
       // Update or insert usage record
-      let updateData: Record<string, any> = {};
+      let updateData: Record<string, any> = { user_id: currentUser.id };
 
-      if (!limitsData) {
-        // First time use
-        updateData = {
-          user_id: currentUser.id,
-          [limitKey]: 1,
-          [resetKey]: now.toISOString()
-        };
-      } else if (shouldReset) {
-        // Reset counter
-        updateData = {
-          [limitKey]: 1,
-          [resetKey]: now.toISOString()
-        };
+      if (!limitsData || !limitsData[limitKey] || shouldReset) {
+        // First time use or reset counter
+        updateData[limitKey] = 1;
+        updateData[resetKey] = now.toISOString();
       } else {
         // Increment counter
-        updateData = {
-          [limitKey]: (limitsData[limitKey] || 0) + 1
-        };
+        updateData[limitKey] = (limitsData[limitKey] || 0) + 1;
       }
 
       // Update the database
       const { error: updateError } = await supabase
         .from('message_limits')
-        .upsert({ 
-          user_id: currentUser.id,
-          ...updateData
-        });
+        .upsert(updateData);
 
       if (updateError) {
         console.error("Error updating usage limits:", updateError);
