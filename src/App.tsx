@@ -1,4 +1,3 @@
-
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -21,7 +20,6 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import SmartRecommenderPage from './pages/SmartRecommenderPage';
 import { AuthProvider } from './contexts/AuthContext';
 import PricingPage from "./pages/PricingPage";
-import { SubscriptionProvider } from "./contexts/SubscriptionContext";
 
 // Create a new queryClient with proper configuration for auth persistence
 const queryClient = new QueryClient({
@@ -54,31 +52,29 @@ const App = () => (
       <UserProvider>
         <AuthProvider>
           <QueryClientProvider client={queryClient}>
-            <SubscriptionProvider>
-              <TooltipProvider>
-                {/* Show toast notifications */}
-                <Toaster position="bottom-right" closeButton={true} />
-                <BrowserRouter>
-                  <ScrollToTop />
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/signup" element={<SignupPage />} />
-                    <Route path="/onboarding" element={<OnboardingPage />} />
-                    <Route path="/dashboard" element={<DashboardPage />} />
-                    <Route path="/profile/edit" element={<ProfileEditPage />} />
-                    <Route path="/essay-analyzer" element={<EssayAnalyzerPage />} />
-                    <Route path="/consultant" element={<ConsultantPage />} />
-                    <Route path="/terms" element={<TermsPage />} />
-                    <Route path="/privacy" element={<PrivacyPage />} />
-                    <Route path="/pricing" element={<PricingPage />} />
-                    <Route path="/recommender" element={<SmartRecommenderPage />} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
-              </TooltipProvider>
-            </SubscriptionProvider>
+            <TooltipProvider>
+              {/* Show toast notifications */}
+              <Toaster position="bottom-right" closeButton={true} />
+              <BrowserRouter>
+                <ScrollToTop />
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/signup" element={<SignupPage />} />
+                  <Route path="/onboarding" element={<OnboardingPage />} />
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/profile/edit" element={<ProfileEditPage />} />
+                  <Route path="/essay-analyzer" element={<EssayAnalyzerPage />} />
+                  <Route path="/consultant" element={<ConsultantPage />} />
+                  <Route path="/terms" element={<TermsPage />} />
+                  <Route path="/privacy" element={<PrivacyPage />} />
+                  <Route path="/pricing" element={<PricingPage />} />
+                  <Route path="/recommender" element={<SmartRecommenderPage />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
           </QueryClientProvider>
         </AuthProvider>
       </UserProvider>

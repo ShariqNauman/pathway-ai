@@ -1,54 +1,18 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { BadgeDollarSign, Star, Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSubscription } from "@/contexts/SubscriptionContext";
-import { toast } from "sonner";
 
 const PricingPage = () => {
   const { currentUser } = useAuth();
-  const { plan, checkoutSubscription, openCustomerPortal, isSubscriptionLoading } = useSubscription();
-  const [loading, setLoading] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     document.title = "Pricing | Pathway AI Plans";
   }, []);
-
-  const handleSubscribe = async (selectedPlan: 'pro' | 'yearly') => {
-    if (!currentUser) {
-      toast.error("Please log in to subscribe");
-      return;
-    }
-
-    try {
-      setLoading({ [selectedPlan]: true });
-      const url = await checkoutSubscription(selectedPlan);
-      window.location.href = url; // Redirect to Stripe checkout
-    } catch (error) {
-      console.error("Subscription error:", error);
-      toast.error("Failed to process subscription request");
-    } finally {
-      setLoading({ [selectedPlan]: false });
-    }
-  };
-
-  const handleManageSubscription = async () => {
-    try {
-      setLoading({ manage: true });
-      const url = await openCustomerPortal();
-      window.location.href = url; // Redirect to Stripe customer portal
-    } catch (error) {
-      console.error("Customer portal error:", error);
-      toast.error("Failed to open subscription management portal");
-    } finally {
-      setLoading({ manage: false });
-    }
-  };
 
   return (
     <motion.div
@@ -122,14 +86,7 @@ const PricingPage = () => {
               </div>
 
               {/* Basic Plan */}
-              <Card className={`relative overflow-hidden border-2 ${plan === 'basic' ? 'border-primary' : 'border-primary/20'} shadow-lg min-w-[280px]`}>
-                {plan === 'basic' && (
-                  <div className="absolute -top-4 left-0 right-0 text-center z-20">
-                    <span className="bg-primary text-primary-foreground text-sm font-semibold px-6 py-1.5 rounded-full shadow-lg">
-                      Current Plan
-                    </span>
-                  </div>
-                )}
+              <Card className="relative overflow-hidden border-2 border-primary/20 shadow-lg min-w-[280px]">
                 <CardHeader className="text-center p-6 h-[140px] flex flex-col justify-center">
                   <CardTitle className="text-2xl">Basic (Free)</CardTitle>
                   <CardDescription className="text-lg">Ideal for exploring features with daily help.</CardDescription>
@@ -146,38 +103,19 @@ const PricingPage = () => {
                     </li>
                     <li className="min-h-[40px] flex items-center justify-center">-</li>
                   </ul>
-                  {!currentUser ? (
-                    <Button size="lg" className="w-full mt-8" onClick={() => window.location.href = '/signup'}>
-                      Get Started
-                    </Button>
-                  ) : plan !== 'basic' ? (
-                    <Button size="lg" variant="outline" className="w-full mt-8" onClick={handleManageSubscription} disabled={loading.manage}>
-                      {loading.manage ? "Loading..." : "Manage Subscription"}
-                    </Button>
-                  ) : (
-                    <Button size="lg" variant="outline" className="w-full mt-8" disabled>
-                      Current Plan
-                    </Button>
+                  {!currentUser && (
+                    <Button size="lg" className="w-full mt-8">Get Started</Button>
                   )}
                 </CardContent>
               </Card>
 
               {/* Pro Plan */}
-              <Card className={`relative overflow-visible border-2 ${plan === 'pro' ? 'border-primary' : 'border-primary/20'} ${plan !== 'pro' ? 'bg-gradient-to-b from-background to-primary/5' : ''} shadow-xl min-w-[280px]`}>
-                {plan !== 'pro' && (
-                  <div className="absolute -top-4 left-0 right-0 text-center z-20">
-                    <span className="bg-primary text-primary-foreground text-sm font-semibold px-6 py-1.5 rounded-full shadow-lg">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-                {plan === 'pro' && (
-                  <div className="absolute -top-4 left-0 right-0 text-center z-20">
-                    <span className="bg-primary text-primary-foreground text-sm font-semibold px-6 py-1.5 rounded-full shadow-lg">
-                      Current Plan
-                    </span>
-                  </div>
-                )}
+              <Card className="relative overflow-visible border-2 border-primary shadow-xl bg-gradient-to-b from-background to-primary/5 min-w-[280px]">
+                <div className="absolute -top-4 left-0 right-0 text-center z-20">
+                  <span className="bg-primary text-primary-foreground text-sm font-semibold px-6 py-1.5 rounded-full shadow-lg">
+                    Most Popular
+                  </span>
+                </div>
                 <CardHeader className="text-center p-6 pt-6 h-[140px] flex flex-col justify-center">
                   <CardTitle className="text-2xl">Pro – $7/month</CardTitle>
                   <CardDescription className="text-base">For serious applicants who want AI-backed support daily.</CardDescription>
@@ -189,39 +127,17 @@ const PricingPage = () => {
                     <li className="min-h-[40px] flex items-center justify-center">30 messages/day</li>
                     <li className="min-h-[40px] flex items-center justify-center">-</li>
                   </ul>
-                  {plan === 'pro' ? (
-                    <Button size="lg" className="w-full mt-8 bg-gradient-to-r from-primary to-primary/90" onClick={handleManageSubscription} disabled={loading.manage}>
-                      {loading.manage ? "Loading..." : "Manage Subscription"}
-                    </Button>
-                  ) : (
-                    <Button 
-                      size="lg" 
-                      className="w-full mt-8 bg-gradient-to-r from-primary to-primary/90"
-                      onClick={() => handleSubscribe('pro')}
-                      disabled={loading.pro || isSubscriptionLoading || !currentUser}
-                    >
-                      {loading.pro ? "Processing..." : "Choose Pro"}
-                    </Button>
-                  )}
+                  <Button size="lg" className="w-full mt-8 bg-gradient-to-r from-primary to-primary/90">Choose Pro</Button>
                 </CardContent>
               </Card>
 
               {/* Yearly Plan */}
-              <Card className={`relative overflow-visible border-2 ${plan === 'yearly' ? 'border-primary' : 'border-primary/20'} shadow-lg min-w-[280px]`}>
-                {plan !== 'yearly' && (
-                  <div className="absolute -top-6 left-0 right-0 text-center z-30">
-                    <span className="bg-green-500 text-white text-sm font-semibold px-6 py-1.5 rounded-full shadow-lg">
-                      Save 40%!
-                    </span>
-                  </div>
-                )}
-                {plan === 'yearly' && (
-                  <div className="absolute -top-4 left-0 right-0 text-center z-20">
-                    <span className="bg-primary text-primary-foreground text-sm font-semibold px-6 py-1.5 rounded-full shadow-lg">
-                      Current Plan
-                    </span>
-                  </div>
-                )}
+              <Card className="relative overflow-visible border-2 border-primary/20 shadow-lg min-w-[280px]">
+                <div className="absolute -top-6 left-0 right-0 text-center z-30">
+                  <span className="bg-green-500 text-white text-sm font-semibold px-6 py-1.5 rounded-full shadow-lg">
+                    Save 40%!
+                  </span>
+                </div>
                 <CardHeader className="text-center p-6 h-[140px] flex flex-col justify-center">
                   <CardTitle className="text-2xl">Yearly – $50/year</CardTitle>
                   <CardDescription className="text-lg">Best value for long-term users.</CardDescription>
@@ -235,20 +151,7 @@ const PricingPage = () => {
                       Priority support + 1 personalized Zoom/Chat consult
                     </li>
                   </ul>
-                  {plan === 'yearly' ? (
-                    <Button size="lg" className="w-full mt-8" onClick={handleManageSubscription} disabled={loading.manage}>
-                      {loading.manage ? "Loading..." : "Manage Subscription"}
-                    </Button>
-                  ) : (
-                    <Button 
-                      size="lg" 
-                      className="w-full mt-8"
-                      onClick={() => handleSubscribe('yearly')}
-                      disabled={loading.yearly || isSubscriptionLoading || !currentUser}
-                    >
-                      {loading.yearly ? "Processing..." : "Choose Yearly"}
-                    </Button>
-                  )}
+                  <Button size="lg" className="w-full mt-8">Choose Yearly</Button>
                 </CardContent>
               </Card>
             </div>
