@@ -103,9 +103,10 @@ export default function useUsageLimits(feature: FeatureType): UsageLimits {
             setDailyUsed(0);
             
             // Update the reset timestamp in DB (don't await, let it happen in background)
-            const updateData: Record<string, any> = {};
-            updateData[resetField] = now;
-            updateData["user_id"] = currentUser.id;
+            const updateData = {
+              user_id: currentUser.id,
+              [resetField]: now
+            };
             
             await supabase
               .from("message_limits")
@@ -184,9 +185,12 @@ export default function useUsageLimits(feature: FeatureType): UsageLimits {
       const currentCount = (currentData?.[countField] || 0) + 1;
       
       // Update the counts with properly typed data
-      const updateData = {
+      const updateData: {
+        user_id: string;
+        [key: string]: any;
+      } = {
         user_id: currentUser.id,
-        [countField]: currentCount,
+        [countField]: currentCount
       };
       
       // Only update reset time if not already set today
