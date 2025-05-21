@@ -11,6 +11,8 @@ import { getGeminiResponse } from '../utils/geminiApi';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { toast } from "sonner";
+import useUsageLimits from "@/hooks/useUsageLimits";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 
 interface Question {
   id: string;
@@ -61,6 +63,8 @@ interface UniversityData {
 
 export default function SmartRecommenderPage() {
   const { currentUser, saveUniversity, savedUniversities } = useAuth();
+  const { plan } = useSubscription();
+  const { checkAndIncrement, used, limit, dailyUsed, dailyLimit } = useUsageLimits('recommender');
   const [currentStep, setCurrentStep] = useState<'profile' | 'questions' | 'results'>('profile');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -183,6 +187,17 @@ export default function SmartRecommenderPage() {
   };
 
   const generateRecommendations = async () => {
+    if (!currentUser) {
+      toast.error("Please sign in to use the Smart Recommender");
+      return;
+    }
+    
+    // Check usage limits before generating recommendations
+    const canProceed = await checkAndIncrement();
+    if (!canProceed) {
+      return;
+    }
+    
     setIsLoading(true);
     try {
       // Combine profile data with answers in a structured way
@@ -411,6 +426,27 @@ Return a JSON array in this exact format, nothing else:
       <Header />
       <main className="flex-grow py-20 px-4">
         <div className="max-w-5xl mx-auto">
+          {/* Add usage display near the top of the page */}
+          {currentUser && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mb-6 p-4 bg-muted/50 rounded-lg"
+            >
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium">Recommender Usage:</span>{" "}
+                {used}/{limit} monthly, {dailyUsed}/{dailyLimit} today
+                {plan === "basic" && (
+                  <span className="ml-2 text-xs">
+                    <a href="/pricing" className="text-primary hover:underline">
+                      Upgrade for more
+                    </a>
+                  </span>
+                )}
+              </p>
+            </motion.div>
+          )}
+          
           {isGeneratingQuestions ? (
             <motion.div
               initial={{ opacity: 0 }}
