@@ -1,5 +1,124 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { UserProfile } from "@/types/user";
+
+export interface ChatResponse {
+  text: string;
+  error?: string;
+  universities?: Array<{
+    name: string;
+    country: string;
+    description?: string;
+    programs?: string[];
+    ranking?: number;
+    website?: string;
+  }>;
+}
+
+export const getChatResponse = async (
+  message: string,
+  previousMessages: { content: string; role: "user" | "model" }[],
+  callbacks?: { onTextUpdate?: (text: string) => void },
+  currentUser?: UserProfile | null,
+  primaryImage?: string | null,
+  additionalImages?: string[],
+  abortSignal?: AbortSignal
+): Promise<ChatResponse> => {
+  try {
+    // Prepare request body with user message and context
+    const requestBody: any = {
+      message,
+      previousMessages,
+      userPreferences: currentUser?.preferences || {}
+    };
+    
+    // Add images if provided
+    if (primaryImage) {
+      requestBody.image = primaryImage;
+      
+      if (additionalImages && additionalImages.length > 0) {
+        requestBody.additionalImages = additionalImages;
+      }
+    }
+
+    // Make API request to get AI response
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+      signal: abortSignal
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error: ${response.statusText}`);
+    }
+
+    // Handle streaming responses
+    if (callbacks?.onTextUpdate) {
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("Response body is not readable");
+      }
+
+      let accumulatedText = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          break;
+        }
+        
+        // Decode the chunk and update text
+        const chunk = new TextDecoder().decode(value);
+        try {
+          const data = JSON.parse(chunk);
+          accumulatedText = data.text || accumulatedText;
+          callbacks.onTextUpdate(accumulatedText);
+          
+          if (data.error) {
+            return {
+              text: accumulatedText,
+              error: data.error,
+              universities: data.universities || []
+            };
+          }
+        } catch (e) {
+          // If it's not valid JSON, just treat as text
+          accumulatedText += chunk;
+          callbacks.onTextUpdate(accumulatedText);
+        }
+      }
+      
+      return {
+        text: accumulatedText,
+        universities: [] // Default empty array for streaming responses
+      };
+    } else {
+      // For non-streaming responses
+      const data = await response.json();
+      return {
+        text: data.response || "",
+        universities: data.universities || [],
+        error: data.error
+      };
+    }
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      return {
+        text: "Response was aborted",
+        error: "Request was cancelled"
+      };
+    }
+    
+    console.error("Error in getChatResponse:", error);
+    return {
+      text: "",
+      error: error.message || "Failed to get response"
+    };
+  }
+};
 
 export const sendMessageToConsultant = async (message: string, conversationId?: string) => {
   try {
