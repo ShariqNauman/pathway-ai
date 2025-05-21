@@ -9,6 +9,41 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      saved_universities: {
+        Row: {
+          id: string
+          user_id: string
+          university_name: string
+          university_data: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          university_name: string
+          university_data: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          university_name?: string
+          university_data?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_universities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       chat_conversations: {
         Row: {
           created_at: string
@@ -98,36 +133,6 @@ export type Database = {
         }
         Relationships: []
       }
-      message_limits: {
-        Row: {
-          essay_count: number | null
-          last_reset: string | null
-          last_reset_essays: string | null
-          last_reset_recommender: string | null
-          message_count: number | null
-          recommender_count: number | null
-          user_id: string
-        }
-        Insert: {
-          essay_count?: number | null
-          last_reset?: string | null
-          last_reset_essays?: string | null
-          last_reset_recommender?: string | null
-          message_count?: number | null
-          recommender_count?: number | null
-          user_id: string
-        }
-        Update: {
-          essay_count?: number | null
-          last_reset?: string | null
-          last_reset_essays?: string | null
-          last_reset_recommender?: string | null
-          message_count?: number | null
-          recommender_count?: number | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           act_score: number | null
@@ -209,73 +214,31 @@ export type Database = {
         }
         Relationships: []
       }
-      saved_universities: {
+      message_limits: {
         Row: {
-          created_at: string
-          id: string
-          university_data: Json
-          university_name: string
-          updated_at: string
           user_id: string
+          message_count: number
+          last_reset: string
         }
         Insert: {
-          created_at?: string
-          id?: string
-          university_data: Json
-          university_name: string
-          updated_at?: string
           user_id: string
+          message_count?: number
+          last_reset?: string
         }
         Update: {
-          created_at?: string
-          id?: string
-          university_data?: Json
-          university_name?: string
-          updated_at?: string
           user_id?: string
+          message_count?: number
+          last_reset?: string
         }
         Relationships: [
           {
-            foreignKeyName: "saved_universities_user_id_fkey"
+            foreignKeyName: "message_limits_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
+            isOneToOne: true
+            referencedRelation: "users"
             referencedColumns: ["id"]
-          },
+          }
         ]
-      }
-      subscriptions: {
-        Row: {
-          created_at: string
-          current_period_end: string | null
-          id: string
-          plan_type: string
-          stripe_customer_id: string | null
-          stripe_subscription_id: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          current_period_end?: string | null
-          id?: string
-          plan_type?: string
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          current_period_end?: string | null
-          id?: string
-          plan_type?: string
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
       }
     }
     Views: {
