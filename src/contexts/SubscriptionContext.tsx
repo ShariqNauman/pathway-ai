@@ -79,7 +79,7 @@ const planLimitsMap: Record<PlanType, PlanLimits> = {
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
 
 export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentUser, isAuthenticated } = useAuth();
+  const { currentUser } = useAuth();
   const [plan, setPlan] = useState<PlanType>('basic');
   const [currentPeriodEnd, setCurrentPeriodEnd] = useState<Date | null>(null);
   const [isSubscriptionLoading, setIsSubscriptionLoading] = useState<boolean>(true);
@@ -125,7 +125,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const refreshSubscription = async (): Promise<void> => {
-    if (!isAuthenticated) {
+    if (!currentUser) {
       setPlan('basic');
       setCurrentPeriodEnd(null);
       setIsSubscriptionLoading(false);
@@ -153,14 +153,14 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   useEffect(() => {
     // Refresh subscription when the user logs in
-    if (isAuthenticated) {
+    if (currentUser) {
       refreshSubscription();
     } else {
       setPlan('basic');
       setCurrentPeriodEnd(null);
       setIsSubscriptionLoading(false);
     }
-  }, [isAuthenticated, currentUser?.id]);
+  }, [currentUser]);
 
   return (
     <SubscriptionContext.Provider

@@ -183,7 +183,7 @@ export default function useUsageLimits(feature: FeatureType): UsageLimits {
       
       const currentCount = (currentData?.[countField] || 0) + 1;
       
-      // Update the counts
+      // Update the counts with properly typed data
       const updateData = {
         user_id: currentUser.id,
         [countField]: currentCount,

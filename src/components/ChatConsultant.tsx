@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -85,7 +86,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }) => {
       if (aiResponse) {
         const aiMessage = {
           id: Date.now().toString() + "-ai",
-          text: aiResponse,
+          text: aiResponse.text || "Sorry, I couldn't generate a response at this time.",
           sender: "ai",
         };
         setMessages((prevMessages) => [...prevMessages, aiMessage]);

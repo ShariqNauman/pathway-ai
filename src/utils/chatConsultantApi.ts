@@ -1,3 +1,4 @@
+
 interface GeminiResponse {
   text: string;
   error?: string;
@@ -294,4 +295,4 @@ export async function getChatResponse(
       error: error instanceof Error ? error.message : 'An unknown error occurred'
     };
   }
-} 
+}
