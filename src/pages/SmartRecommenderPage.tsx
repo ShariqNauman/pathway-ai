@@ -230,7 +230,7 @@ For each university:
 - List concrete admission requirements
 - Show rankings relevant to the specific program
 - Add relevant tags (e.g., "Strong Research", "Merit Scholarships", "Industry Connections")
-- Provide the direct URL to the undergraduate/graduate admissions page (not the homepage)
+- Provide the direct URL to the university page
 
 Return a JSON array in this exact format, nothing else:
 [
@@ -251,9 +251,11 @@ Return a JSON array in this exact format, nothing else:
     "tags": ["string"],
     "applicationDeadline": "string",
     "scholarshipInfo": "string (if within budget constraints)",
-    "website": "string (direct URL to the relevant admissions page based on study level)"
+    "website": "string (direct URL to the relevant university page)"
   }
-]`;
+]
+
+IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO TEXT BESIDES THE JSON ARRAY`;
 
       const response = await getChatResponse(prompt);
       
