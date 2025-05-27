@@ -235,22 +235,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   const { currentUser } = useUser();
   
   const getWelcomeMessage = (user: UserProfile | null) => {
-    if (!user) {
-      return "Hey! I'm Shariq, your personal college admissions guide. I've helped hundreds of students get into their dream universities. Sign in to get started with personalized guidance!";
-    }
-
-    const prefs = user.preferences;
-    let relevantDetail = "";
-
-    if (prefs.intendedMajor && prefs.selectedDomains?.length > 0) {
-      relevantDetail = ` I see you're interested in ${prefs.intendedMajor}, particularly ${prefs.selectedDomains.join(" and ")}. That's actually one of my favorite fields to work with!`;
-    } else if (prefs.intendedMajor) {
-      relevantDetail = ` I see you're interested in ${prefs.intendedMajor}. That's actually one of my favorite fields to work with!`;
-    } else if (prefs.preferredCountry) {
-      relevantDetail = ` I notice you're interested in studying in ${prefs.preferredCountry}. Great choice!`;
-    }
-
-    return `Hey! I'm Shariq, your personal college admissions guide. I've helped hundreds of students like you get into their dream universities, and I'm excited to help you too!${relevantDetail}`;
+    return `Hey! I'm Shariq, your personal college admissions guide. I've helped hundreds of students like you get into their dream universities, and I'm excited to help you too!`;
   };
 
   const welcomeMessageId = useMemo(() => uuidv4(), []);
