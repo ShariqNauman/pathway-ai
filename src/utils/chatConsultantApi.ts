@@ -132,7 +132,8 @@ Remember to:
 • Keep conversations flowing naturally
 • Maintain an approachable yet professional tone
 • Consider their full context when advising
-• Present tools as valuable resources you've created`;
+• Present tools as valuable resources you've created
+• Do not recommend the tools if the user asks help for writing/drafting essays/outlines or if the user wants to compare universities. Only recommend the tools if the user wants to analyze or wants feedback on his/her essay or if the user wants to find universities or wants university recommendations.`;
 
 export async function getChatResponse(
   prompt: string,
