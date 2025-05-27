@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
@@ -46,8 +47,8 @@ const Footer = () => {
               </Link>
             </li>
             <li>
-              <Link to="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Pricing
+              <Link to="/donations" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Donations
               </Link>
             </li>
           </ul>

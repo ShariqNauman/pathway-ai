@@ -70,7 +70,7 @@ interface ChatConsultantProps {
 const DEFAULT_CHAT_TITLE = "New Chat";
 const MIN_USER_MESSAGES_FOR_TITLE = 5;
 const MAX_IMAGES = 3;
-const MAX_DAILY_MESSAGES = 30;
+const MAX_DAILY_MESSAGES = 15; // Changed from 30 to 15
 
 const ABBREVIATIONS = {
   // Degrees and Levels
@@ -236,21 +236,21 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   
   const getWelcomeMessage = (user: UserProfile | null) => {
     if (!user) {
-      return "Hey! I'm Shariq, your personal college admissions guide. I've helped hundreds of students get into their dream universities. Sign in to get started with personalized guidance!";
+      return "Hey! I'm your AI college consultant. I'm here to help you navigate your educational journey. Sign in to get personalized guidance!";
     }
 
     const prefs = user.preferences;
     let relevantDetail = "";
 
     if (prefs.intendedMajor && prefs.selectedDomains?.length > 0) {
-      relevantDetail = ` I see you're interested in ${prefs.intendedMajor}, particularly ${prefs.selectedDomains.join(" and ")}. That's actually one of my favorite fields to work with!`;
+      relevantDetail = ` I see you're interested in ${prefs.intendedMajor}, particularly ${prefs.selectedDomains.join(" and ")}. That's exciting!`;
     } else if (prefs.intendedMajor) {
-      relevantDetail = ` I see you're interested in ${prefs.intendedMajor}. That's actually one of my favorite fields to work with!`;
+      relevantDetail = ` I notice you're interested in ${prefs.intendedMajor}. Great choice!`;
     } else if (prefs.preferredCountry) {
-      relevantDetail = ` I notice you're interested in studying in ${prefs.preferredCountry}. Great choice!`;
+      relevantDetail = ` I see you're interested in studying in ${prefs.preferredCountry}. Awesome!`;
     }
 
-    return `Hey! I'm Shariq, your personal college admissions guide. I've helped hundreds of students like you get into their dream universities, and I'm excited to help you too!${relevantDetail}`;
+    return `Hi there! I'm your AI college consultant, ready to help you with your educational journey.${relevantDetail} What would you like to explore today?`;
   };
 
   const welcomeMessageId = useMemo(() => uuidv4(), []);

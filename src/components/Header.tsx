@@ -46,7 +46,7 @@ const Header = () => {
 
   const navItems = [
     { name: "Home", href: "/" },
-    { name: "Pricing", href: "/pricing" }
+    { name: "Donations", href: "/donations" }
   ];
 
   useEffect(() => {
@@ -164,12 +164,12 @@ const Header = () => {
 
             <li>
               <Link
-                to="/pricing"
+                to="/donations"
                 className={`text-sm font-medium transition-colors ${
-                  location.pathname === "/pricing" ? "text-primary font-semibold" : "hover:text-primary"
+                  location.pathname === "/donations" ? "text-primary font-semibold" : "hover:text-primary"
                 }`}
               >
-                Pricing
+                Donations
               </Link>
             </li>
           </ul>

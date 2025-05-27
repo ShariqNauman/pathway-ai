@@ -20,6 +20,7 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import SmartRecommenderPage from './pages/SmartRecommenderPage';
 import { AuthProvider } from './contexts/AuthContext';
 import PricingPage from "./pages/PricingPage";
+import DonationsPage from "./pages/DonationsPage";
 
 // Create a new queryClient with proper configuration for auth persistence
 const queryClient = new QueryClient({
@@ -69,6 +70,7 @@ const App = () => (
                   <Route path="/terms" element={<TermsPage />} />
                   <Route path="/privacy" element={<PrivacyPage />} />
                   <Route path="/pricing" element={<PricingPage />} />
+                  <Route path="/donations" element={<DonationsPage />} />
                   <Route path="/recommender" element={<SmartRecommenderPage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
