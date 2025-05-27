@@ -29,13 +29,28 @@ serve(async (req) => {
       additionalImagesCount: additionalImages?.length || 0
     });
 
-    // Enhanced response system for Shariq
+    // Enhanced response system for Shariq that maintains conversation context
     const generateShariqResponse = (userMessage: string, previousMessages: any[]) => {
       const lowercaseMessage = userMessage.toLowerCase();
+      const hasConversationHistory = previousMessages.length > 1;
       
-      // Handle greetings naturally
+      // If this is the very first interaction (no previous messages), give welcome
+      if (previousMessages.length <= 1) {
+        if (lowercaseMessage.includes('hi') || lowercaseMessage.includes('hello') || lowercaseMessage.includes('hey')) {
+          return "Hey! I'm Shariq, your AI college consultant. What's on your mind today?";
+        }
+        return "Hey! I'm Shariq, your AI college consultant. I'm here to help you navigate your educational journey. What would you like to talk about?";
+      }
+      
+      // For ongoing conversations, respond naturally without re-introducing
       if (lowercaseMessage.includes('hi') || lowercaseMessage.includes('hello') || lowercaseMessage.includes('hey')) {
-        return "Hey! What's on your mind today? I'm here to help with anything related to your educational journey.";
+        const greetings = [
+          "Hey there! What can I help you with?",
+          "Hi! What's on your mind?",
+          "Hello! How can I assist you today?",
+          "Hey! What would you like to know?"
+        ];
+        return greetings[Math.floor(Math.random() * greetings.length)];
       }
       
       // Handle questions about college applications
@@ -49,7 +64,7 @@ serve(async (req) => {
       }
       
       // Handle questions about universities
-      if (lowercaseMessage.includes('university') || lowercaseMessage.includes('college') || lowercaseMessage.includes('school')) {
+      if (lowercaseMessage.includes('university') || lowercaseMessage.includes('college') || lowercaseMessage.includes('school') || lowercaseMessage.includes('unis')) {
         return "I'd love to help you find the right university! There are so many factors to consider - location, program strength, campus culture, costs. What's most important to you in a university?";
       }
       
@@ -63,8 +78,18 @@ serve(async (req) => {
         return "Financing your education is definitely a key consideration. There are lots of options - scholarships, grants, work-study programs. I can help you understand what's available and how to apply. What's your situation?";
       }
       
-      // Default helpful response
-      return "I'm here to help with any questions about your educational journey - whether it's choosing schools, understanding requirements, application strategies, or anything else college-related. What would you like to explore?";
+      // Handle questions about previous conversation
+      if (lowercaseMessage.includes('before') || lowercaseMessage.includes('earlier') || lowercaseMessage.includes('previous')) {
+        return "I can see our conversation history, but could you remind me what specific topic you'd like to continue discussing? I want to make sure I give you the most helpful response.";
+      }
+      
+      // Handle vague or unclear messages
+      if (lowercaseMessage.length < 10 || lowercaseMessage.includes('what') || lowercaseMessage.includes('help')) {
+        return "I'm here to help! Could you tell me more about what you're looking for? Are you thinking about applications, choosing schools, majors, requirements, or something else?";
+      }
+      
+      // Default helpful response for ongoing conversation
+      return "That's interesting! Can you tell me more about what you're looking for? I'm here to help with any aspect of your educational journey - whether it's applications, school selection, requirements, or planning your academic path.";
     };
 
     const responseText = generateShariqResponse(message, previousMessages);
