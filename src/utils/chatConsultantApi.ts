@@ -76,8 +76,7 @@ Key guidelines:
     console.log("Making request to gemini-chat function");
     
     const { data, error } = await supabase.functions.invoke('gemini-chat', {
-      body: requestBody,
-      signal
+      body: requestBody
     });
 
     if (error) {

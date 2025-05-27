@@ -24,9 +24,10 @@ interface EssayFormProps {
   onSubmit: (data: EssayFormValues) => void;
   isAnalyzing: boolean;
   defaultValues?: EssayFormValues;
+  disabled?: boolean;
 }
 
-const EssayForm = ({ onSubmit, isAnalyzing, defaultValues }: EssayFormProps) => {
+const EssayForm = ({ onSubmit, isAnalyzing, defaultValues, disabled = false }: EssayFormProps) => {
   const form = useForm<EssayFormValues>({
     resolver: zodResolver(essaySchema),
     defaultValues: defaultValues || {
@@ -48,6 +49,7 @@ const EssayForm = ({ onSubmit, isAnalyzing, defaultValues }: EssayFormProps) => 
               <Select 
                 onValueChange={field.onChange} 
                 defaultValue={field.value}
+                disabled={disabled}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -72,7 +74,11 @@ const EssayForm = ({ onSubmit, isAnalyzing, defaultValues }: EssayFormProps) => 
             <FormItem>
               <FormLabel>Essay Prompt/Topic</FormLabel>
               <FormControl>
-                <Input placeholder="Enter the essay prompt or topic" {...field} />
+                <Input 
+                  placeholder="Enter the essay prompt or topic" 
+                  disabled={disabled}
+                  {...field} 
+                />
               </FormControl>
             </FormItem>
           )}
@@ -88,6 +94,7 @@ const EssayForm = ({ onSubmit, isAnalyzing, defaultValues }: EssayFormProps) => 
                 <Textarea 
                   placeholder="Paste your essay here..." 
                   className="min-h-[200px]" 
+                  disabled={disabled}
                   {...field} 
                 />
               </FormControl>
@@ -98,7 +105,7 @@ const EssayForm = ({ onSubmit, isAnalyzing, defaultValues }: EssayFormProps) => 
         <Button 
           type="submit" 
           className="w-full" 
-          disabled={isAnalyzing}
+          disabled={isAnalyzing || disabled}
         >
           {isAnalyzing ? (
             <>
