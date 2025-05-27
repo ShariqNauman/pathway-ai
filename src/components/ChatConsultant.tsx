@@ -235,22 +235,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   const { currentUser } = useUser();
   
   const getWelcomeMessage = (user: UserProfile | null) => {
-    if (!user) {
-      return "Hey! I'm your AI college consultant. I'm here to help you navigate your educational journey. Sign in to get personalized guidance!";
-    }
-
-    const prefs = user.preferences;
-    let relevantDetail = "";
-
-    if (prefs.intendedMajor && prefs.selectedDomains?.length > 0) {
-      relevantDetail = ` I see you're interested in ${prefs.intendedMajor}, particularly ${prefs.selectedDomains.join(" and ")}. That's exciting!`;
-    } else if (prefs.intendedMajor) {
-      relevantDetail = ` I notice you're interested in ${prefs.intendedMajor}. Great choice!`;
-    } else if (prefs.preferredCountry) {
-      relevantDetail = ` I see you're interested in studying in ${prefs.preferredCountry}. Awesome!`;
-    }
-
-    return `Hi there! I'm your AI college consultant, ready to help you with your educational journey.${relevantDetail} What would you like to explore today?`;
+    return "Hey! I'm Shariq, your AI college consultant. I'm here to help you navigate your educational journey. What would you like to talk about?";
   };
 
   const welcomeMessageId = useMemo(() => uuidv4(), []);
@@ -760,8 +745,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
         },
         currentUser,
         primaryImage,
-        additionalImages,
-        abortControllerRef.current.signal
+        additionalImages
       );
       
       console.log("Gemini API response received", { hasError: !!response.error });
@@ -1253,7 +1237,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
               >
                 {message.sender === "ai" && (
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/chatbot-logo.svg" alt="AI Consultant" />
+                    <AvatarImage src="/chatbot-logo.svg" alt="Shariq - AI Consultant" />
                     <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500">
                       <MessageSquare className="h-4 w-4 text-white" />
                     </AvatarFallback>
@@ -1345,7 +1329,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
                 onPaste={handleImagePaste}
-                placeholder="Message AI Consultant..."
+                placeholder="Message Shariq..."
                 className="pr-14 py-3 min-h-[50px] max-h-[200px] resize-none rounded-full"
                 disabled={isLoading || isLimitReached}
               />
