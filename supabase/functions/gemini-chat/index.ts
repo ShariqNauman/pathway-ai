@@ -34,8 +34,12 @@ serve(async (req) => {
       const lowercaseMessage = userMessage.toLowerCase();
       const hasConversationHistory = previousMessages.length > 1;
       
-      // If this is the very first interaction (no previous messages), give welcome
-      if (previousMessages.length <= 1) {
+      // Check if this is truly the first interaction (no AI responses yet)
+      const aiResponseCount = previousMessages.filter(msg => msg.role === 'model').length;
+      const isFirstInteraction = aiResponseCount === 0;
+      
+      // If this is the very first interaction, give welcome
+      if (isFirstInteraction) {
         if (lowercaseMessage.includes('hi') || lowercaseMessage.includes('hello') || lowercaseMessage.includes('hey')) {
           return "Hey! I'm Shariq, your AI college consultant. What's on your mind today?";
         }

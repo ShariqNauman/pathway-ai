@@ -1,4 +1,5 @@
-import { getGeminiResponse } from "./geminiApi";
+
+import { getChatResponse } from "./chatConsultantApi";
 import { renderMarkdown } from "./markdownUtils";
 import { EssaySegment } from "@/components/essay-checker/HighlightedEssay";
 import { RatingCategory } from "@/components/essay-checker/EssayRating";
@@ -123,8 +124,8 @@ CRITICAL INSTRUCTIONS:
 
 Remember: Write in a natural, flowing style while covering all required aspects of the evaluation.`;
     
-    const response = await getGeminiResponse(promptForAI);
-    console.log("Gemini API Response:", response);
+    const response = await getChatResponse(promptForAI);
+    console.log("Chat API Response:", response);
     
     if (response.error) {
       return { 

@@ -70,7 +70,7 @@ interface ChatConsultantProps {
 const DEFAULT_CHAT_TITLE = "New Chat";
 const MIN_USER_MESSAGES_FOR_TITLE = 5;
 const MAX_IMAGES = 3;
-const MAX_DAILY_MESSAGES = 30;
+const MAX_DAILY_MESSAGES = 15; // Changed from 30 to 15
 
 const ABBREVIATIONS = {
   // Degrees and Levels
