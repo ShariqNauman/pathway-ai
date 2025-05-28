@@ -9,13 +9,11 @@ import EssayRating, { RatingCategory } from "./essay-checker/EssayRating";
 import { Button } from "./ui/button";
 import { FileText } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
-import { supabase } from "@/integrations/supabase/client";
+import { checkAndUpdateLimits, checkLimitsOnly } from "@/utils/messageLimits";
 
 interface EssayCheckerProps {
   initialSidebarOpen?: boolean;
 }
-
-const MAX_DAILY_ESSAYS = 3;
 
 const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen = false }) => {
   const { currentUser } = useUser();
@@ -32,133 +30,39 @@ const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen = false 
     essay: ""
   });
   const [hasAnalyzedOnce, setHasAnalyzedOnce] = useState(false);
-  const [essayCount, setEssayCount] = useState<number>(0);
-  const [isLimitReached, setIsLimitReached] = useState(false);
-
-  const checkEssayLimit = async (userId: string) => {
-    try {
-      const { data: limitData, error: limitError } = await supabase
-        .from('message_limits')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (limitError && limitError.code !== 'PGRST116') {
-        console.error('Error checking essay limit:', limitError);
-        return false;
-      }
-
-      const now = new Date();
-      const resetTime = new Date(now.toISOString().split('T')[0] + 'T00:00:00.000Z');
-
-      if (!limitData) {
-        const { error } = await supabase
-          .from('message_limits')
-          .insert({
-            user_id: userId,
-            essay_count: 1,
-            last_reset_essays: resetTime.toISOString()
-          });
-
-        if (error) {
-          console.error('Error creating essay limit:', error);
-          return false;
-        }
-
-        setEssayCount(1);
-        return true;
-      }
-
-      const lastReset = new Date(limitData.last_reset_essays || limitData.last_reset);
-      if (now > lastReset && now.getUTCDate() !== lastReset.getUTCDate()) {
-        const { error } = await supabase
-          .from('message_limits')
-          .update({
-            essay_count: 1,
-            last_reset_essays: resetTime.toISOString()
-          })
-          .eq('user_id', userId);
-
-        if (error) {
-          console.error('Error resetting essay limit:', error);
-          return false;
-        }
-
-        setEssayCount(1);
-        return true;
-      }
-
-      if ((limitData.essay_count || 0) >= MAX_DAILY_ESSAYS) {
-        setIsLimitReached(true);
-        return false;
-      }
-
-      const { error } = await supabase
-        .from('message_limits')
-        .update({
-          essay_count: (limitData.essay_count || 0) + 1
-        })
-        .eq('user_id', userId);
-
-      if (error) {
-        console.error('Error updating essay count:', error);
-        return false;
-      }
-
-      setEssayCount((limitData.essay_count || 0) + 1);
-      return true;
-    } catch (error) {
-      console.error('Error in checkEssayLimit:', error);
-      return false;
-    }
-  };
+  const [limitInfo, setLimitInfo] = useState<{
+    canUse: boolean;
+    remaining: number;
+    resetTime: string | null;
+    isAdmin?: boolean;
+  }>({ canUse: true, remaining: 0, resetTime: null });
 
   React.useEffect(() => {
-    const fetchEssayCount = async () => {
-      if (!currentUser?.id) return;
-
-      const { data, error } = await supabase
-        .from('message_limits')
-        .select('essay_count, last_reset_essays, last_reset')
-        .eq('user_id', currentUser.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching essay count:', error);
-        return;
-      }
-
-      if (data) {
-        const now = new Date();
-        const lastReset = new Date(data.last_reset_essays || data.last_reset);
-        
-        if (now > lastReset && now.getUTCDate() !== lastReset.getUTCDate()) {
-          setEssayCount(0);
-          setIsLimitReached(false);
-        } else {
-          setEssayCount(data.essay_count || 0);
-          setIsLimitReached((data.essay_count || 0) >= MAX_DAILY_ESSAYS);
-        }
-      }
+    const fetchLimitInfo = async () => {
+      const info = await checkLimitsOnly(currentUser?.id || null, 'essay');
+      setLimitInfo(info);
     };
 
-    fetchEssayCount();
+    fetchLimitInfo();
   }, [currentUser?.id]);
   
   const handleAnalyzeEssay = async (data: EssayFormValues) => {
-    if (!currentUser?.id) {
-      toast.error("Please sign in to analyze essays");
+    if (!limitInfo.canUse) {
+      if (!currentUser) {
+        toast.error("You've reached your weekly limit. Please sign in or create an account to continue.");
+      } else {
+        toast.error("You've reached your daily limit. Please try again tomorrow.");
+      }
       return;
     }
 
-    if (isLimitReached) {
-      toast.error(`You've reached your daily limit of ${MAX_DAILY_ESSAYS} essays. Please try again tomorrow at UTC midnight.`);
-      return;
-    }
-
-    const canAnalyze = await checkEssayLimit(currentUser.id);
-    if (!canAnalyze) {
-      toast.error(`You've reached your daily limit of ${MAX_DAILY_ESSAYS} essays. Please try again tomorrow at UTC midnight.`);
+    const result = await checkAndUpdateLimits(currentUser?.id || null, 'essay');
+    if (!result.canUse) {
+      if (!currentUser) {
+        toast.error("You've reached your weekly limit. Please sign in or create an account to continue.");
+      } else {
+        toast.error("You've reached your daily limit. Please try again tomorrow.");
+      }
       return;
     }
 
@@ -170,17 +74,20 @@ const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen = false 
     setHasAnalyzedOnce(true);
     
     try {
-      const result = await analyzeEssay(data.essayType, data.prompt, data.essay);
+      const analysisResult = await analyzeEssay(data.essayType, data.prompt, data.essay);
       
-      if (!result || !result.highlightedEssay) {
+      if (!analysisResult || !analysisResult.highlightedEssay) {
         toast.error("Error analyzing essay. Please try again.");
         setIsAnalyzing(false);
         return;
       }
       
-      setHighlightedEssay(result.highlightedEssay);
-      setFeedback(result.feedback);
-      setRatings(result.ratings);
+      setHighlightedEssay(analysisResult.highlightedEssay);
+      setFeedback(analysisResult.feedback);
+      setRatings(analysisResult.ratings);
+      
+      // Update limit info after successful analysis
+      setLimitInfo(result);
     } catch (err) {
       console.error("Essay analysis error:", err);
       toast.error("Error analyzing essay. Please try again.");
@@ -201,12 +108,19 @@ const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen = false 
     setHasAnalyzedOnce(false);
   };
 
-  const essayCountDisplay = currentUser && (
+  const shouldShowLimits = !limitInfo.isAdmin;
+
+  const essayCountDisplay = shouldShowLimits && (
     <div className="text-sm text-muted-foreground text-center mt-4">
-      {isLimitReached ? (
-        <span className="text-destructive">Daily essay limit reached ({MAX_DAILY_ESSAYS}/{MAX_DAILY_ESSAYS})</span>
+      {!limitInfo.canUse ? (
+        <span className="text-destructive">
+          {!currentUser ? "Weekly essay limit reached" : "Daily essay limit reached"}
+        </span>
       ) : (
-        <span>Essays remaining today: {MAX_DAILY_ESSAYS - essayCount}/{MAX_DAILY_ESSAYS}</span>
+        <span>
+          Essays remaining {!currentUser ? "this week" : "today"}: {limitInfo.remaining}
+          {limitInfo.resetTime && ` (Resets ${limitInfo.resetTime})`}
+        </span>
       )}
     </div>
   );
@@ -221,7 +135,7 @@ const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen = false 
                 onSubmit={handleAnalyzeEssay} 
                 isAnalyzing={isAnalyzing}
                 defaultValues={currentFormValues}
-                disabled={isLimitReached}
+                disabled={!limitInfo.canUse}
               />
               {essayCountDisplay}
             </div>

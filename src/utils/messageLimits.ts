@@ -3,11 +3,96 @@ import { supabase } from '@/integrations/supabase/client';
 
 const ADMIN_EMAIL = 'shariqnaumann@gmail.com'; // Admin email with no limits
 
-export async function checkAndUpdateLimits(
-  userId: string, 
-  feature: 'chat' | 'essay' | 'recommender'
-): Promise<{ canUse: boolean; remaining: number; resetTime: string | null }> {
+// Weekly limits for unsigned users
+const UNSIGNED_WEEKLY_LIMITS = {
+  chat: 5,
+  essay: 1,
+  recommender: 1
+};
+
+// Helper function to get the start of the current week (Monday)
+function getWeekStart(): Date {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust when day is Sunday
+  const monday = new Date(now.setDate(diff));
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+// Helper function to manage unsigned user limits in localStorage
+function getUnsignedUserLimits() {
+  const stored = localStorage.getItem('unsignedUserLimits');
+  if (!stored) return null;
+  
   try {
+    const data = JSON.parse(stored);
+    const weekStart = getWeekStart();
+    
+    // Check if we need to reset (new week)
+    if (new Date(data.weekStart) < weekStart) {
+      return null; // Reset needed
+    }
+    
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function setUnsignedUserLimits(chatCount: number, essayCount: number, recommenderCount: number) {
+  const weekStart = getWeekStart();
+  const data = {
+    chatCount,
+    essayCount,
+    recommenderCount,
+    weekStart: weekStart.toISOString()
+  };
+  localStorage.setItem('unsignedUserLimits', JSON.stringify(data));
+}
+
+export async function checkAndUpdateLimits(
+  userId: string | null, 
+  feature: 'chat' | 'essay' | 'recommender'
+): Promise<{ canUse: boolean; remaining: number; resetTime: string | null; isAdmin?: boolean }> {
+  try {
+    // Handle unsigned users
+    if (!userId) {
+      let limits = getUnsignedUserLimits();
+      
+      if (!limits) {
+        // Initialize limits for new week
+        limits = {
+          chatCount: 0,
+          essayCount: 0,
+          recommenderCount: 0,
+          weekStart: getWeekStart().toISOString()
+        };
+      }
+
+      const weeklyLimit = UNSIGNED_WEEKLY_LIMITS[feature];
+      const currentCount = limits[`${feature}Count`];
+
+      if (currentCount >= weeklyLimit) {
+        return {
+          canUse: false,
+          remaining: 0,
+          resetTime: 'Next Monday at 00:00 UTC'
+        };
+      }
+
+      // Increment count
+      const newCounts = { ...limits };
+      newCounts[`${feature}Count`] = currentCount + 1;
+      setUnsignedUserLimits(newCounts.chatCount, newCounts.essayCount, newCounts.recommenderCount);
+
+      return {
+        canUse: true,
+        remaining: weeklyLimit - (currentCount + 1),
+        resetTime: 'Next Monday at 00:00 UTC'
+      };
+    }
+
     // Check if user is admin
     const { data: profile } = await supabase
       .from('profiles')
@@ -16,10 +101,10 @@ export async function checkAndUpdateLimits(
       .single();
 
     if (profile?.email === ADMIN_EMAIL) {
-      return { canUse: true, remaining: 999, resetTime: null };
+      return { canUse: true, remaining: 999, resetTime: null, isAdmin: true };
     }
 
-    // Get current limits
+    // Get current limits for signed-in users
     const { data: limits, error: fetchError } = await supabase
       .from('message_limits')
       .select('*')
@@ -158,10 +243,34 @@ export async function checkAndUpdateLimits(
 
 // New function to check limits without updating them
 export async function checkLimitsOnly(
-  userId: string, 
+  userId: string | null, 
   feature: 'chat' | 'essay' | 'recommender'
-): Promise<{ canUse: boolean; remaining: number; resetTime: string | null }> {
+): Promise<{ canUse: boolean; remaining: number; resetTime: string | null; isAdmin?: boolean }> {
   try {
+    // Handle unsigned users
+    if (!userId) {
+      let limits = getUnsignedUserLimits();
+      
+      if (!limits) {
+        // Initialize limits for new week
+        limits = {
+          chatCount: 0,
+          essayCount: 0,
+          recommenderCount: 0,
+          weekStart: getWeekStart().toISOString()
+        };
+      }
+
+      const weeklyLimit = UNSIGNED_WEEKLY_LIMITS[feature];
+      const currentCount = limits[`${feature}Count`];
+
+      return {
+        canUse: currentCount < weeklyLimit,
+        remaining: Math.max(0, weeklyLimit - currentCount),
+        resetTime: 'Next Monday at 00:00 UTC'
+      };
+    }
+
     // Check if user is admin
     const { data: profile } = await supabase
       .from('profiles')
@@ -170,10 +279,10 @@ export async function checkLimitsOnly(
       .single();
 
     if (profile?.email === ADMIN_EMAIL) {
-      return { canUse: true, remaining: 999, resetTime: null };
+      return { canUse: true, remaining: 999, resetTime: null, isAdmin: true };
     }
 
-    // Get current limits
+    // Get current limits for signed-in users
     const { data: limits, error: fetchError } = await supabase
       .from('message_limits')
       .select('*')
