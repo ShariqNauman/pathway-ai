@@ -62,14 +62,76 @@ function generateDefaultRatings(): {
   };
 }
 
+function generateDefaultHighlights(essay: string): { text: string; comment: string; }[] {
+  // Create meaningful highlights by analyzing essay structure
+  const sentences = essay.match(/[^.!?]+[.!?]+/g) || [];
+  const paragraphs = essay.split('\n\n').filter(p => p.trim().length > 0);
+  
+  const highlights = [];
+  
+  // Always highlight the opening sentence
+  if (sentences.length > 0) {
+    highlights.push({
+      text: sentences[0].trim(),
+      comment: "Consider strengthening your opening to immediately capture the reader's attention with a more compelling hook."
+    });
+  }
+  
+  // Highlight a middle section for development
+  if (sentences.length > 3) {
+    const middleIndex = Math.floor(sentences.length / 2);
+    highlights.push({
+      text: sentences[middleIndex].trim(),
+      comment: "This section could benefit from more specific examples or deeper reflection to strengthen your narrative."
+    });
+  }
+  
+  // Highlight conclusion if available
+  if (sentences.length > 1) {
+    highlights.push({
+      text: sentences[sentences.length - 1].trim(),
+      comment: "Consider making your conclusion more impactful by clearly connecting back to your main theme and showing growth."
+    });
+  }
+  
+  // Add paragraph-level feedback if we have multiple paragraphs
+  if (paragraphs.length > 1 && highlights.length < 4) {
+    const longParagraphs = paragraphs.filter(p => p.length > 200);
+    if (longParagraphs.length > 0) {
+      const firstLongParagraph = longParagraphs[0];
+      const firstSentence = firstLongParagraph.match(/^[^.!?]+[.!?]+/)?.[0];
+      if (firstSentence && !highlights.some(h => h.text === firstSentence.trim())) {
+        highlights.push({
+          text: firstSentence.trim(),
+          comment: "This paragraph is quite long. Consider breaking it into smaller, more focused paragraphs for better readability."
+        });
+      }
+    }
+  }
+  
+  // Ensure we have at least 3 highlights
+  if (highlights.length < 3 && sentences.length > highlights.length) {
+    for (let i = 1; i < sentences.length && highlights.length < 3; i++) {
+      const sentence = sentences[i].trim();
+      if (!highlights.some(h => h.text === sentence)) {
+        highlights.push({
+          text: sentence,
+          comment: "Consider revising this section for greater clarity and impact."
+        });
+      }
+    }
+  }
+  
+  return highlights.slice(0, 5); // Maximum 5 highlights
+}
+
 export async function analyzeEssay(
   essayType: string,
   prompt: string,
   essay: string
 ): Promise<EssayAnalysisResult> {
   try {
-    const promptForAI = `
-You are an experienced college admissions officer with 15+ years of experience at top universities. You are evaluating the following ${essayType}.
+    const promptForAI = `You are an experienced college admissions officer with 15+ years of experience at top universities. You are evaluating the following ${essayType}.
 
 ESSAY PROMPT: "${prompt}"
 
@@ -78,9 +140,11 @@ ESSAY: "${essay}"
 Analyze this essay as if you were making an actual admissions decision. Your response MUST follow this exact format with NO DEVIATIONS:
 
 ---HIGHLIGHTED_PARTS---
-[exact text that needs improvement]||[your specific comment about this text and how it could be improved to strengthen the application]
-[next text part]||[your specific comment]
-...add more highlighted parts as needed
+IMPORTANT: You MUST provide at least 3-5 highlighted text segments from the essay. Each highlight should be an exact quote from the essay followed by specific feedback.
+
+[exact text from essay]||[specific feedback about this text and how to improve it]
+[next exact text from essay]||[specific feedback about this text and how to improve it]
+[continue with 3-5 total highlights]
 
 ---OVERALL_FEEDBACK---
 [Write a comprehensive evaluation in paragraph form, approximately 500 words. Begin with a one-sentence overall assessment. Then, analyze the following aspects in flowing paragraphs:
@@ -111,18 +175,11 @@ Authenticity: [score 1-100, measuring genuineness and self-reflection]
 Conciseness: [score 1-100, assessing efficiency and impact of language]
 
 CRITICAL INSTRUCTIONS:
-1. Write the feedback in flowing paragraphs - DO NOT use numbered sections
-2. Ensure smooth transitions between different aspects of the evaluation
-3. Include all required aspects (First Impression through Recommendations) in a natural, flowing narrative
-4. End with clear, bullet-pointed recommendations
-5. Evaluate with the same rigor you would use for actual college applications
-6. Each highlighted text MUST be an EXACT match to text in the original essay
-7. For each highlight, explain both the impact on the application and how to improve
-8. Focus on elements that influence admission decisions (character, growth, potential)
-9. Rate based on actual admission standards, not general writing quality
-10. Maintain clear paragraph breaks between major topics
-
-Remember: Write in a natural, flowing style while covering all required aspects of the evaluation.`;
+1. You MUST provide highlighted parts - this is essential for the analysis
+2. Each highlighted text MUST be an EXACT match to text in the original essay
+3. Provide specific, actionable feedback for each highlight
+4. Write flowing paragraphs in the feedback section
+5. Rate based on actual admission standards`;
     
     const response = await getChatResponse(promptForAI);
     console.log("Chat API Response:", response);
@@ -152,107 +209,34 @@ Remember: Write in a natural, flowing style while covering all required aspects 
       console.log("Full response text:", response.text);
       console.log("Parsed sections:", { 
         highlightedPartSection: highlightedPartSection.substring(0, 100) + "...", 
-        overallFeedbackSection,
+        overallFeedbackSection: overallFeedbackSection.substring(0, 100) + "...",
         ratingsSection
       });
       
-      // Improved handling for missing highlighted parts
-      if (!highlightedPartSection || !highlightedPartSection.trim()) {
-        console.warn("No highlighted parts found in AI response");
-        
-        // Create default highlight sections by analyzing the essay
-        // This ensures we always have some highlighted parts even if the AI didn't provide them
-        const sentences = essay.match(/[^.!?]+[.!?]+/g) || [];
-        const highlightedSentences = sentences
-          .filter((_, index) => index % 3 === 0) // Highlight every third sentence
-          .slice(0, 5); // Maximum 5 highlights
-        
-        const defaultHighlights = highlightedSentences.map(sentence => ({
-          text: sentence.trim(),
-          comment: "Consider revising this section for clarity and impact."
-        }));
-        
-        // Process feedback as normal
-        let finalFeedback = "";
-        if (overallFeedbackSection) {
-          finalFeedback = await renderMarkdown(overallFeedbackSection);
-        } else {
-          finalFeedback = await renderMarkdown(response.text);
-        }
-        
-        // Parse segments from our default highlights
-        const segments: EssaySegment[] = [];
-        let remainingEssay = essay;
-        
-        for (const highlight of defaultHighlights) {
-          if (!remainingEssay.includes(highlight.text)) continue;
-          
-          const startIndex = remainingEssay.indexOf(highlight.text);
-          
-          // Add non-highlighted text before this highlight
-          if (startIndex > 0) {
-            segments.push({
-              text: remainingEssay.substring(0, startIndex),
-              highlighted: false,
-              comment: null,
-            });
-          }
-          
-          // Add the highlighted text
-          segments.push({
-            text: highlight.text,
-            highlighted: true,
-            comment: highlight.comment,
-          });
-          
-          // Update the remaining essay
-          remainingEssay = remainingEssay.substring(startIndex + highlight.text.length);
-        }
-        
-        // Add any remaining text
-        if (remainingEssay.length > 0) {
-          segments.push({
-            text: remainingEssay,
-            highlighted: false,
-            comment: null,
-          });
-        }
-        
-        return {
-          highlightedEssay: segments,
-          feedback: finalFeedback,
-          ratings: generateDefaultRatings()
-        };
+      // Process highlighted parts with fallback to defaults
+      let highlights = [];
+      
+      if (highlightedPartSection && highlightedPartSection.trim()) {
+        highlights = highlightedPartSection
+          .split("\n")
+          .filter(line => line.includes("||"))
+          .map(line => {
+            const [text, comment] = line.split("||").map(part => part.trim());
+            return { text, comment };
+          })
+          .filter(highlight => highlight.text && highlight.text.length > 0);
       }
       
-      // Process highlighted parts
-      const highlights = highlightedPartSection
-        .split("\n")
-        .filter(line => line.includes("||"))
-        .map(line => {
-          const [text, comment] = line.split("||").map(part => part.trim());
-          return { text, comment };
-        })
-        .filter(highlight => highlight.text && highlight.text.length > 0);
-      
-      console.log("Parsed highlights:", highlights);
-      
-      // If we still don't have highlights after parsing, create some default ones
-      if (highlights.length === 0) {
-        const sentences = essay.match(/[^.!?]+[.!?]+/g) || [];
-        const highlightedSentences = sentences
-          .filter((_, index) => index % 3 === 0)
-          .slice(0, 5);
-          
-        for (const sentence of highlightedSentences) {
-          highlights.push({
-            text: sentence.trim(),
-            comment: "Consider revising this section for clarity and impact."
-          });
-        }
+      // If no highlights were parsed or too few, generate defaults
+      if (highlights.length < 3) {
+        console.warn("Insufficient highlighted parts found, generating defaults");
+        const defaultHighlights = generateDefaultHighlights(essay);
+        highlights = [...highlights, ...defaultHighlights].slice(0, 5);
       }
       
-      // Create highlighted essay segments with improved matching
+      console.log("Final highlights:", highlights);
+      
+      // Create highlighted essay segments
       let segments: EssaySegment[] = [];
       
       if (highlights.length > 0) {
@@ -262,37 +246,33 @@ Remember: Write in a natural, flowing style while covering all required aspects 
           // Skip invalid highlights
           if (!highlight.text || highlight.text.length < 3) continue;
           
-          // Improved matching for highlights that might have whitespace differences
-          const escapedText = highlight.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const flexibleRegex = new RegExp(escapedText.replace(/\s+/g, '\\s+'), 'i');
-          const match = remainingEssay.match(flexibleRegex);
+          // Find the highlight in the remaining essay
+          const highlightIndex = remainingEssay.toLowerCase().indexOf(highlight.text.toLowerCase());
           
-          if (!match) {
+          if (highlightIndex === -1) {
             console.warn(`Could not find highlight text: "${highlight.text}" in essay`);
             continue;
           }
           
-          const matchedText = match[0];
-          const startIndex = match.index || 0;
-          
           // Add non-highlighted text before this highlight
-          if (startIndex > 0) {
+          if (highlightIndex > 0) {
             segments.push({
-              text: remainingEssay.substring(0, startIndex),
+              text: remainingEssay.substring(0, highlightIndex),
               highlighted: false,
               comment: null,
             });
           }
           
-          // Add the highlighted text
+          // Add the highlighted text (use the actual text from essay to preserve formatting)
+          const actualText = remainingEssay.substring(highlightIndex, highlightIndex + highlight.text.length);
           segments.push({
-            text: matchedText,
+            text: actualText,
             highlighted: true,
             comment: highlight.comment,
           });
           
           // Update the remaining essay
-          remainingEssay = remainingEssay.substring(startIndex + matchedText.length);
+          remainingEssay = remainingEssay.substring(highlightIndex + highlight.text.length);
         }
         
         // Add any remaining text
@@ -304,7 +284,7 @@ Remember: Write in a natural, flowing style while covering all required aspects 
           });
         }
       } else {
-        // If no highlights were found, just display the original essay
+        // If no highlights, just display the original essay
         segments = [{
           text: essay,
           highlighted: false,
@@ -315,21 +295,7 @@ Remember: Write in a natural, flowing style while covering all required aspects 
       // Process and set overall feedback
       let finalFeedback = "";
       if (overallFeedbackSection) {
-        // Clean up the feedback to ensure consistent formatting
-        const cleanedFeedback = overallFeedbackSection
-          .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
-          .replace(/^\s+|\s+$/g, '') // Trim whitespace
-          .split('\n')
-          .map(line => {
-            // Ensure numbered sections are properly formatted
-            if (/^\d+\./.test(line)) {
-              return `\n${line}`;
-            }
-            return line;
-          })
-          .join('\n');
-        
-        finalFeedback = await renderMarkdown(cleanedFeedback);
+        finalFeedback = await renderMarkdown(overallFeedbackSection);
       } else {
         finalFeedback = await renderMarkdown(response.text);
       }
@@ -339,8 +305,6 @@ Remember: Write in a natural, flowing style while covering all required aspects 
       
       if (ratingsSection) {
         try {
-          const ratingLines = ratingsSection.split('\n').filter(line => line.includes(':'));
-          
           // Parse overall rating
           const overallMatch = ratingsSection.match(/Overall:\s*(\d+)/i);
           if (overallMatch && overallMatch[1]) {
@@ -351,13 +315,13 @@ Remember: Write in a natural, flowing style while covering all required aspects 
           }
           
           // Parse category ratings
-          const categoryMap: Record<string, keyof typeof ratings.categories[0]> = {
-            'Uniqueness': 'name',
-            'Hook': 'name',
-            'Voice': 'name',
-            'Flow': 'name',
-            'Authenticity': 'name',
-            'Conciseness': 'name'
+          const categoryMap: Record<string, string> = {
+            'Uniqueness': 'Uniqueness',
+            'Hook': 'Hook',
+            'Voice': 'Voice',
+            'Flow': 'Flow',
+            'Authenticity': 'Authenticity',
+            'Conciseness': 'Conciseness'
           };
           
           Object.keys(categoryMap).forEach(category => {
@@ -377,7 +341,6 @@ Remember: Write in a natural, flowing style while covering all required aspects 
           
         } catch (ratingError) {
           console.error("Error parsing ratings:", ratingError);
-          // Use default ratings if parsing fails
         }
       }
       
@@ -388,10 +351,44 @@ Remember: Write in a natural, flowing style while covering all required aspects 
       };
     } catch (parseError) {
       console.error("Error parsing AI response:", parseError);
-      // If parsing fails, just display the raw response
+      
+      // Fallback: create default highlights and use raw response
+      const defaultHighlights = generateDefaultHighlights(essay);
+      let segments: EssaySegment[] = [];
+      let remainingEssay = essay;
+      
+      for (const highlight of defaultHighlights) {
+        const highlightIndex = remainingEssay.indexOf(highlight.text);
+        if (highlightIndex !== -1) {
+          if (highlightIndex > 0) {
+            segments.push({
+              text: remainingEssay.substring(0, highlightIndex),
+              highlighted: false,
+              comment: null,
+            });
+          }
+          
+          segments.push({
+            text: highlight.text,
+            highlighted: true,
+            comment: highlight.comment,
+          });
+          
+          remainingEssay = remainingEssay.substring(highlightIndex + highlight.text.length);
+        }
+      }
+      
+      if (remainingEssay.length > 0) {
+        segments.push({
+          text: remainingEssay,
+          highlighted: false,
+          comment: null,
+        });
+      }
+      
       const renderedFeedback = await renderMarkdown(response.text);
       return { 
-        highlightedEssay: [], 
+        highlightedEssay: segments,
         feedback: renderedFeedback,
         ratings: generateDefaultRatings(),
         error: parseError instanceof Error ? parseError.message : "Unknown parsing error"
@@ -399,8 +396,17 @@ Remember: Write in a natural, flowing style while covering all required aspects 
     }
   } catch (error) {
     console.error("Error analyzing essay:", error);
+    
+    // Final fallback with default highlights
+    const defaultHighlights = generateDefaultHighlights(essay);
+    const segments: EssaySegment[] = [{
+      text: essay,
+      highlighted: false,
+      comment: null,
+    }];
+    
     return { 
-      highlightedEssay: [], 
+      highlightedEssay: segments,
       feedback: "An error occurred while analyzing your essay. Please try again.",
       ratings: generateDefaultRatings(),
       error: error instanceof Error ? error.message : "Unknown error"

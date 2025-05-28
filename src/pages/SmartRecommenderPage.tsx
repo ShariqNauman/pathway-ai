@@ -6,8 +6,9 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Slider } from '../components/ui/slider';
-import { Loader2, ChevronRight, Star, MapPin, DollarSign, GraduationCap } from 'lucide-react';
+import { Loader2, ChevronRight, Star, MapPin, DollarSign, GraduationCap, AlertTriangle } from 'lucide-react';
 import { getChatResponse } from '../utils/chatConsultantApi';
+import { checkAndUpdateLimits } from '../utils/messageLimits';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { toast } from "sonner";
@@ -71,6 +72,7 @@ export default function SmartRecommenderPage() {
   const [currentAnswer, setCurrentAnswer] = useState<any>('');
   const [academicProfile, setAcademicProfile] = useState<any>(null);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+  const [limitInfo, setLimitInfo] = useState({ canUse: true, remaining: 5, resetTime: null });
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
@@ -92,9 +94,42 @@ export default function SmartRecommenderPage() {
     visible: { x: 0, opacity: 1 }
   };
 
+  // Check limits on component mount
+  useEffect(() => {
+    const checkLimits = async () => {
+      if (currentUser) {
+        try {
+          const limits = await checkAndUpdateLimits(currentUser.id, 'recommender');
+          setLimitInfo(limits);
+        } catch (error) {
+          console.error('Error checking limits:', error);
+        }
+      }
+    };
+    
+    checkLimits();
+  }, [currentUser]);
+
   const generateQuestions = async () => {
+    if (!limitInfo.canUse) {
+      toast.error(`You've reached your daily limit of 5 recommendations. Try again after ${limitInfo.resetTime}.`);
+      return;
+    }
+
     setIsGeneratingQuestions(true);
     try {
+      // Update limits first
+      if (currentUser) {
+        const newLimits = await checkAndUpdateLimits(currentUser.id, 'recommender');
+        setLimitInfo(newLimits);
+        
+        if (!newLimits.canUse) {
+          toast.error(`You've reached your daily limit of 5 recommendations. Try again after ${newLimits.resetTime}.`);
+          setIsGeneratingQuestions(false);
+          return;
+        }
+      }
+
       const prompt = `Generate a comprehensive set of questions to recommend universities to a student.
       Consider the user's profile data: ${JSON.stringify(currentUser?.preferences, null, 2)}
       
@@ -449,6 +484,34 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
             <p className="text-muted-foreground text-lg">
               Get personalized university recommendations based on your profile and preferences
             </p>
+            
+            {/* Usage Limits Display */}
+            {currentUser && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="mt-6 flex justify-center"
+              >
+                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm ${
+                  limitInfo.canUse 
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' 
+                    : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                }`}>
+                  {limitInfo.canUse ? (
+                    <>
+                      <GraduationCap className="h-4 w-4" />
+                      <span>{limitInfo.remaining} recommendations remaining today</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="h-4 w-4" />
+                      <span>Daily limit reached. Resets at {limitInfo.resetTime}</span>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            )}
           </motion.div>
 
           {error && (
@@ -476,6 +539,7 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
                 <Button
                   size="lg"
                   onClick={generateQuestions}
+                  disabled={!limitInfo.canUse}
                   className="bg-primary hover:bg-primary/90 text-white"
                 >
                   Start Recommendation Process
