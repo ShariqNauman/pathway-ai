@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 const ADMIN_EMAIL = 'shariqnaumann@gmail.com'; // Admin email with no limits
@@ -6,7 +5,7 @@ const ADMIN_EMAIL = 'shariqnaumann@gmail.com'; // Admin email with no limits
 export async function checkAndUpdateLimits(
   userId: string, 
   feature: 'chat' | 'essay' | 'recommender'
-): Promise<{ canUse: boolean; remaining: number; resetTime: string | null }> {
+): Promise<{ canUse: boolean; remaining: number; resetTime: string | null; isAdmin?: boolean }> {
   try {
     // Check if user is admin
     const { data: profile } = await supabase
@@ -16,7 +15,7 @@ export async function checkAndUpdateLimits(
       .single();
 
     if (profile?.email === ADMIN_EMAIL) {
-      return { canUse: true, remaining: 999, resetTime: null };
+      return { canUse: true, remaining: 999, resetTime: null, isAdmin: true };
     }
 
     // Get current limits
@@ -111,7 +110,8 @@ export async function checkAndUpdateLimits(
           timeZone: 'UTC',
           hour: '2-digit',
           minute: '2-digit'
-        }) + ' UTC'
+        }) + ' UTC',
+        isAdmin: false
       };
     }
 
@@ -125,7 +125,8 @@ export async function checkAndUpdateLimits(
           timeZone: 'UTC',
           hour: '2-digit',
           minute: '2-digit'
-        }) + ' UTC'
+        }) + ' UTC',
+        isAdmin: false
       };
     }
 
@@ -146,22 +147,60 @@ export async function checkAndUpdateLimits(
         timeZone: 'UTC',
         hour: '2-digit',
         minute: '2-digit'
-      }) + ' UTC'
+      }) + ' UTC',
+      isAdmin: false
     };
 
   } catch (error) {
     console.error('Error checking/updating limits:', error);
     // Default to allowing usage if there's an error
-    return { canUse: true, remaining: 1, resetTime: null };
+    return { canUse: true, remaining: 1, resetTime: null, isAdmin: false };
   }
 }
 
 // New function to check limits without updating them
 export async function checkLimitsOnly(
-  userId: string, 
+  userId: string | null, 
   feature: 'chat' | 'essay' | 'recommender'
-): Promise<{ canUse: boolean; remaining: number; resetTime: string | null }> {
+): Promise<{ canUse: boolean; remaining: number; resetTime: string | null; isAdmin?: boolean }> {
   try {
+    // Handle unsigned users with weekly limits stored in localStorage
+    if (!userId) {
+      const storageKey = `unsigned_limits_${feature}`;
+      const weeklyLimits = { chat: 5, essay: 1, recommender: 1 };
+      const limit = weeklyLimits[feature];
+      
+      const stored = localStorage.getItem(storageKey);
+      const now = Date.now();
+      const oneWeek = 7 * 24 * 60 * 60 * 1000;
+      
+      let currentData = { count: 0, lastReset: now };
+      
+      if (stored) {
+        try {
+          currentData = JSON.parse(stored);
+          // Reset if more than a week has passed
+          if (now - currentData.lastReset > oneWeek) {
+            currentData = { count: 0, lastReset: now };
+            localStorage.setItem(storageKey, JSON.stringify(currentData));
+          }
+        } catch {
+          currentData = { count: 0, lastReset: now };
+          localStorage.setItem(storageKey, JSON.stringify(currentData));
+        }
+      }
+      
+      const remaining = Math.max(0, limit - currentData.count);
+      const nextResetDate = new Date(currentData.lastReset + oneWeek);
+      
+      return {
+        canUse: currentData.count < limit,
+        remaining,
+        resetTime: nextResetDate.toLocaleDateString() + ' (weekly reset)',
+        isAdmin: false
+      };
+    }
+
     // Check if user is admin
     const { data: profile } = await supabase
       .from('profiles')
@@ -170,7 +209,7 @@ export async function checkLimitsOnly(
       .single();
 
     if (profile?.email === ADMIN_EMAIL) {
-      return { canUse: true, remaining: 999, resetTime: null };
+      return { canUse: true, remaining: 999, resetTime: null, isAdmin: true };
     }
 
     // Get current limits
@@ -249,7 +288,8 @@ export async function checkLimitsOnly(
           timeZone: 'UTC',
           hour: '2-digit',
           minute: '2-digit'
-        }) + ' UTC'
+        }) + ' UTC',
+        isAdmin: false
       };
     }
 
@@ -262,11 +302,12 @@ export async function checkLimitsOnly(
         timeZone: 'UTC',
         hour: '2-digit',
         minute: '2-digit'
-      }) + ' UTC'
+      }) + ' UTC',
+      isAdmin: false
     };
 
   } catch (error) {
     console.error('Error checking limits:', error);
-    return { canUse: true, remaining: 1, resetTime: null };
+    return { canUse: true, remaining: 1, resetTime: null, isAdmin: false };
   }
 }
