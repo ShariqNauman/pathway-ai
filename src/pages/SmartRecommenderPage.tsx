@@ -94,12 +94,13 @@ export default function SmartRecommenderPage() {
     visible: { x: 0, opacity: 1 }
   };
 
-  // Check limits on component mount
+  // Check limits on component mount WITHOUT updating them
   useEffect(() => {
     const checkLimits = async () => {
       if (currentUser) {
         try {
-          const limits = await checkAndUpdateLimits(currentUser.id, 'recommender');
+          const { checkLimitsOnly } = await import('../utils/messageLimits');
+          const limits = await checkLimitsOnly(currentUser.id, 'recommender');
           setLimitInfo(limits);
         } catch (error) {
           console.error('Error checking limits:', error);
@@ -118,8 +119,9 @@ export default function SmartRecommenderPage() {
 
     setIsGeneratingQuestions(true);
     try {
-      // Update limits first
+      // Update limits first (this is when we actually consume a usage)
       if (currentUser) {
+        const { checkAndUpdateLimits } = await import('../utils/messageLimits');
         const newLimits = await checkAndUpdateLimits(currentUser.id, 'recommender');
         setLimitInfo(newLimits);
         
@@ -485,8 +487,8 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
               Get personalized university recommendations based on your profile and preferences
             </p>
             
-            {/* Usage Limits Display */}
-            {currentUser && (
+            {/* Usage Limits Display - Only show for non-admin users */}
+            {currentUser && limitInfo.remaining !== 999 && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
