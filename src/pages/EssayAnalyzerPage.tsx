@@ -17,7 +17,7 @@ const EssayAnalyzerPage = () => {
       
       {/* Main content with padding to avoid navbar overlap */}
       <main className="flex-1 pt-16">
-        <div className="h-[calc(100vh-4rem)]">
+        <div className="max-w-6xl mx-auto px-4 h-[calc(100vh-4rem)]">
           <EssayChecker initialSidebarOpen={sidebarOpen} />
         </div>
       </main>

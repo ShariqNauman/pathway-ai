@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Slider } from '../components/ui/slider';
 import { Loader2, ChevronRight, Star, MapPin, DollarSign, GraduationCap, AlertTriangle } from 'lucide-react';
 import { getChatResponse } from '../utils/chatConsultantApi';
-import { checkAndUpdateLimits } from '../utils/messageLimits';
+import { checkAndUpdateLimits, checkLimitsWithoutUpdating } from '../utils/messageLimits';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { toast } from "sonner";
@@ -60,6 +60,8 @@ interface UniversityData {
   scholarshipInfo?: string;
 }
 
+const ADMIN_EMAIL = 'shariqnaumann@gmail.com';
+
 export default function SmartRecommenderPage() {
   const { currentUser, saveUniversity, savedUniversities } = useAuth();
   const [currentStep, setCurrentStep] = useState<'profile' | 'questions' | 'results'>('profile');
@@ -94,32 +96,91 @@ export default function SmartRecommenderPage() {
     visible: { x: 0, opacity: 1 }
   };
 
-  // Check limits on component mount
+  // Check limits on component mount without updating them
   useEffect(() => {
     const checkLimits = async () => {
       if (currentUser) {
         try {
-          const limits = await checkAndUpdateLimits(currentUser.id, 'recommender');
+          const limits = await checkLimitsWithoutUpdating(currentUser.id, 'recommender');
           setLimitInfo(limits);
         } catch (error) {
           console.error('Error checking limits:', error);
         }
+      } else {
+        // Handle unsigned users with weekly limits
+        const weeklyLimits = getWeeklyLimits();
+        const canUse = weeklyLimits.recommender < 1;
+        setLimitInfo({
+          canUse,
+          remaining: canUse ? 1 - weeklyLimits.recommender : 0,
+          resetTime: getNextWeekReset()
+        });
       }
     };
     
     checkLimits();
   }, [currentUser]);
 
+  const getWeeklyLimits = () => {
+    const stored = localStorage.getItem('weeklyLimits');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      const now = new Date();
+      const lastReset = new Date(parsed.lastReset);
+      const weeksDiff = Math.floor((now.getTime() - lastReset.getTime()) / (7 * 24 * 60 * 60 * 1000));
+      
+      if (weeksDiff >= 1) {
+        // Reset weekly limits
+        const newLimits = { chat: 0, essay: 0, recommender: 0, lastReset: now.toISOString() };
+        localStorage.setItem('weeklyLimits', JSON.stringify(newLimits));
+        return newLimits;
+      }
+      return parsed;
+    }
+    
+    const newLimits = { chat: 0, essay: 0, recommender: 0, lastReset: new Date().toISOString() };
+    localStorage.setItem('weeklyLimits', JSON.stringify(newLimits));
+    return newLimits;
+  };
+
+  const updateWeeklyLimits = (feature: string) => {
+    const limits = getWeeklyLimits();
+    limits[feature]++;
+    localStorage.setItem('weeklyLimits', JSON.stringify(limits));
+  };
+
+  const getNextWeekReset = () => {
+    const now = new Date();
+    const nextWeek = new Date(now);
+    nextWeek.setDate(nextWeek.getDate() + (7 - now.getDay()));
+    nextWeek.setHours(0, 0, 0, 0);
+    return nextWeek.toLocaleString();
+  };
+
   const generateQuestions = async () => {
-    if (!limitInfo.canUse) {
-      toast.error(`You've reached your daily limit of 5 recommendations. Try again after ${limitInfo.resetTime}.`);
-      return;
+    if (currentUser) {
+      // Check if user is admin
+      if (currentUser.email === ADMIN_EMAIL) {
+        // Admin has no limits, proceed directly
+      } else {
+        if (!limitInfo.canUse) {
+          toast.error(`You've reached your daily limit of 5 recommendations. Try again after ${limitInfo.resetTime}.`);
+          return;
+        }
+      }
+    } else {
+      // Unsigned user
+      const weeklyLimits = getWeeklyLimits();
+      if (weeklyLimits.recommender >= 1) {
+        toast.error(`You've reached your weekly limit of 1 recommendation. Please sign in for more uses or try again next week.`);
+        return;
+      }
     }
 
     setIsGeneratingQuestions(true);
     try {
-      // Update limits first
-      if (currentUser) {
+      // Update limits only when actually generating
+      if (currentUser && currentUser.email !== ADMIN_EMAIL) {
         const newLimits = await checkAndUpdateLimits(currentUser.id, 'recommender');
         setLimitInfo(newLimits);
         
@@ -128,6 +189,9 @@ export default function SmartRecommenderPage() {
           setIsGeneratingQuestions(false);
           return;
         }
+      } else if (!currentUser) {
+        updateWeeklyLimits('recommender');
+        setLimitInfo(prev => ({ ...prev, remaining: 0, canUse: false }));
       }
 
       const prompt = `Generate a comprehensive set of questions to recommend universities to a student.
@@ -485,8 +549,35 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
               Get personalized university recommendations based on your profile and preferences
             </p>
             
-            {/* Usage Limits Display */}
-            {currentUser && (
+            {/* Usage Limits Display - Only show for non-admin users */}
+            {currentUser ? (
+              currentUser.email !== ADMIN_EMAIL && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="mt-6 flex justify-center"
+                >
+                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm ${
+                    limitInfo.canUse 
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' 
+                      : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                  }`}>
+                    {limitInfo.canUse ? (
+                      <>
+                        <GraduationCap className="h-4 w-4" />
+                        <span>{limitInfo.remaining} recommendations remaining today</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle className="h-4 w-4" />
+                        <span>Daily limit reached. Resets at {limitInfo.resetTime}</span>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              )
+            ) : (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -495,18 +586,18 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
               >
                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm ${
                   limitInfo.canUse 
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' 
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' 
                     : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
                 }`}>
                   {limitInfo.canUse ? (
                     <>
                       <GraduationCap className="h-4 w-4" />
-                      <span>{limitInfo.remaining} recommendations remaining today</span>
+                      <span>{limitInfo.remaining} recommendation remaining this week</span>
                     </>
                   ) : (
                     <>
                       <AlertTriangle className="h-4 w-4" />
-                      <span>Daily limit reached. Resets at {limitInfo.resetTime}</span>
+                      <span>Weekly limit reached. Sign in for more uses or try again next week.</span>
                     </>
                   )}
                 </div>
