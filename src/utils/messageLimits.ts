@@ -200,16 +200,28 @@ export const incrementUsage = async (userId: string | null, feature: 'consultant
                     feature === 'essays' ? 'essay_count' : 
                     'recommender_count';
 
-  const { error } = await supabase
+  // First get the current count
+  const { data: currentLimits } = await supabase
     .from('message_limits')
-    .update({
-      [countField]: supabase.raw(`${countField} + 1`)
-    })
-    .eq('user_id', userId);
+    .select(countField)
+    .eq('user_id', userId)
+    .single();
 
-  if (error) {
-    console.error(`Error incrementing ${feature} usage:`, error);
-    throw error;
+  if (currentLimits) {
+    const currentCount = currentLimits[countField] || 0;
+    
+    // Update with incremented value
+    const { error } = await supabase
+      .from('message_limits')
+      .update({
+        [countField]: currentCount + 1
+      })
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error(`Error incrementing ${feature} usage:`, error);
+      throw error;
+    }
   }
 
   console.log(`${feature} usage incremented successfully`);
