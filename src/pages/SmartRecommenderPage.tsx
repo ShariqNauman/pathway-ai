@@ -140,10 +140,9 @@ export default function SmartRecommenderPage() {
         return;
       }
       
-      // Update UI state and re-check limits after incrementing
-      const { canUse: updatedCanUse, remaining } = await canUseRecommender(currentUser.id);
-      setCanUse(updatedCanUse);
-      setRemainingUses(remaining);
+      // Immediately update the UI to reflect the usage
+      setRemainingUses(prev => Math.max(0, prev - 1));
+      setCanUse(prev => prev - 1 > 0);
     }
 
     setIsGeneratingQuestions(true);
