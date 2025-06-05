@@ -132,10 +132,9 @@ export default function SmartRecommenderPage() {
         return;
       }
       
-      // Update remaining uses after incrementing
-      const { canUse: updatedCanUse, remaining } = await canUseRecommender(currentUser.id);
-      setCanUse(updatedCanUse);
-      setRemainingUses(remaining);
+      // Update UI state immediately after incrementing
+      setRemainingUses(prev => Math.max(0, prev - 1));
+      setCanUse(remainingUses > 1); // Will be false if this was the last use
     }
 
     setIsGeneratingQuestions(true);
@@ -525,7 +524,7 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
             </p>
           </motion.div>
 
-          {/* Only show limits to signed-in users */}
+          {/* Only show limits to signed-in users who are not admin */}
           {currentUser && !isUserAdmin && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -564,8 +563,6 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
               </Card>
             </motion.div>
           )}
-
-          {/* ... keep existing code (profile, questions, and results sections) */}
 
           {currentStep === 'profile' && (
             <motion.div
