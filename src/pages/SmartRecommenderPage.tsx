@@ -75,6 +75,7 @@ export default function SmartRecommenderPage() {
   const [remainingUses, setRemainingUses] = useState<number>(0);
   const [canUse, setCanUse] = useState<boolean>(true);
   const [isUserAdmin, setIsUserAdmin] = useState<boolean>(false);
+  const [isCheckingLimits, setIsCheckingLimits] = useState<boolean>(true);
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
@@ -99,6 +100,7 @@ export default function SmartRecommenderPage() {
   useEffect(() => {
     const checkLimits = async () => {
       if (currentUser?.id) {
+        setIsCheckingLimits(true);
         const adminStatus = await isAdmin(currentUser.id);
         setIsUserAdmin(adminStatus);
         
@@ -106,7 +108,13 @@ export default function SmartRecommenderPage() {
           const { canUse: canUseService, remaining } = await canUseRecommender(currentUser.id);
           setCanUse(canUseService);
           setRemainingUses(remaining);
+        } else {
+          setCanUse(true);
+          setRemainingUses(999); // Unlimited for admin
         }
+        setIsCheckingLimits(false);
+      } else {
+        setIsCheckingLimits(false);
       }
     };
 
@@ -132,9 +140,10 @@ export default function SmartRecommenderPage() {
         return;
       }
       
-      // Update UI state immediately after incrementing
-      setRemainingUses(prev => Math.max(0, prev - 1));
-      setCanUse(remainingUses > 1); // Will be false if this was the last use
+      // Update UI state and re-check limits after incrementing
+      const { canUse: updatedCanUse, remaining } = await canUseRecommender(currentUser.id);
+      setCanUse(updatedCanUse);
+      setRemainingUses(remaining);
     }
 
     setIsGeneratingQuestions(true);
@@ -524,8 +533,8 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
             </p>
           </motion.div>
 
-          {/* Only show limits to signed-in users who are not admin */}
-          {currentUser && !isUserAdmin && (
+          {/* Only show limits to signed-in users who are not admin and not loading */}
+          {currentUser && !isUserAdmin && !isCheckingLimits && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
