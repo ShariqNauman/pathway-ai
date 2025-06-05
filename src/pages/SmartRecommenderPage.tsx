@@ -6,9 +6,8 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Slider } from '../components/ui/slider';
-import { Loader2, ChevronRight, Star, MapPin, DollarSign, GraduationCap, SkipForward, AlertCircle } from 'lucide-react';
+import { Loader2, ChevronRight, Star, MapPin, DollarSign, GraduationCap } from 'lucide-react';
 import { getChatResponse } from '../utils/chatConsultantApi';
-import { checkMessageLimits, incrementUsage } from '../utils/messageLimits';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { toast } from "sonner";
@@ -72,12 +71,6 @@ export default function SmartRecommenderPage() {
   const [currentAnswer, setCurrentAnswer] = useState<any>('');
   const [academicProfile, setAcademicProfile] = useState<any>(null);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
-  const [limitInfo, setLimitInfo] = useState({
-    canUse: true,
-    remaining: 0,
-    resetTime: null,
-    isAdmin: false
-  });
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
@@ -99,38 +92,7 @@ export default function SmartRecommenderPage() {
     visible: { x: 0, opacity: 1 }
   };
 
-  useEffect(() => {
-    const fetchLimitInfo = async () => {
-      try {
-        const info = await checkMessageLimits(currentUser?.id || null, 'recommender');
-        setLimitInfo(info);
-      } catch (error) {
-        console.error('Error fetching limit info:', error);
-      }
-    };
-
-    fetchLimitInfo();
-  }, [currentUser?.id]);
-
   const generateQuestions = async () => {
-    // Check limits before proceeding
-    if (!limitInfo.canUse && !limitInfo.isAdmin) {
-      setError('You have reached your daily recommendation limit. Please try again tomorrow.');
-      return;
-    }
-
-    // Increment usage when starting the process
-    try {
-      await incrementUsage(currentUser?.id || null, 'recommender');
-      // Update limit info after incrementing
-      const updatedInfo = await checkMessageLimits(currentUser?.id || null, 'recommender');
-      setLimitInfo(updatedInfo);
-    } catch (error) {
-      console.error('Error updating usage:', error);
-      setError('Failed to start recommendation process. Please try again.');
-      return;
-    }
-
     setIsGeneratingQuestions(true);
     try {
       const prompt = `Generate a comprehensive set of questions to recommend universities to a student.
@@ -213,16 +175,6 @@ export default function SmartRecommenderPage() {
     setAnswers(prev => ({ ...prev, [currentQuestion.id]: currentAnswer }));
     setCurrentAnswer('');
 
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-    } else {
-      generateRecommendations();
-    }
-  };
-
-  const handleSkip = () => {
-    setCurrentAnswer('');
-    
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
@@ -372,16 +324,10 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
               onChange={(e) => setCurrentAnswer(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAnswer()}
             />
-            <div className="flex gap-3">
-              <Button className="flex-1" onClick={handleAnswer}>
-                Next
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button variant="outline" onClick={handleSkip}>
-                <SkipForward className="h-4 w-4" />
-                Skip
-              </Button>
-            </div>
+            <Button className="w-full" onClick={handleAnswer}>
+              Next
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
         );
       case 'select':
@@ -399,16 +345,10 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex gap-3">
-              <Button className="flex-1" onClick={handleAnswer} disabled={!currentAnswer}>
-                Next
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button variant="outline" onClick={handleSkip}>
-                <SkipForward className="h-4 w-4" />
-                Skip
-              </Button>
-            </div>
+            <Button className="w-full" onClick={handleAnswer} disabled={!currentAnswer}>
+              Next
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
         );
       case 'slider':
@@ -424,16 +364,10 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
             <div className="text-sm text-muted-foreground text-center">
               ${currentAnswer?.toLocaleString() || question.min?.toLocaleString()} USD
             </div>
-            <div className="flex gap-3">
-              <Button className="flex-1" onClick={handleAnswer} disabled={!currentAnswer}>
-                Next
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button variant="outline" onClick={handleSkip}>
-                <SkipForward className="h-4 w-4" />
-                Skip
-              </Button>
-            </div>
+            <Button className="w-full" onClick={handleAnswer} disabled={!currentAnswer}>
+              Next
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
         );
       default:
@@ -521,9 +455,8 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="mb-8 p-4 bg-destructive/10 text-destructive rounded-lg flex items-center gap-2"
+              className="mb-8 p-4 bg-destructive/10 text-destructive rounded-lg"
             >
-              <AlertCircle className="h-5 w-5" />
               {error}
             </motion.div>
           )}
@@ -540,23 +473,14 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
                 <p className="text-muted-foreground mb-8">
                   We'll use your profile information and ask a few additional questions to find the best universities for you.
                 </p>
-                
-                {!limitInfo.canUse && !limitInfo.isAdmin ? (
-                  <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-6">
-                    <p className="font-medium">Daily limit reached</p>
-                    <p className="text-sm">You have used all your recommendations for today. Reset time: {limitInfo.resetTime}</p>
-                  </div>
-                ) : (
-                  <Button
-                    size="lg"
-                    onClick={generateQuestions}
-                    className="bg-primary hover:bg-primary/90 text-white"
-                    disabled={!limitInfo.canUse && !limitInfo.isAdmin}
-                  >
-                    Start Recommendation Process
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </Button>
-                )}
+                <Button
+                  size="lg"
+                  onClick={generateQuestions}
+                  className="bg-primary hover:bg-primary/90 text-white"
+                >
+                  Start Recommendation Process
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
               </motion.div>
             </motion.div>
           )}
@@ -781,23 +705,6 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
           )}
         </div>
       </main>
-
-      {/* Limit display for non-admin users */}
-      {currentUser && !limitInfo.isAdmin && (
-        <div className="fixed bottom-4 right-4 bg-background border rounded-lg p-3 shadow-lg">
-          <div className="text-sm text-muted-foreground">
-            {!limitInfo.canUse ? (
-              <span className="text-destructive">Daily recommendation limit reached</span>
-            ) : (
-              <span>
-                Recommendations remaining today: {limitInfo.remaining}
-                {limitInfo.resetTime && ` (Resets ${limitInfo.resetTime})`}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
       <Footer />
     </div>
   );
