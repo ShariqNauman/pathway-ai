@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
@@ -133,13 +132,15 @@ export default function SmartRecommenderPage() {
         return;
       }
       
-      // Update remaining uses
-      const { remaining } = await canUseRecommender(currentUser.id);
+      // Update remaining uses after incrementing
+      const { canUse: updatedCanUse, remaining } = await canUseRecommender(currentUser.id);
+      setCanUse(updatedCanUse);
       setRemainingUses(remaining);
     }
 
     setIsGeneratingQuestions(true);
     try {
+      // ... keep existing code (prompt and API call logic)
       const prompt = `Generate a comprehensive set of questions to recommend universities to a student.
       Consider the user's profile data: ${JSON.stringify(currentUser?.preferences, null, 2)}
       
@@ -524,7 +525,8 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
             </p>
           </motion.div>
 
-          {!isUserAdmin && (
+          {/* Only show limits to signed-in users */}
+          {currentUser && !isUserAdmin && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -563,6 +565,8 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
             </motion.div>
           )}
 
+          {/* ... keep existing code (profile, questions, and results sections) */}
+
           {currentStep === 'profile' && (
             <motion.div
               initial="hidden"
@@ -578,15 +582,20 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
                 <Button
                   size="lg"
                   onClick={generateQuestions}
-                  disabled={!isUserAdmin && !canUse}
+                  disabled={currentUser && !isUserAdmin && !canUse}
                   className="bg-primary hover:bg-primary/90 text-white"
                 >
                   Start Recommendation Process
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
-                {!isUserAdmin && !canUse && (
+                {currentUser && !isUserAdmin && !canUse && (
                   <p className="text-sm text-muted-foreground mt-2">
                     You have reached your daily limit. Please try again tomorrow.
+                  </p>
+                )}
+                {!currentUser && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Please log in to use the Smart Recommender.
                   </p>
                 )}
               </motion.div>
