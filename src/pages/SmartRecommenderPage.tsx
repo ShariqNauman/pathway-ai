@@ -6,9 +6,8 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Slider } from '../components/ui/slider';
-import { Loader2, ChevronRight, Star, MapPin, DollarSign, GraduationCap, SkipForward, AlertCircle } from 'lucide-react';
+import { Loader2, ChevronRight, Star, MapPin, DollarSign, GraduationCap } from 'lucide-react';
 import { getChatResponse } from '../utils/chatConsultantApi';
-import { canUseRecommender, incrementRecommenderCount, isAdmin } from '../utils/messageLimits';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { toast } from "sonner";
@@ -72,10 +71,6 @@ export default function SmartRecommenderPage() {
   const [currentAnswer, setCurrentAnswer] = useState<any>('');
   const [academicProfile, setAcademicProfile] = useState<any>(null);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
-  const [remainingUses, setRemainingUses] = useState<number>(0);
-  const [canUse, setCanUse] = useState<boolean>(true);
-  const [isUserAdmin, setIsUserAdmin] = useState<boolean>(false);
-  const [isCheckingLimits, setIsCheckingLimits] = useState<boolean>(true);
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
@@ -97,57 +92,9 @@ export default function SmartRecommenderPage() {
     visible: { x: 0, opacity: 1 }
   };
 
-  useEffect(() => {
-    const checkLimits = async () => {
-      if (currentUser?.id) {
-        setIsCheckingLimits(true);
-        const adminStatus = await isAdmin(currentUser.id);
-        setIsUserAdmin(adminStatus);
-        
-        if (!adminStatus) {
-          const { canUse: canUseService, remaining } = await canUseRecommender(currentUser.id);
-          setCanUse(canUseService);
-          setRemainingUses(remaining);
-        } else {
-          setCanUse(true);
-          setRemainingUses(999); // Unlimited for admin
-        }
-        setIsCheckingLimits(false);
-      } else {
-        setIsCheckingLimits(false);
-      }
-    };
-
-    checkLimits();
-  }, [currentUser]);
-
   const generateQuestions = async () => {
-    if (!currentUser?.id) {
-      setError('Please log in to use the Smart Recommender.');
-      return;
-    }
-
-    if (!isUserAdmin && !canUse) {
-      setError('You have reached your daily limit for Smart Recommender. Please try again tomorrow.');
-      return;
-    }
-
-    // Increment usage count when starting the process
-    if (!isUserAdmin) {
-      const success = await incrementRecommenderCount(currentUser.id);
-      if (!success) {
-        setError('Failed to update usage count. Please try again.');
-        return;
-      }
-      
-      // Immediately update the UI to reflect the usage
-      setRemainingUses(prev => Math.max(0, prev - 1));
-      setCanUse(prev => prev - 1 > 0);
-    }
-
     setIsGeneratingQuestions(true);
     try {
-      // ... keep existing code (prompt and API call logic)
       const prompt = `Generate a comprehensive set of questions to recommend universities to a student.
       Consider the user's profile data: ${JSON.stringify(currentUser?.preferences, null, 2)}
       
@@ -228,16 +175,6 @@ export default function SmartRecommenderPage() {
     setAnswers(prev => ({ ...prev, [currentQuestion.id]: currentAnswer }));
     setCurrentAnswer('');
 
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-    } else {
-      generateRecommendations();
-    }
-  };
-
-  const handleSkip = () => {
-    setCurrentAnswer('');
-    
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
@@ -387,16 +324,10 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
               onChange={(e) => setCurrentAnswer(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAnswer()}
             />
-            <div className="flex gap-3">
-              <Button className="flex-1" onClick={handleAnswer}>
-                Next
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button variant="outline" onClick={handleSkip}>
-                Skip
-                <SkipForward className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
+            <Button className="w-full" onClick={handleAnswer}>
+              Next
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
         );
       case 'select':
@@ -414,16 +345,10 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex gap-3">
-              <Button className="flex-1" onClick={handleAnswer} disabled={!currentAnswer}>
-                Next
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button variant="outline" onClick={handleSkip}>
-                Skip
-                <SkipForward className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
+            <Button className="w-full" onClick={handleAnswer} disabled={!currentAnswer}>
+              Next
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
         );
       case 'slider':
@@ -439,16 +364,10 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
             <div className="text-sm text-muted-foreground text-center">
               ${currentAnswer?.toLocaleString() || question.min?.toLocaleString()} USD
             </div>
-            <div className="flex gap-3">
-              <Button className="flex-1" onClick={handleAnswer} disabled={!currentAnswer}>
-                Next
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button variant="outline" onClick={handleSkip}>
-                Skip
-                <SkipForward className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
+            <Button className="w-full" onClick={handleAnswer} disabled={!currentAnswer}>
+              Next
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
         );
       default:
@@ -532,43 +451,13 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
             </p>
           </motion.div>
 
-          {/* Only show limits to signed-in users who are not admin and not loading */}
-          {currentUser && !isUserAdmin && !isCheckingLimits && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-8 text-center"
-            >
-              <Card className="max-w-md mx-auto">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-center space-x-2">
-                    <GraduationCap className="h-5 w-5 text-primary" />
-                    <span className="text-sm font-medium">
-                      Daily Limit: {remainingUses}/5 recommendations remaining
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Resets daily at midnight UTC
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
           {error && (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="mb-8"
+              className="mb-8 p-4 bg-destructive/10 text-destructive rounded-lg"
             >
-              <Card className="border-destructive">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2 text-destructive">
-                    <AlertCircle className="h-5 w-5" />
-                    <span className="font-medium">{error}</span>
-                  </div>
-                </CardContent>
-              </Card>
+              {error}
             </motion.div>
           )}
 
@@ -587,22 +476,11 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
                 <Button
                   size="lg"
                   onClick={generateQuestions}
-                  disabled={currentUser && !isUserAdmin && !canUse}
                   className="bg-primary hover:bg-primary/90 text-white"
                 >
                   Start Recommendation Process
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
-                {currentUser && !isUserAdmin && !canUse && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    You have reached your daily limit. Please try again tomorrow.
-                  </p>
-                )}
-                {!currentUser && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Please log in to use the Smart Recommender.
-                  </p>
-                )}
               </motion.div>
             </motion.div>
           )}
