@@ -4,6 +4,8 @@ import type { Json } from "@/integrations/supabase/types";
 import { UserProfile, UserCredentials, UserPreferences, ExtracurricularActivity } from "@/types/user";
 import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
+import { analytics } from "@/utils/analytics";
 
 interface UserContextType {
   currentUser: UserProfile | null;
@@ -29,6 +31,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLogoutInProgress, setIsLogoutInProgress] = useState(false);
+  const { handleError } = useErrorHandler();
 
   useEffect(() => {
     setIsLoading(true);
@@ -38,6 +41,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (session) {
         setCurrentSession(session);
+        analytics.identify(session.user.id, {
+          email: session.user.email,
+        });
         fetchUserProfile(session.user.id);
       } else {
         setCurrentUser(null);
@@ -51,7 +57,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error("Session fetch error:", error);
+          handleError(error, "Failed to check authentication status");
           setIsLoading(false);
           return;
         }
@@ -63,7 +69,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsLoading(false);
         }
       } catch (err) {
-        console.error("Error checking session:", err);
+        handleError(err, "Error checking authentication status");
         setIsLoading(false);
       }
     };
@@ -73,7 +79,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [handleError]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -84,37 +90,31 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) {
-        console.error('Error fetching user profile:', error);
+        handleError(error, "Failed to load user profile");
         return null;
       }
 
       // Helper functions for phone number parsing
       const parsePhoneCode = (phone: string | null): string => {
         if (!phone) return '';
-        // If there's a space, the first part is the country code
         if (phone.includes(' ')) {
           return phone.split(' ')[0];
         }
-        // Try to extract country code (usually starts with + and has 1-4 digits)
         const match = phone.match(/^(\+\d{1,4})/);
         return match ? match[1] : '';
       };
 
       const parsePhoneNumber = (phone: string | null): string => {
         if (!phone) return '';
-        // If there's a space, the second part is the phone number
         if (phone.includes(' ')) {
           return phone.split(' ').slice(1).join(' ');
         }
-        // Otherwise try to extract everything after the country code
         const match = phone.match(/^(\+\d{1,4})(.*)/);
         return match ? match[2] : phone;
       };
 
       if (profile) {
-        console.log('Fetched profile:', profile);
         
-        // Convert profile data to UserPreferences format
         const userPreferences: UserPreferences = {
           intendedMajor: profile.intended_major || '',
           selectedDomains: profile.selected_domains || [],
@@ -153,9 +153,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           countryCode: parsePhoneCode(profile.phone)
         };
 
-        console.log('Mapped user preferences:', userPreferences);
-
-        // Create user profile
         const userProfile: UserProfile = {
           id: userId,
           email: currentSession?.user.email || '',
@@ -172,7 +169,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
       return null;
     } catch (error) {
-      console.error('Error in fetchUserProfile:', error);
+      handleError(error, "Error loading user profile");
       setIsLoading(false);
       return null;
     }
@@ -187,13 +184,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (error) {
-        console.error('Login error:', error);
+        handleError(error, "Invalid email or password");
         return false;
       }
       
+      analytics.track('user_login', { email: credentials.email });
       return true;
     } catch (error) {
-      console.error('Login error:', error);
+      handleError(error, "Login failed");
       return false;
     } finally {
       setIsLoading(false);
@@ -209,18 +207,23 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           data: {
             name: userData.name
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/`
         }
       });
       
       if (error) {
-        console.error('Signup error:', error);
+        handleError(error, "Failed to create account");
         return false;
       }
       
+      analytics.track('user_signup', { 
+        email: userData.email,
+        name: userData.name 
+      });
       return true;
     } catch (error) {
-      console.error('Signup error:', error);
+      handleError(error, "Signup failed");
       return false;
     } finally {
       setIsLoading(false);
@@ -235,16 +238,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Logout error:', error);
-        toast("Failed to log out. Please try again.");
+        handleError(error, "Failed to log out");
       } else {
         setCurrentUser(null);
         setCurrentSession(null);
-        toast("Successfully logged out");
+        analytics.track('user_logout');
+        toast.success("Successfully logged out");
       }
     } catch (error) {
-      console.error('Logout error:', error);
-      toast("Failed to log out. Please try again.");
+      handleError(error, "Logout failed");
     } finally {
       setIsLoading(false);
       setIsLogoutInProgress(false);
@@ -255,14 +257,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!currentUser) return;
       
-      // Format the phone number if both country code and phone number exist
+      
       let formattedPhone = null;
       if (preferences.countryCode && preferences.phoneNumber) {
-        // Store with a space between country code and number for consistent parsing
         formattedPhone = `${preferences.countryCode} ${preferences.phoneNumber.trim()}`;
       }
       
-      // Process extracurricular activities safely
       let safeExtracurricularActivities = preferences.extracurricularActivities ? 
         preferences.extracurricularActivities.map(activity => ({
           id: activity.id || "",
@@ -275,7 +275,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           weeksPerYear: typeof activity.weeksPerYear === 'number' ? activity.weeksPerYear : 0
         })) : [];
       
-      // Convert string values to numbers for fields that require numbers in the database
       const profileUpdate = {
         intended_major: preferences.intendedMajor || null,
         selected_domains: preferences.selectedDomains || [],
@@ -293,25 +292,20 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         extracurricular_activities: safeExtracurricularActivities as unknown as Json[],
         date_of_birth: preferences.dateOfBirth || null,
         nationality: preferences.nationality || null,
-        countryofresidence: preferences.countryOfResidence || null, // Correct DB column name
+        countryofresidence: preferences.countryOfResidence || null,
         phone: formattedPhone
       };
-      
-      console.log("Sending profile update to Supabase:", profileUpdate);
 
-      // Update the profile in Supabase
       const { error } = await supabase
         .from('profiles')
         .update(profileUpdate)
         .eq('id', currentUser.id);
         
       if (error) {
-        console.error('Error updating preferences:', error);
-        toast.error(`Failed to update preferences: ${error.message}`);
+        handleError(error, "Failed to update preferences");
         return;
       }
       
-      // Update the local user state
       setCurrentUser(prev => {
         if (!prev) return null;
         return {
@@ -320,11 +314,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       });
       
-      console.log("Preferences updated successfully");
+      analytics.track('preferences_updated');
       toast.success("Preferences updated successfully");
     } catch (error) {
-      console.error("Exception during preference update:", error);
-      toast.error("An unexpected error occurred while saving your preferences");
+      handleError(error, "Failed to save preferences");
     }
   };
 
