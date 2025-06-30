@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
@@ -6,11 +7,12 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Slider } from '../components/ui/slider';
-import { Loader2, ChevronRight, Star, MapPin, DollarSign, GraduationCap } from 'lucide-react';
+import { Loader2, ChevronRight, Star, MapPin, DollarSign, GraduationCap, SkipForward, AlertCircle } from 'lucide-react';
 import { getChatResponse } from '../utils/chatConsultantApi';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { toast } from "sonner";
+import { supabase } from '../integrations/supabase/client';
 
 interface Question {
   id: string;
@@ -59,6 +61,11 @@ interface UniversityData {
   scholarshipInfo?: string;
 }
 
+interface UsageLimits {
+  current_count: number;
+  limit_reached: boolean;
+}
+
 export default function SmartRecommenderPage() {
   const { currentUser, saveUniversity, savedUniversities } = useAuth();
   const [currentStep, setCurrentStep] = useState<'profile' | 'questions' | 'results'>('profile');
@@ -71,6 +78,7 @@ export default function SmartRecommenderPage() {
   const [currentAnswer, setCurrentAnswer] = useState<any>('');
   const [academicProfile, setAcademicProfile] = useState<any>(null);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+  const [usageLimits, setUsageLimits] = useState<UsageLimits>({ current_count: 0, limit_reached: false });
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
@@ -92,7 +100,62 @@ export default function SmartRecommenderPage() {
     visible: { x: 0, opacity: 1 }
   };
 
+  // Check usage limits
+  const checkUsageLimits = async () => {
+    if (!currentUser?.id) return;
+    
+    try {
+      const { data, error } = await supabase.rpc('check_and_reset_smart_recommender_limit', {
+        user_uuid: currentUser.id
+      });
+
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setUsageLimits(data[0]);
+      }
+    } catch (err) {
+      console.error('Error checking usage limits:', err);
+    }
+  };
+
+  // Increment usage count
+  const incrementUsage = async (): Promise<boolean> => {
+    if (!currentUser?.id) return false;
+    
+    try {
+      const { data, error } = await supabase.rpc('increment_smart_recommender_usage', {
+        user_uuid: currentUser.id
+      });
+
+      if (error) throw error;
+      
+      if (data) {
+        // Refresh usage limits after incrementing
+        await checkUsageLimits();
+        return true;
+      } else {
+        setError('Daily limit reached. You can use the Smart Recommender 5 times per day.');
+        return false;
+      }
+    } catch (err) {
+      console.error('Error incrementing usage:', err);
+      setError('Failed to track usage. Please try again.');
+      return false;
+    }
+  };
+
   const generateQuestions = async () => {
+    // Check if user has reached limit
+    if (usageLimits.limit_reached) {
+      setError('You have reached your daily limit of 5 recommendations. Please try again tomorrow.');
+      return;
+    }
+
+    // Increment usage count first
+    const canProceed = await incrementUsage();
+    if (!canProceed) return;
+
     setIsGeneratingQuestions(true);
     try {
       const prompt = `Generate a comprehensive set of questions to recommend universities to a student.
@@ -166,13 +229,28 @@ export default function SmartRecommenderPage() {
 
   useEffect(() => {
     document.title = "Smart University Recommender | Pathway";
-  }, []);
+    if (currentUser?.id) {
+      checkUsageLimits();
+    }
+  }, [currentUser]);
 
   const handleAnswer = () => {
-    if (!currentAnswer) return;
+    if (!currentAnswer && currentAnswer !== 0) return;
     
     const currentQuestion = questions[currentQuestionIndex];
     setAnswers(prev => ({ ...prev, [currentQuestion.id]: currentAnswer }));
+    setCurrentAnswer('');
+
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      generateRecommendations();
+    }
+  };
+
+  const handleSkip = () => {
+    const currentQuestion = questions[currentQuestionIndex];
+    setAnswers(prev => ({ ...prev, [currentQuestion.id]: 'skipped' }));
     setCurrentAnswer('');
 
     if (currentQuestionIndex < questions.length - 1) {
@@ -324,10 +402,16 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
               onChange={(e) => setCurrentAnswer(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAnswer()}
             />
-            <Button className="w-full" onClick={handleAnswer}>
-              Next
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
+            <div className="flex gap-3">
+              <Button className="flex-1" onClick={handleAnswer}>
+                Next
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button variant="outline" onClick={handleSkip} className="flex items-center gap-2">
+                <SkipForward className="h-4 w-4" />
+                Skip
+              </Button>
+            </div>
           </div>
         );
       case 'select':
@@ -345,10 +429,16 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
                 ))}
               </SelectContent>
             </Select>
-            <Button className="w-full" onClick={handleAnswer} disabled={!currentAnswer}>
-              Next
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
+            <div className="flex gap-3">
+              <Button className="flex-1" onClick={handleAnswer} disabled={!currentAnswer}>
+                Next
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button variant="outline" onClick={handleSkip} className="flex items-center gap-2">
+                <SkipForward className="h-4 w-4" />
+                Skip
+              </Button>
+            </div>
           </div>
         );
       case 'slider':
@@ -364,10 +454,16 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
             <div className="text-sm text-muted-foreground text-center">
               ${currentAnswer?.toLocaleString() || question.min?.toLocaleString()} USD
             </div>
-            <Button className="w-full" onClick={handleAnswer} disabled={!currentAnswer}>
-              Next
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
+            <div className="flex gap-3">
+              <Button className="flex-1" onClick={handleAnswer} disabled={!currentAnswer && currentAnswer !== 0}>
+                Next
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button variant="outline" onClick={handleSkip} className="flex items-center gap-2">
+                <SkipForward className="h-4 w-4" />
+                Skip
+              </Button>
+            </div>
           </div>
         );
       default:
@@ -449,6 +545,26 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
             <p className="text-muted-foreground text-lg">
               Get personalized university recommendations based on your profile and preferences
             </p>
+            
+            {/* Usage Display */}
+            {currentUser && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="mt-6 inline-flex items-center gap-2 bg-card border rounded-lg px-4 py-2"
+              >
+                <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">
+                  Daily Usage: {usageLimits.current_count}/5 recommendations
+                </span>
+                {usageLimits.limit_reached && (
+                  <span className="text-xs text-destructive ml-2">
+                    (Limit reached - resets at midnight UTC)
+                  </span>
+                )}
+              </motion.div>
+            )}
           </motion.div>
 
           {error && (
@@ -476,11 +592,19 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
                 <Button
                   size="lg"
                   onClick={generateQuestions}
+                  disabled={usageLimits.limit_reached || !currentUser}
                   className="bg-primary hover:bg-primary/90 text-white"
                 >
-                  Start Recommendation Process
+                  {!currentUser ? 'Please sign in to continue' : 
+                   usageLimits.limit_reached ? 'Daily limit reached' : 
+                   'Start Recommendation Process'}
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
+                {!currentUser && (
+                  <p className="text-sm text-muted-foreground mt-4">
+                    You need to be signed in to use the Smart Recommender
+                  </p>
+                )}
               </motion.div>
             </motion.div>
           )}
@@ -669,9 +793,6 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
                                 university.isSaving = true;
 
                                 try {
-                                  // Debug: log savedUniversities
-                                  console.log('Saved universities:', savedUniversities);
-
                                   // Check if the university is already saved
                                   const isAlreadySaved = savedUniversities?.some(
                                     (saved) => saved.university_data.id === university.id

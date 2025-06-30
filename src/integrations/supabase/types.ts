@@ -104,8 +104,10 @@ export type Database = {
           last_reset: string | null
           last_reset_essays: string | null
           last_reset_recommender: string | null
+          last_reset_smart_recommender: string | null
           message_count: number | null
           recommender_count: number | null
+          smart_recommender_count: number | null
           user_id: string
         }
         Insert: {
@@ -113,8 +115,10 @@ export type Database = {
           last_reset?: string | null
           last_reset_essays?: string | null
           last_reset_recommender?: string | null
+          last_reset_smart_recommender?: string | null
           message_count?: number | null
           recommender_count?: number | null
+          smart_recommender_count?: number | null
           user_id: string
         }
         Update: {
@@ -122,8 +126,10 @@ export type Database = {
           last_reset?: string | null
           last_reset_essays?: string | null
           last_reset_recommender?: string | null
+          last_reset_smart_recommender?: string | null
           message_count?: number | null
           recommender_count?: number | null
+          smart_recommender_count?: number | null
           user_id?: string
         }
         Relationships: []
@@ -282,7 +288,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_and_reset_smart_recommender_limit: {
+        Args: { user_uuid: string }
+        Returns: {
+          current_count: number
+          limit_reached: boolean
+        }[]
+      }
+      increment_smart_recommender_usage: {
+        Args: { user_uuid: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
