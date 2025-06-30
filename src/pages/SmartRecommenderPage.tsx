@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
@@ -78,7 +77,7 @@ export default function SmartRecommenderPage() {
   const [currentAnswer, setCurrentAnswer] = useState<any>('');
   const [academicProfile, setAcademicProfile] = useState<any>(null);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
-  const [usageLimits, setUsageLimits] = useState<UsageLimits>({ current_count: 0, limit_reached: false });
+  const [usageLimits, setUsageLimits] = useState<UsageLimits>({ current_count: 5, limit_reached: false });
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
@@ -119,7 +118,7 @@ export default function SmartRecommenderPage() {
     }
   };
 
-  // Increment usage count
+  // Decrement usage count
   const incrementUsage = async (): Promise<boolean> => {
     if (!currentUser?.id) return false;
     
@@ -131,7 +130,7 @@ export default function SmartRecommenderPage() {
       if (error) throw error;
       
       if (data) {
-        // Refresh usage limits after incrementing
+        // Refresh usage limits after decrementing
         await checkUsageLimits();
         return true;
       } else {
@@ -139,7 +138,7 @@ export default function SmartRecommenderPage() {
         return false;
       }
     } catch (err) {
-      console.error('Error incrementing usage:', err);
+      console.error('Error decrementing usage:', err);
       setError('Failed to track usage. Please try again.');
       return false;
     }
@@ -152,7 +151,7 @@ export default function SmartRecommenderPage() {
       return;
     }
 
-    // Increment usage count first
+    // Decrement usage count first
     const canProceed = await incrementUsage();
     if (!canProceed) return;
 
@@ -546,7 +545,7 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
               Get personalized university recommendations based on your profile and preferences
             </p>
             
-            {/* Usage Display */}
+            {/* Usage Display - Updated to show countdown */}
             {currentUser && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -556,11 +555,11 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
               >
                 <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">
-                  Daily Usage: {usageLimits.current_count}/5 recommendations
+                  Remaining Uses: {usageLimits.current_count}/5 recommendations
                 </span>
                 {usageLimits.limit_reached && (
                   <span className="text-xs text-destructive ml-2">
-                    (Limit reached - resets at midnight UTC)
+                    (No uses left - resets at midnight UTC)
                   </span>
                 )}
               </motion.div>
@@ -596,7 +595,7 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
                   className="bg-primary hover:bg-primary/90 text-white"
                 >
                   {!currentUser ? 'Please sign in to continue' : 
-                   usageLimits.limit_reached ? 'Daily limit reached' : 
+                   usageLimits.limit_reached ? 'No uses remaining' : 
                    'Start Recommendation Process'}
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
