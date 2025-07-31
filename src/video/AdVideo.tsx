@@ -7,7 +7,6 @@ import {
   spring,
   Easing,
 } from "remotion";
-import { motion } from "framer-motion";
 
 // Scene 1: Hero Introduction (0-120 frames, 4 seconds)
 const HeroScene = () => {

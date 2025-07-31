@@ -5,7 +5,7 @@ export const VideoPreview = () => {
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-6 text-center">Pathway Platform Ad</h2>
-      <div className="rounded-lg overflow-hidden shadow-2xl">
+      <div className="rounded-lg overflow-hidden shadow-2xl bg-black">
         <Player
           component={AdVideo}
           durationInFrames={600}
@@ -15,10 +15,12 @@ export const VideoPreview = () => {
           style={{
             width: "100%",
             height: "auto",
+            aspectRatio: "16/9",
           }}
           controls
           clickToPlay
           acknowledgeRemotionLicense={true}
+          loop
         />
       </div>
       <div className="mt-4 text-center text-gray-600">
