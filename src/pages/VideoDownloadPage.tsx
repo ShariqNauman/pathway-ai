@@ -39,10 +39,11 @@ const VideoDownloadPage = () => {
 
       console.log('Render response:', data);
 
-      // Simulate processing time for demo purposes
+      // Simulate processing time and provide a working demo video
       setTimeout(() => {
         setRenderStatus('completed');
-        setDownloadUrl('https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4');
+        // Using a working demo video URL for now
+        setDownloadUrl('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
         toast({
           title: "Video ready!",
           description: "Your HD marketing video has been generated successfully.",
@@ -62,9 +63,11 @@ const VideoDownloadPage = () => {
 
   const handleDownload = () => {
     if (downloadUrl) {
+      // Create a temporary link to trigger download
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = 'pathway-marketing-ad.mp4';
+      link.target = '_blank'; // Open in new tab as fallback
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

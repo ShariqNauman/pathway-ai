@@ -18,6 +18,7 @@ export const VideoPreview = () => {
           }}
           controls
           clickToPlay
+          acknowledgeRemotionLicense={true}
         />
       </div>
       <div className="mt-4 text-center text-gray-600">
