@@ -24,6 +24,7 @@ import SmartRecommenderPage from './pages/SmartRecommenderPage';
 import { AuthProvider } from './contexts/AuthContext';
 import PricingPage from "./pages/PricingPage";
 import DonationsPage from "./pages/DonationsPage";
+import VideoDownloadPage from "./pages/VideoDownloadPage";
 import { analytics } from './utils/analytics';
 
 // Create a new queryClient with production-ready configuration
@@ -97,6 +98,7 @@ const App = () => (
                     <Route path="/pricing" element={<PricingPage />} />
                     <Route path="/donations" element={<DonationsPage />} />
                     <Route path="/recommender" element={<SmartRecommenderPage />} />
+                    <Route path="/video-download" element={<VideoDownloadPage />} />
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
