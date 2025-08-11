@@ -151,10 +151,6 @@ export default function SmartRecommenderPage() {
       return;
     }
 
-    // Decrement usage count first
-    const canProceed = await incrementUsage();
-    if (!canProceed) return;
-
     setIsGeneratingQuestions(true);
     try {
       const prompt = `Generate a comprehensive set of questions to recommend universities to a student.
@@ -341,35 +337,45 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
         throw new Error('Failed to generate recommendations');
       }
 
-      let recommendations;
+      let recommendations: any[] = [];
       try {
-        const jsonText = response.text.replace(/```json\n?|\n?```/g, '').trim();
-        recommendations = JSON.parse(jsonText);
-        
-        if (!Array.isArray(recommendations)) {
-          throw new Error('Response is not an array');
+        let jsonText = response.text.replace(/```json\n?|\n?```/g, '').trim();
+        if (!jsonText.startsWith('[')) {
+          const start = jsonText.indexOf('[');
+          const end = jsonText.lastIndexOf(']');
+          if (start !== -1 && end !== -1 && end > start) {
+            jsonText = jsonText.slice(start, end + 1);
+          }
         }
-        
-        // Validate each university has required fields and meaningful data
-        const isValid = recommendations.every(u => 
-          u.id &&
-          u.name &&
-          u.location &&
-          u.tuitionRange &&
-          typeof u.programMatch === 'number' &&
-          u.programMatch >= 0 &&
-          u.programMatch <= 100 &&
-          Array.isArray(u.requirements) &&
-          u.requirements.length > 0 &&
-          u.rankings &&
-          (u.rankings.global || u.rankings.national || u.rankings.program) &&
-          Array.isArray(u.tags) &&
-          u.tags.length > 0 &&
-          u.website
-        );
+        const raw = JSON.parse(jsonText);
+        const arr = Array.isArray(raw) ? raw : [];
 
-        if (!isValid) {
-          throw new Error('Invalid university format or missing critical data');
+        // Normalize and validate entries with sensible defaults
+        recommendations = arr
+          .map((u: any, idx: number) => {
+            if (!u || (!u.name && !u.id)) return null;
+            const id = typeof u.id === 'string' && u.id.trim() ? u.id : (typeof u.name === 'string' ? u.name.toLowerCase().replace(/\s+/g, '-') : String(idx));
+            const name = typeof u.name === 'string' ? u.name : null;
+            if (!name) return null;
+            const website = typeof u.website === 'string' ? u.website : '';
+            return {
+              id,
+              name,
+              location: typeof u.location === 'string' ? u.location : '—',
+              tuitionRange: typeof u.tuitionRange === 'string' ? u.tuitionRange : 'N/A',
+              programMatch: Math.max(0, Math.min(100, Number.isFinite(u.programMatch) ? Number(u.programMatch) : 60)),
+              requirements: Array.isArray(u.requirements) ? u.requirements.filter((r:any)=>typeof r==='string') : [],
+              rankings: typeof u.rankings === 'object' && u.rankings !== null ? u.rankings : {},
+              tags: Array.isArray(u.tags) ? u.tags.filter((t:any)=>typeof t==='string') : [],
+              applicationDeadline: typeof u.applicationDeadline === 'string' ? u.applicationDeadline : undefined,
+              scholarshipInfo: typeof u.scholarshipInfo === 'string' ? u.scholarshipInfo : undefined,
+              website
+            } as University;
+          })
+          .filter(Boolean) as University[];
+
+        if (recommendations.length === 0) {
+          throw new Error('No valid recommendations returned');
         }
 
         // Sort by program match score
@@ -382,6 +388,9 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
       setUniversities(recommendations);
       setCurrentStep('results');
       setError(null);
+
+      // Decrement usage ONLY after successful display of recommendations
+      await incrementUsage();
     } catch (err) {
       console.error('Failed to generate recommendations:', err);
       setError('Failed to generate recommendations. Please try again.');

@@ -24,7 +24,8 @@ import SmartRecommenderPage from './pages/SmartRecommenderPage';
 import { AuthProvider } from './contexts/AuthContext';
 import PricingPage from "./pages/PricingPage";
 import DonationsPage from "./pages/DonationsPage";
-import VideoDownloadPage from "./pages/VideoDownloadPage";
+import ProtectedRoute from "./components/ProtectedRoute";
+
 import { analytics } from './utils/analytics';
 
 // Create a new queryClient with production-ready configuration
@@ -84,24 +85,23 @@ const App = () => (
                 />
                 <BrowserRouter>
                   <ScrollToTop />
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/signup" element={<SignupPage />} />
-                    <Route path="/onboarding" element={<OnboardingPage />} />
-                    <Route path="/dashboard" element={<DashboardPage />} />
-                    <Route path="/profile/edit" element={<ProfileEditPage />} />
-                    <Route path="/essay-analyzer" element={<EssayAnalyzerPage />} />
-                    <Route path="/consultant" element={<ConsultantPage />} />
-                    <Route path="/terms" element={<TermsPage />} />
-                    <Route path="/privacy" element={<PrivacyPage />} />
-                    <Route path="/pricing" element={<PricingPage />} />
-                    <Route path="/donations" element={<DonationsPage />} />
-                    <Route path="/recommender" element={<SmartRecommenderPage />} />
-                    <Route path="/video-download" element={<VideoDownloadPage />} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/login" element={<LoginPage />} />
+                      <Route path="/signup" element={<SignupPage />} />
+                      <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+                      <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+                      <Route path="/profile/edit" element={<ProtectedRoute><ProfileEditPage /></ProtectedRoute>} />
+                      <Route path="/essay-analyzer" element={<ProtectedRoute><EssayAnalyzerPage /></ProtectedRoute>} />
+                      <Route path="/consultant" element={<ProtectedRoute><ConsultantPage /></ProtectedRoute>} />
+                      <Route path="/terms" element={<TermsPage />} />
+                      <Route path="/privacy" element={<PrivacyPage />} />
+                      <Route path="/pricing" element={<PricingPage />} />
+                      <Route path="/donations" element={<DonationsPage />} />
+                      <Route path="/recommender" element={<ProtectedRoute><SmartRecommenderPage /></ProtectedRoute>} />
+                      {/* Video download page removed */}
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
                 </BrowserRouter>
               </TooltipProvider>
             </QueryClientProvider>

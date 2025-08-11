@@ -170,8 +170,10 @@ const Hero = () => {
           >
             <div className="relative rounded-2xl overflow-hidden glass-card aspect-[4/3]">
               <img 
-                src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80" 
-                alt="University campus"
+                src="/images/campus-hero.jpg"
+                alt="Modern university campus at sunset"
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover" 
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
