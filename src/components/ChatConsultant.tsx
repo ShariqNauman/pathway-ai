@@ -68,7 +68,7 @@ interface ChatConsultantProps {
 }
 
 const DEFAULT_CHAT_TITLE = "New Chat";
-const MIN_USER_MESSAGES_FOR_TITLE = 5;
+const MIN_USER_MESSAGES_FOR_TITLE = 3; // Rename after at least 3 user messages (≈3 exchanges)
 const MAX_IMAGES = 3;
 const MAX_DAILY_MESSAGES = 15; // Changed from 30 to 15
 
@@ -229,6 +229,27 @@ const analyzeConversationTitle = (messages: Message[]): string => {
   const words = firstMessage.split(" ").slice(0, 3);
   const title = words.join(" ");
   return title.charAt(0).toUpperCase() + title.slice(1);
+};
+
+// Generate concise AI title for conversation
+const toTitleCase = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+const sanitizeTitle = (s: string) => toTitleCase(s.replace(/["'`~!@#$%^&*()_+=[\]{};:,.<>/?|-]/g, ' ').replace(/\s+/g, ' ').trim()).slice(0, 60);
+
+const generateTitleWithAI = async (messages: Message[], user: UserProfile | null): Promise<string> => {
+  try {
+    const previous = messages.map((m) => ({ content: m.content, role: (m.sender === 'user' ? 'user' : 'model') as 'user' | 'model' }));
+    const prompt = 'Generate a short, human-friendly chat title summarizing the conversation so far. 3-6 words, Title Case, no punctuation or quotes. Return ONLY the title.';
+    const res = await getChatResponse(prompt, previous, undefined, user);
+    const raw = res.text || '';
+    const cleaned = sanitizeTitle(raw);
+    if (!cleaned || cleaned.toLowerCase() === DEFAULT_CHAT_TITLE.toLowerCase()) {
+      return sanitizeTitle(analyzeConversationTitle(messages));
+    }
+    return cleaned;
+  } catch (e) {
+    console.error('AI title generation failed, falling back:', e);
+    return sanitizeTitle(analyzeConversationTitle(messages));
+  }
 };
 
 const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => {
@@ -417,26 +438,32 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
     }
   };
 
-  const updateConversationTitle = async (conversationId: string, messages: Message[]) => {
+const updateConversationTitle = async (conversationId: string, msgs: Message[]) => {
     if (!currentUser) return;
-    
     try {
-      const userMessageCount = messages.filter(msg => msg.sender === "user").length;
-      
-      if (userMessageCount === MIN_USER_MESSAGES_FOR_TITLE) {
-        const newTitle = analyzeConversationTitle(messages);
-        
-        const { error } = await supabase
-          .from('chat_conversations')
-          .update({ title: newTitle })
-          .eq('id', conversationId);
-          
-        if (error) throw error;
-        
-        await fetchSavedChats();
-      }
+      const userMessageCount = msgs.filter(m => m.sender === 'user').length;
+      if (userMessageCount < MIN_USER_MESSAGES_FOR_TITLE) return;
+
+      // Check current title; only rename if still default
+      const { data: conv, error: convErr } = await supabase
+        .from('chat_conversations')
+        .select('title')
+        .eq('id', conversationId)
+        .single();
+      if (convErr) throw convErr;
+      if (!conv || !conv.title || conv.title !== DEFAULT_CHAT_TITLE) return;
+
+      const aiTitle = await generateTitleWithAI(msgs, currentUser);
+      const finalTitle = aiTitle && aiTitle !== DEFAULT_CHAT_TITLE ? aiTitle : analyzeConversationTitle(msgs);
+
+      const { error } = await supabase
+        .from('chat_conversations')
+        .update({ title: finalTitle })
+        .eq('id', conversationId);
+      if (error) throw error;
+      await fetchSavedChats();
     } catch (error) {
-      console.error("Error updating conversation title:", error);
+      console.error('Error updating conversation title:', error);
     }
   };
 
