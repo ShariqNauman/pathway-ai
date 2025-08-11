@@ -25,6 +25,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import PricingPage from "./pages/PricingPage";
 import DonationsPage from "./pages/DonationsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import FeatureGate from "./components/FeatureGate";
 
 import { analytics } from './utils/analytics';
 
@@ -92,13 +93,13 @@ const App = () => (
                       <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
                       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
                       <Route path="/profile/edit" element={<ProtectedRoute><ProfileEditPage /></ProtectedRoute>} />
-                      <Route path="/essay-analyzer" element={<ProtectedRoute><EssayAnalyzerPage /></ProtectedRoute>} />
-                      <Route path="/consultant" element={<ProtectedRoute><ConsultantPage /></ProtectedRoute>} />
+                      <Route path="/essay-analyzer" element={<FeatureGate><EssayAnalyzerPage /></FeatureGate>} />
+                      <Route path="/consultant" element={<FeatureGate><ConsultantPage /></FeatureGate>} />
                       <Route path="/terms" element={<TermsPage />} />
                       <Route path="/privacy" element={<PrivacyPage />} />
                       <Route path="/pricing" element={<PricingPage />} />
                       <Route path="/donations" element={<DonationsPage />} />
-                      <Route path="/recommender" element={<ProtectedRoute><SmartRecommenderPage /></ProtectedRoute>} />
+                      <Route path="/recommender" element={<FeatureGate><SmartRecommenderPage /></FeatureGate>} />
                       {/* Video download page removed */}
                       <Route path="*" element={<NotFound />} />
                     </Routes>
