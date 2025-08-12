@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { motion } from "framer-motion";
+
 import { toast } from "sonner";
 import { getChatResponse } from "@/utils/chatConsultantApi";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,8 +13,6 @@ import {
   Trash2,
   Pencil,
   Image as ImageIcon,
-  Mic,
-  MicOff,
   X,
   Square
 } from "lucide-react";
@@ -38,7 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from "@/lib/utils";
 import { UserProfile } from "@/types/user";
-import { VoiceRecorder, transcribeAudio } from "@/utils/voiceUtils";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import {
   Tooltip,
   TooltipContent,
@@ -279,7 +277,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   const [isChatSavingInProgress, setIsChatSavingInProgress] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(currentUser ? initialSidebarOpen : false);
   
-  const [isRecording, setIsRecording] = useState(false);
+  
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -287,7 +285,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const initialLoadRef = useRef(true);
-  const voiceRecorder = useRef<VoiceRecorder>(new VoiceRecorder());
+  
 
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [chatToRename, setChatToRename] = useState<SavedChat | null>(null);
@@ -840,61 +838,6 @@ const updateConversationTitle = async (conversationId: string, msgs: Message[]) 
           }]);
         }
       }
-    }
-  };
-
-  const startRecording = async () => {
-    try {
-      if (!voiceRecorder.current.isCurrentlyRecording()) {
-        setIsRecording(true);
-        await voiceRecorder.current.start();
-        } else {
-        console.log("Recording is already in progress");
-      }
-    } catch (error) {
-      console.error("Error accessing microphone:", error);
-      setIsRecording(false);
-      toast.error("Could not access microphone. Please check your browser permissions.");
-    }
-  };
-
-  const stopRecording = async () => {
-    try {
-      if (!voiceRecorder.current.isCurrentlyRecording()) {
-        console.log("No active recording to stop");
-        setIsRecording(false);
-        return;
-      }
-      
-      setIsLoading(true);
-      const audioBlob = await voiceRecorder.current.stop();
-      
-      const transcription = await transcribeAudio(audioBlob);
-      
-      if (transcription && transcription.trim()) {
-        setInputValue(transcription);
-        setTimeout(() => {
-          handleSendMessage(transcription);
-        }, 100);
-        } else {
-        toast.error("Could not transcribe audio. Please try again or type your message.");
-      }
-    } catch (error) {
-      console.error("Error in voice recording process:", error);
-      toast.error("Error processing voice recording. Please try again.");
-    } finally {
-      setIsRecording(false);
-      setIsLoading(false);
-    }
-  };
-
-  const toggleRecording = () => {
-    const isActuallyRecording = voiceRecorder.current.isCurrentlyRecording();
-    
-    if (isActuallyRecording || isRecording) {
-      stopRecording();
-    } else {
-      startRecording();
     }
   };
 
