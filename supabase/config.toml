@@ -143,3 +143,6 @@ verify_jwt = false
 
 [functions.render-video]
 verify_jwt = false
+
+[functions.send-signup-email]
+verify_jwt = false

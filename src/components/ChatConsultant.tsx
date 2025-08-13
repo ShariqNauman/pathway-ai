@@ -1063,7 +1063,7 @@ const updateConversationTitle = async (conversationId: string, msgs: Message[]) 
   );
 
   return (
-    <div className="h-[calc(100vh-4rem)]">
+    <div className="h-full">
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {currentUser && sidebarOpen && (
           <ResizablePanel
