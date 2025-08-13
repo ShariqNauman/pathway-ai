@@ -106,4 +106,3 @@ async function createDemoVideo() {
   // Convert to blob (this is a simplified version)
   const blob = await canvas.convertToBlob({ type: 'video/mp4' });
   return blob;
-}

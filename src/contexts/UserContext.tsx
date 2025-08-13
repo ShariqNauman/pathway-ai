@@ -216,20 +216,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         handleError(error, "Failed to create account");
         return false;
       }
-
-      // Send welcome email
-      try {
-        await supabase.functions.invoke('send-signup-email', {
-          body: {
-            name: userData.name,
-            email: userData.email
-          }
-        });
-        console.log('Welcome email sent successfully');
-      } catch (emailError) {
-        console.warn('Failed to send welcome email:', emailError);
-        // Don't fail signup if email fails
-      }
       
       analytics.track('user_signup', { 
         email: userData.email,

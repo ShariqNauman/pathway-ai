@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { getChatResponse } from "@/utils/chatConsultantApi";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,6 +13,8 @@ import {
   Trash2,
   Pencil,
   Image as ImageIcon,
+  Mic,
+  MicOff,
   X,
   Square
 } from "lucide-react";
@@ -36,7 +38,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from "@/lib/utils";
 import { UserProfile } from "@/types/user";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { VoiceRecorder, transcribeAudio } from "@/utils/voiceUtils";
 import {
   Tooltip,
   TooltipContent,
@@ -277,7 +279,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   const [isChatSavingInProgress, setIsChatSavingInProgress] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(currentUser ? initialSidebarOpen : false);
   
-  
+  const [isRecording, setIsRecording] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -285,7 +287,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const initialLoadRef = useRef(true);
-  
+  const voiceRecorder = useRef<VoiceRecorder>(new VoiceRecorder());
 
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [chatToRename, setChatToRename] = useState<SavedChat | null>(null);
@@ -841,6 +843,61 @@ const updateConversationTitle = async (conversationId: string, msgs: Message[]) 
     }
   };
 
+  const startRecording = async () => {
+    try {
+      if (!voiceRecorder.current.isCurrentlyRecording()) {
+        setIsRecording(true);
+        await voiceRecorder.current.start();
+        } else {
+        console.log("Recording is already in progress");
+      }
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+      setIsRecording(false);
+      toast.error("Could not access microphone. Please check your browser permissions.");
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      if (!voiceRecorder.current.isCurrentlyRecording()) {
+        console.log("No active recording to stop");
+        setIsRecording(false);
+        return;
+      }
+      
+      setIsLoading(true);
+      const audioBlob = await voiceRecorder.current.stop();
+      
+      const transcription = await transcribeAudio(audioBlob);
+      
+      if (transcription && transcription.trim()) {
+        setInputValue(transcription);
+        setTimeout(() => {
+          handleSendMessage(transcription);
+        }, 100);
+        } else {
+        toast.error("Could not transcribe audio. Please try again or type your message.");
+      }
+    } catch (error) {
+      console.error("Error in voice recording process:", error);
+      toast.error("Error processing voice recording. Please try again.");
+    } finally {
+      setIsRecording(false);
+      setIsLoading(false);
+    }
+  };
+
+  const toggleRecording = () => {
+    const isActuallyRecording = voiceRecorder.current.isCurrentlyRecording();
+    
+    if (isActuallyRecording || isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
@@ -1063,284 +1120,97 @@ const updateConversationTitle = async (conversationId: string, msgs: Message[]) 
   );
 
   return (
-    <div className="h-full">
-      <ResizablePanelGroup direction="horizontal" className="h-full">
-        {currentUser && sidebarOpen && (
-          <ResizablePanel
-            defaultSize={24}
-            minSize={16}
-            maxSize={40}
-            className="bg-muted/50 border-r border-border overflow-hidden"
-          >
-            <div className="h-full flex flex-col">
-              <div className="p-4 border-b border-border flex items-center justify-between">
-                <Button 
-                  variant="ghost" 
-                  className="flex-1 justify-start gap-2"
-                  onClick={startNewChat}
-                >
-                  <Plus className="h-4 w-4" />
-                  New Chat
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-2"
-                  onClick={toggleSidebar}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                {savedChats.map((chat) => (
-                  <div
-                    key={chat.id}
-                    className={cn(
-                      "group relative w-full text-left px-4 py-2 hover:bg-muted/80 transition-colors",
-                      currentConversationId === chat.id && "bg-muted"
-                    )}
-                  >
-                    <button
-                      onClick={() => loadConversation(chat.id)}
-                      className="w-full text-left"
-                    >
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4" />
-                        <span className="truncate">{chat.title}</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {formatDate(chat.lastMessageDate)}
-                      </div>
-                    </button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setChatToRename(chat);
-                            setNewChatTitle(chat.title);
-                            setIsRenameDialogOpen(true);
-                          }}
-                        >
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Rename
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteChat(chat.id);
-                          }}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </ResizablePanel>
-        )}
-
-        {currentUser && sidebarOpen && <ResizableHandle withHandle />}
-
-        <ResizablePanel defaultSize={(currentUser && sidebarOpen) ? 76 : 100} minSize={30} className="flex flex-col">
-          {currentUser && !sidebarOpen && (
+    <div className="flex h-[calc(100vh-4rem)]">
+      {currentUser && (
+        <motion.div
+          initial={false}
+          animate={{ width: sidebarOpen ? "260px" : "0px" }}
+          className="h-full bg-muted/50 border-r border-border overflow-hidden"
+        >
+          <div className="h-full flex flex-col">
+            <div className="p-4 border-b border-border flex items-center justify-between">
             <Button 
-              variant="ghost"
-              size="icon"
-              className="absolute left-2 top-4 z-10 bg-background/80 backdrop-blur-sm rounded-full"
+              variant="ghost" 
+                className="flex-1 justify-start gap-2"
+                onClick={startNewChat}
+              >
+                <Plus className="h-4 w-4" />
+                New Chat
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="ml-2"
               onClick={toggleSidebar}
             >
-              <ChevronLeft className="h-4 w-4 rotate-180" />
+              <ChevronLeft className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                !sidebarOpen && "rotate-180"
+              )} />
             </Button>
-          )}
-
-          <div 
-            ref={chatContainerRef}
-            className="flex-1 overflow-y-auto p-4 pt-14"
-          >
-            <div className="max-w-3xl mx-auto px-8 py-6 space-y-6">
-              {messages.map((message) => (
+          </div>
+            <div className="flex-1 overflow-y-auto">
+                {savedChats.map((chat) => (
                 <div
-                  key={message.id}
-                  className={cn(
-                    "flex gap-3",
-                    message.sender === "user" ? "justify-end" : "justify-start"
-                  )}
-                >
-                  {message.sender === "ai" && (
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src="/chatbot-logo.svg" alt="AI Consultant" />
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500">
-                        <MessageSquare className="h-4 w-4 text-white" />
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div
+                    key={chat.id}
                     className={cn(
-                      "max-w-[80%] rounded-lg p-4",
-                      message.sender === "user" 
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
+                    "group relative w-full text-left px-4 py-2 hover:bg-muted/80 transition-colors",
+                    currentConversationId === chat.id && "bg-muted"
                     )}
-                  >
-                    {message.sender === "ai" && message.isStreaming ? (
-                      <div className="flex flex-col">
-                        <div className="prose dark:prose-invert max-w-none min-h-[24px] whitespace-pre-wrap break-words">
-                          <ReactMarkdown>
-                            {message.content || ""}
-                          </ReactMarkdown>
-                        </div>
-                        <StreamingAnimation />
-                      </div>
-                    ) : (
-                      <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap break-words">
-                        <ReactMarkdown>
-                          {message.content}
-                        </ReactMarkdown>
-                      </div>
-                    )}
-                    {message.imageUrls && message.imageUrls.length > 0 && (
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        {message.imageUrls.map((url, index) => (
-                          <img
-                            key={index}
-                            src={url}
-                            alt={`Uploaded image ${index + 1}`}
-                            className="rounded-lg max-w-full h-auto"
-                          />
-                        ))}
-                      </div>
-                    )}
+                >
+                  <button
+                    onClick={() => loadConversation(chat.id)}
+                    className="w-full text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    <span className="truncate">{chat.title}</span>
                   </div>
-                  {message.sender === "user" && (
-                    <Avatar className="h-8 w-8">
-                      {currentUser?.profilePicture ? (
-                        <AvatarImage 
-                          src={currentUser.profilePicture} 
-                          alt={currentUser.name || "User"} 
-                          className="object-cover"
-                        />
-                      ) : (
-                        <AvatarFallback className="bg-primary text-primary-foreground font-medium">
-                          {currentUser?.name?.[0]?.toUpperCase() || "U"}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                  )}
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-          </div>
-          
-          <div className="p-4 border-t border-border">
-            <div className="max-w-2xl mx-auto">
-              {imageUrls.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {imageUrls.map((url, index) => (
-                    <div key={index} className="relative w-16 h-16">
-                      <img 
-                        src={url} 
-                        alt={`Preview ${index + 1}`} 
-                        className="w-full h-full object-cover rounded"
-                      />
-                      <button
-                        className="absolute -top-2 -right-2 bg-background rounded-full p-0.5 border border-border"
-                        onClick={() => removeImage(index)}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                  <div className="text-xs text-muted-foreground mt-1">
+                        {formatDate(chat.lastMessageDate)}
                     </div>
-                  ))}
-                </div>
-              )}
-              <div className="relative">
-                <Textarea
-                  ref={textareaRef}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onPaste={handleImagePaste}
-                  placeholder="Message AI Consultant..."
-                  className="pr-14 py-3 min-h-[50px] max-h-[200px] resize-none rounded-full"
-                  disabled={isLoading || isLimitReached}
-                />
-                <div className="absolute bottom-2 right-3 flex items-center gap-1">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    ref={fileInputRef}
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 rounded-full"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isLoading || imageUrls.length >= MAX_IMAGES || isLimitReached}
-                        >
-                          <ImageIcon className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Add up to 3 images</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  {isStreaming ? (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 rounded-full bg-destructive text-destructive-foreground"
-                            onClick={stopStreaming}
-                          >
-                            <Square className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Stop AI response</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  ) : (
-                    <Button
-                      size="icon"
-                      disabled={(!inputValue.trim() && imageUrls.length === 0) || isLoading || isLimitReached}
-                      onClick={() => handleSendMessage()}
-                      className="h-8 w-8 rounded-full"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-              {messageCountDisplay}
-            </div>
+                </button>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+                        className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+                        <MoreVertical className="h-4 w-4" />
+            </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setChatToRename(chat);
+                          setNewChatTitle(chat.title);
+                          setIsRenameDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Rename
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteChat(chat.id);
+                        }}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
           </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+              ))}
+        </div>
+          </div>
+        </motion.div>
+      )}
 
       <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
         <DialogContent>
@@ -1367,6 +1237,215 @@ const updateConversationTitle = async (conversationId: string, msgs: Message[]) 
           </form>
         </DialogContent>
       </Dialog>
+
+      <div className="flex-1 flex flex-col h-full relative">
+        {currentUser && !sidebarOpen && (
+          <Button 
+            variant="ghost"
+            size="icon"
+            className="absolute left-2 top-4 z-10 bg-background/80 backdrop-blur-sm rounded-full"
+            onClick={toggleSidebar}
+          >
+            <ChevronLeft className="h-4 w-4 rotate-180" />
+          </Button>
+        )}
+
+        <div 
+          ref={chatContainerRef}
+          className="flex-1 overflow-y-auto p-4 pt-14"
+        >
+          <div className="max-w-3xl mx-auto px-8 py-6 space-y-6">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+                className={cn(
+                  "flex gap-3",
+                  message.sender === "user" ? "justify-end" : "justify-start"
+                )}
+              >
+                {message.sender === "ai" && (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src="/chatbot-logo.svg" alt="AI Consultant" />
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500">
+                      <MessageSquare className="h-4 w-4 text-white" />
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+                <div
+                  className={cn(
+                    "max-w-[80%] rounded-lg p-4",
+                  message.sender === "user" 
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
+                  )}
+                >
+                  {message.sender === "ai" && message.isStreaming ? (
+                    <div className="flex flex-col">
+                      <div className="prose dark:prose-invert max-w-none min-h-[24px] whitespace-pre-wrap break-words">
+                    <ReactMarkdown>
+                          {message.content || ""}
+                    </ReactMarkdown>
+                      </div>
+                      <StreamingAnimation />
+                  </div>
+                ) : (
+                    <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap break-words">
+                      <ReactMarkdown>
+                        {message.content}
+                      </ReactMarkdown>
+              </div>
+                  )}
+                  {message.imageUrls && message.imageUrls.length > 0 && (
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      {message.imageUrls.map((url, index) => (
+                        <img
+                          key={index}
+                          src={url}
+                          alt={`Uploaded image ${index + 1}`}
+                          className="rounded-lg max-w-full h-auto"
+                        />
+                      ))}
+                </div>
+                  )}
+              </div>
+                {message.sender === "user" && (
+                  <Avatar className="h-8 w-8">
+                    {currentUser?.profilePicture ? (
+                      <AvatarImage 
+                        src={currentUser.profilePicture} 
+                        alt={currentUser.name || "User"} 
+                        className="object-cover"
+                      />
+                    ) : (
+                      <AvatarFallback className="bg-primary text-primary-foreground font-medium">
+                        {currentUser?.name?.[0]?.toUpperCase() || "U"}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                )}
+              </div>
+            ))}
+          <div ref={messagesEndRef} />
+          </div>
+        </div>
+        
+        <div className="p-4 border-t border-border">
+          <div className="max-w-2xl mx-auto">
+            {imageUrls.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {imageUrls.map((url, index) => (
+                  <div key={index} className="relative w-16 h-16">
+                    <img 
+                      src={url} 
+                      alt={`Preview ${index + 1}`} 
+                      className="w-full h-full object-cover rounded"
+                    />
+                    <button
+                      className="absolute -top-2 -right-2 bg-background rounded-full p-0.5 border border-border"
+                      onClick={() => removeImage(index)}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+                onPaste={handleImagePaste}
+                placeholder="Message AI Consultant..."
+                className="pr-14 py-3 min-h-[50px] max-h-[200px] resize-none rounded-full"
+                disabled={isLoading || isLimitReached}
+              />
+              <div className="absolute bottom-2 right-3 flex items-center gap-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 rounded-full"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isLoading || imageUrls.length >= MAX_IMAGES || isLimitReached}
+                      >
+                        <ImageIcon className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Add up to 3 images</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className={cn(
+                          "h-8 w-8 rounded-full",
+                          isRecording && "bg-destructive text-destructive-foreground"
+                        )}
+                        onClick={toggleRecording}
+                        disabled={isLoading && !isRecording || isLimitReached}
+                      >
+                        {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Click twice to start recording</p>
+                      <p className="text-xs text-yellow-500 mt-1">⚠️ Experimental feature - may not work as expected</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                {isStreaming ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 rounded-full bg-destructive text-destructive-foreground"
+                          onClick={stopStreaming}
+                        >
+                          <Square className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Stop AI response</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <Button
+                    size="icon"
+                    disabled={(!inputValue.trim() && imageUrls.length === 0) || isLoading || isLimitReached}
+                    onClick={() => handleSendMessage()}
+                    className="h-8 w-8 rounded-full"
+                  >
+                  <Send className="h-4 w-4" />
+              </Button>
+                )}
+          </div>
+            </div>
+            {messageCountDisplay}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
