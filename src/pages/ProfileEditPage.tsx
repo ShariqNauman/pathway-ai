@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Award, BookOpen } from "lucide-react";
+import { ArrowLeft, Loader2, Award, BookOpen, Key } from "lucide-react";
 import { UserPreferences } from "@/types/user";
 import PersonalInfo from "@/components/PersonalInfo";
 import { majorDomains } from "@/data/majorDomains";
@@ -364,6 +364,40 @@ const ProfileEditPage = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* AI Features Configuration Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Key className="h-5 w-5" />
+                    AI Features Configuration
+                  </CardTitle>
+                  <CardDescription>Configure your API keys for AI-powered features</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="geminiKey">Gemini API Key</Label>
+                    <Input
+                      id="geminiKey"
+                      type="password"
+                      placeholder="Enter your Gemini API key (AIza...)"
+                      value={preferences.geminiApiKey || ""}
+                      onChange={(e) => updatePreference("geminiApiKey", e.target.value)}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Required for Essay Analyzer, Smart Recommender, and Chat Consultant features. 
+                      <a 
+                        href="https://aistudio.google.com/app/apikey" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline ml-1"
+                      >
+                        Get your free API key here
+                      </a>
+                    </p>
                   </div>
                 </CardContent>
               </Card>

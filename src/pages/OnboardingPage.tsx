@@ -17,7 +17,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, User, GraduationCap, DollarSign, Map, Globe, Flag, Phone } from "lucide-react";
+import { Loader2, User, GraduationCap, DollarSign, Map, Globe, Flag, Phone, Key } from "lucide-react";
 import { UserPreferences } from "@/types/user";
 import { majorDomains } from "@/data/majorDomains";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -110,7 +110,8 @@ const OnboardingPage = () => {
     countryOfResidence: "",
     countryCode: "",
     phoneNumber: "",
-    englishTestScore: ""
+    englishTestScore: "",
+    geminiApiKey: ""
   });
 
   const availableDomains = preferences.intendedMajor ? majorDomains[preferences.intendedMajor] || [] : [];
@@ -167,6 +168,8 @@ const OnboardingPage = () => {
         return preferences.budget !== "";
       case 4:
         return preferences.preferredCountry && preferences.preferredUniversityType;
+      case 5:
+        return preferences.geminiApiKey && preferences.geminiApiKey.trim() !== "";
       default:
         return true;
     }
@@ -221,10 +224,10 @@ const OnboardingPage = () => {
             
             <div className="mt-6 flex justify-center">
               <div className="flex space-x-2">
-                {[1, 2, 3, 4].map((s) => (
+                {[1, 2, 3, 4, 5].map((s) => (
                   <div 
                     key={s} 
-                    className={`h-2 w-12 rounded-full ${
+                    className={`h-2 w-10 rounded-full ${
                       s === step ? "bg-primary" : 
                       s < step ? "bg-primary/60" : "bg-muted"
                     }`}
@@ -487,6 +490,51 @@ const OnboardingPage = () => {
                 <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
                   Back
                 </Button>
+                <Button onClick={handleNextStep} className="flex-1">
+                  Continue
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {step === 5 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-6"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Key className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">AI Features Setup</h2>
+              </div>
+              
+              <div className="space-y-3">
+                <Label htmlFor="geminiKey">Gemini API Key</Label>
+                <Input
+                  id="geminiKey"
+                  type="password"
+                  placeholder="Enter your Gemini API key (AIza...)"
+                  value={preferences.geminiApiKey || ""}
+                  onChange={(e) => updatePreference("geminiApiKey", e.target.value)}
+                />
+                <p className="text-sm text-muted-foreground">
+                  This key will be used for our AI-powered features: Essay Analyzer, Smart Recommender, and Chat Consultant. 
+                  <a 
+                    href="https://aistudio.google.com/app/apikey" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline ml-1"
+                  >
+                    Get your free API key here
+                  </a>
+                </p>
+              </div>
+
+              <div className="flex space-x-3">
+                <Button variant="outline" onClick={() => setStep(4)} className="flex-1">
+                  Back
+                </Button>
                 <Button onClick={handleSubmit} className="flex-1" disabled={isLoading}>
                   {isLoading ? (
                     <>
@@ -494,7 +542,7 @@ const OnboardingPage = () => {
                       Saving...
                     </>
                   ) : (
-                    "Complete"
+                    "Complete Setup"
                   )}
                 </Button>
               </div>
