@@ -150,8 +150,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           nationality: profile.nationality || '',
           countryOfResidence: profile.countryofresidence || '',
           phoneNumber: parsePhoneNumber(profile.phone),
-          countryCode: parsePhoneCode(profile.phone),
-          geminiApiKey: profile.gemini_api_key || ''
+          countryCode: parsePhoneCode(profile.phone)
         };
 
         const userProfile: UserProfile = {
@@ -216,6 +215,20 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         handleError(error, "Failed to create account");
         return false;
+      }
+
+      // Send welcome email
+      try {
+        await supabase.functions.invoke('send-signup-email', {
+          body: {
+            name: userData.name,
+            email: userData.email
+          }
+        });
+        console.log('Welcome email sent successfully');
+      } catch (emailError) {
+        console.warn('Failed to send welcome email:', emailError);
+        // Don't fail signup if email fails
       }
       
       analytics.track('user_signup', { 
@@ -294,8 +307,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         date_of_birth: preferences.dateOfBirth || null,
         nationality: preferences.nationality || null,
         countryofresidence: preferences.countryOfResidence || null,
-        phone: formattedPhone,
-        gemini_api_key: preferences.geminiApiKey || null
+        phone: formattedPhone
       };
 
       const { error } = await supabase

@@ -29,12 +29,12 @@ const SignupPage = () => {
   const [error, setError] = useState("");
   const [formSubmitted, setFormSubmitted] = useState(false);
 
-  // Redirect if already logged in (but not during signup process)
+  // Redirect if already logged in
   useEffect(() => {
-    if (currentUser && !formSubmitted) {
+    if (currentUser) {
       navigate("/dashboard");
     }
-  }, [currentUser, navigate, formSubmitted]);
+  }, [currentUser, navigate]);
 
   useEffect(() => {
     document.title = "Sign Up | Join Pathway";
