@@ -150,7 +150,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           nationality: profile.nationality || '',
           countryOfResidence: profile.countryofresidence || '',
           phoneNumber: parsePhoneNumber(profile.phone),
-          countryCode: parsePhoneCode(profile.phone)
+          countryCode: parsePhoneCode(profile.phone),
+          geminiApiKey: profile.gemini_api_key || ''
         };
 
         const userProfile: UserProfile = {
@@ -307,7 +308,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         date_of_birth: preferences.dateOfBirth || null,
         nationality: preferences.nationality || null,
         countryofresidence: preferences.countryOfResidence || null,
-        phone: formattedPhone
+        phone: formattedPhone,
+        gemini_api_key: preferences.geminiApiKey || null
       };
 
       const { error } = await supabase

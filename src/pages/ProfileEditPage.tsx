@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Award, BookOpen } from "lucide-react";
+import { ArrowLeft, Loader2, Award, BookOpen, Key } from "lucide-react";
 import { UserPreferences } from "@/types/user";
 import PersonalInfo from "@/components/PersonalInfo";
 import { majorDomains } from "@/data/majorDomains";
@@ -44,7 +44,8 @@ const ProfileEditPage = () => {
     highSchoolCurriculum: undefined,
     curriculumGrades: {},
     curriculumSubjects: [],
-    extracurricularActivities: []
+    extracurricularActivities: [],
+    geminiApiKey: ""
   });
 
   const availableDomains = preferences.intendedMajor ? majorDomains[preferences.intendedMajor] || [] : [];
@@ -364,6 +365,40 @@ const ProfileEditPage = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* API Configuration Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Key className="h-5 w-5" />
+                    API Configuration
+                  </CardTitle>
+                  <CardDescription>Configure your AI features</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="geminiApiKey">Gemini API Key</Label>
+                    <Input
+                      id="geminiApiKey"
+                      type="password"
+                      placeholder="Enter your Gemini API key"
+                      value={preferences.geminiApiKey || ""}
+                      onChange={(e) => updatePreference("geminiApiKey", e.target.value)}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      This key is required to use our AI-powered features like Essay Analyzer, Smart Recommender, and AI Consultant. 
+                      <a 
+                        href="https://makersuite.google.com/app/apikey" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-primary hover:underline ml-1"
+                      >
+                        Get your free Gemini API key here.
+                      </a>
+                    </p>
                   </div>
                 </CardContent>
               </Card>

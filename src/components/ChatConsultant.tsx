@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { StreamingAnimation } from "@/components/StreamingAnimation";
+import ApiKeyModal from "./ApiKeyModal";
 
 interface Message {
   id: string;
@@ -294,8 +295,7 @@ const ChatConsultant = ({ initialSidebarOpen = false }: ChatConsultantProps) => 
   const [isStreaming, setIsStreaming] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const [messageCount, setMessageCount] = useState<number>(0);
-  const [isLimitReached, setIsLimitReached] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -690,18 +690,9 @@ const updateConversationTitle = async (conversationId: string, msgs: Message[]) 
       return;
     }
 
-    if (isLimitReached) {
-      console.log("Message limit reached");
-      toast.error(`You've reached your daily limit of ${MAX_DAILY_MESSAGES} messages. Please try again tomorrow at UTC midnight.`);
-      return;
-    }
-
-    // Check message limit before sending
-    console.log("Checking message limit");
-    const canSendMessage = await checkMessageLimit(currentUser.id);
-    if (!canSendMessage) {
-      console.log("Cannot send message due to limit");
-      toast.error(`You've reached your daily limit of ${MAX_DAILY_MESSAGES} messages. Please try again tomorrow at UTC midnight.`);
+    // Check if user has API key
+    if (!currentUser.preferences.geminiApiKey) {
+      setShowApiKeyModal(true);
       return;
     }
 
@@ -1052,15 +1043,7 @@ const updateConversationTitle = async (conversationId: string, msgs: Message[]) 
     }
   };
 
-  const messageCountDisplay = (
-    <div className="text-sm text-muted-foreground text-center mt-2">
-      {isLimitReached ? (
-        <span className="text-destructive">Daily message limit reached ({MAX_DAILY_MESSAGES}/{MAX_DAILY_MESSAGES})</span>
-      ) : (
-        <span>Messages remaining today: {MAX_DAILY_MESSAGES - messageCount}/{MAX_DAILY_MESSAGES}</span>
-      )}
-    </div>
-  );
+  // Removed message count display
 
   return (
     <div className="h-full">
@@ -1276,7 +1259,7 @@ const updateConversationTitle = async (conversationId: string, msgs: Message[]) 
                   onPaste={handleImagePaste}
                   placeholder="Message AI Consultant..."
                   className="pr-14 py-3 min-h-[50px] max-h-[200px] resize-none rounded-full"
-                  disabled={isLoading || isLimitReached}
+                  disabled={isLoading}
                 />
                 <div className="absolute bottom-2 right-3 flex items-center gap-1">
                   <input
@@ -1296,7 +1279,7 @@ const updateConversationTitle = async (conversationId: string, msgs: Message[]) 
                           variant="ghost"
                           className="h-8 w-8 rounded-full"
                           onClick={() => fileInputRef.current?.click()}
-                          disabled={isLoading || imageUrls.length >= MAX_IMAGES || isLimitReached}
+                          disabled={isLoading || imageUrls.length >= MAX_IMAGES}
                         >
                           <ImageIcon className="h-4 w-4" />
                         </Button>
@@ -1327,7 +1310,7 @@ const updateConversationTitle = async (conversationId: string, msgs: Message[]) 
                   ) : (
                     <Button
                       size="icon"
-                      disabled={(!inputValue.trim() && imageUrls.length === 0) || isLoading || isLimitReached}
+                      disabled={(!inputValue.trim() && imageUrls.length === 0) || isLoading}
                       onClick={() => handleSendMessage()}
                       className="h-8 w-8 rounded-full"
                     >
@@ -1336,7 +1319,7 @@ const updateConversationTitle = async (conversationId: string, msgs: Message[]) 
                   )}
                 </div>
               </div>
-              {messageCountDisplay}
+              {/* Removed message count display */}
             </div>
           </div>
         </ResizablePanel>
@@ -1367,6 +1350,17 @@ const updateConversationTitle = async (conversationId: string, msgs: Message[]) 
           </form>
         </DialogContent>
       </Dialog>
+      
+      <ApiKeyModal 
+        open={showApiKeyModal}
+        onOpenChange={setShowApiKeyModal}
+        onSuccess={() => {
+          // Retry sending message after API key is saved
+          if (inputValue.trim()) {
+            handleSendMessage();
+          }
+        }}
+      />
     </div>
   );
 };

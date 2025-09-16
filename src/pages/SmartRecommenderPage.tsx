@@ -11,7 +11,7 @@ import { getChatResponse } from '../utils/chatConsultantApi';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { toast } from "sonner";
-import { supabase } from '../integrations/supabase/client';
+import ApiKeyModal from '../components/ApiKeyModal';
 
 interface Question {
   id: string;
@@ -60,10 +60,7 @@ interface UniversityData {
   scholarshipInfo?: string;
 }
 
-interface UsageLimits {
-  current_count: number;
-  limit_reached: boolean;
-}
+// Removed usage limits - now controlled by API key
 
 export default function SmartRecommenderPage() {
   const { currentUser, saveUniversity, savedUniversities } = useAuth();
@@ -77,7 +74,7 @@ export default function SmartRecommenderPage() {
   const [currentAnswer, setCurrentAnswer] = useState<any>('');
   const [academicProfile, setAcademicProfile] = useState<any>(null);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
-  const [usageLimits, setUsageLimits] = useState<UsageLimits>({ current_count: 5, limit_reached: false });
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
@@ -99,55 +96,12 @@ export default function SmartRecommenderPage() {
     visible: { x: 0, opacity: 1 }
   };
 
-  // Check usage limits
-  const checkUsageLimits = async () => {
-    if (!currentUser?.id) return;
-    
-    try {
-      const { data, error } = await supabase.rpc('check_and_reset_smart_recommender_limit', {
-        user_uuid: currentUser.id
-      });
-
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        setUsageLimits(data[0]);
-      }
-    } catch (err) {
-      console.error('Error checking usage limits:', err);
-    }
-  };
-
-  // Decrement usage count
-  const incrementUsage = async (): Promise<boolean> => {
-    if (!currentUser?.id) return false;
-    
-    try {
-      const { data, error } = await supabase.rpc('increment_smart_recommender_usage', {
-        user_uuid: currentUser.id
-      });
-
-      if (error) throw error;
-      
-      if (data) {
-        // Refresh usage limits after decrementing
-        await checkUsageLimits();
-        return true;
-      } else {
-        setError('Daily limit reached. You can use the Smart Recommender 5 times per day.');
-        return false;
-      }
-    } catch (err) {
-      console.error('Error decrementing usage:', err);
-      setError('Failed to track usage. Please try again.');
-      return false;
-    }
-  };
+  // Removed usage limit checking - now controlled by API key
 
   const generateQuestions = async () => {
-    // Check if user has reached limit
-    if (usageLimits.limit_reached) {
-      setError('You have reached your daily limit of 5 recommendations. Please try again tomorrow.');
+    // Check if user has API key
+    if (!currentUser?.preferences?.geminiApiKey) {
+      setShowApiKeyModal(true);
       return;
     }
 
@@ -224,10 +178,7 @@ export default function SmartRecommenderPage() {
 
   useEffect(() => {
     document.title = "Smart University Recommender | Pathway";
-    if (currentUser?.id) {
-      checkUsageLimits();
-    }
-  }, [currentUser]);
+  }, []);
 
   const handleAnswer = () => {
     if (!currentAnswer && currentAnswer !== 0) return;
@@ -388,9 +339,6 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
       setUniversities(recommendations);
       setCurrentStep('results');
       setError(null);
-
-      // Decrement usage ONLY after successful display of recommendations
-      await incrementUsage();
     } catch (err) {
       console.error('Failed to generate recommendations:', err);
       setError('Failed to generate recommendations. Please try again.');
@@ -555,24 +503,7 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
             </p>
             
             {/* Usage Display - Updated to show countdown */}
-            {currentUser && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="mt-6 inline-flex items-center gap-2 bg-card border rounded-lg px-4 py-2"
-              >
-                <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">
-                  Remaining Uses: {usageLimits.current_count}/5 recommendations
-                </span>
-                {usageLimits.limit_reached && (
-                  <span className="text-xs text-destructive ml-2">
-                    (No uses left - resets at midnight UTC)
-                  </span>
-                )}
-              </motion.div>
-            )}
+            {/* Removed usage limits display */}
           </motion.div>
 
           {error && (
@@ -600,12 +531,10 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
                 <Button
                   size="lg"
                   onClick={generateQuestions}
-                  disabled={usageLimits.limit_reached || !currentUser}
+                  disabled={!currentUser}
                   className="bg-primary hover:bg-primary/90 text-white"
                 >
-                  {!currentUser ? 'Please sign in to continue' : 
-                   usageLimits.limit_reached ? 'No uses remaining' : 
-                   'Start Recommendation Process'}
+                  {!currentUser ? 'Please sign in to continue' : 'Start Recommendation Process'}
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
                 {!currentUser && (
@@ -835,6 +764,15 @@ IMPORTANT: MAKE SURE THE OUTPUT IS IN THE JSON FORMAT ONLY, THERE SHOULD BE NO T
         </div>
       </main>
       <Footer />
+      
+      <ApiKeyModal 
+        open={showApiKeyModal}
+        onOpenChange={setShowApiKeyModal}
+        onSuccess={() => {
+          // Retry generating questions after API key is saved
+          generateQuestions();
+        }}
+      />
     </div>
   );
 }
