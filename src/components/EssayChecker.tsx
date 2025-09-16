@@ -9,13 +9,13 @@ import EssayRating, { RatingCategory } from "./essay-checker/EssayRating";
 import { Button } from "./ui/button";
 import { FileText } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
-import ApiKeyModal from "./ApiKeyModal";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EssayCheckerProps {
   initialSidebarOpen?: boolean;
 }
 
-// Removed daily essay limits - now controlled by API key
+const MAX_DAILY_ESSAYS = 3;
 
 const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen = false }) => {
   const { currentUser } = useUser();
@@ -32,11 +32,118 @@ const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen = false 
     essay: ""
   });
   const [hasAnalyzedOnce, setHasAnalyzedOnce] = useState(false);
-  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [essayCount, setEssayCount] = useState<number>(0);
+  const [isLimitReached, setIsLimitReached] = useState(false);
 
-  // Removed essay limit checking - now controlled by API key
+  const checkEssayLimit = async (userId: string) => {
+    try {
+      const { data: limitData, error: limitError } = await supabase
+        .from('message_limits')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
 
-  // Removed essay count tracking - now controlled by API key
+      if (limitError && limitError.code !== 'PGRST116') {
+        console.error('Error checking essay limit:', limitError);
+        return false;
+      }
+
+      const now = new Date();
+      const resetTime = new Date(now.toISOString().split('T')[0] + 'T00:00:00.000Z');
+
+      if (!limitData) {
+        const { error } = await supabase
+          .from('message_limits')
+          .insert({
+            user_id: userId,
+            essay_count: 1,
+            last_reset_essays: resetTime.toISOString()
+          });
+
+        if (error) {
+          console.error('Error creating essay limit:', error);
+          return false;
+        }
+
+        setEssayCount(1);
+        return true;
+      }
+
+      const lastReset = new Date(limitData.last_reset_essays || limitData.last_reset);
+      if (now > lastReset && now.getUTCDate() !== lastReset.getUTCDate()) {
+        const { error } = await supabase
+          .from('message_limits')
+          .update({
+            essay_count: 1,
+            last_reset_essays: resetTime.toISOString()
+          })
+          .eq('user_id', userId);
+
+        if (error) {
+          console.error('Error resetting essay limit:', error);
+          return false;
+        }
+
+        setEssayCount(1);
+        return true;
+      }
+
+      if ((limitData.essay_count || 0) >= MAX_DAILY_ESSAYS) {
+        setIsLimitReached(true);
+        return false;
+      }
+
+      const { error } = await supabase
+        .from('message_limits')
+        .update({
+          essay_count: (limitData.essay_count || 0) + 1
+        })
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error updating essay count:', error);
+        return false;
+      }
+
+      setEssayCount((limitData.essay_count || 0) + 1);
+      return true;
+    } catch (error) {
+      console.error('Error in checkEssayLimit:', error);
+      return false;
+    }
+  };
+
+  React.useEffect(() => {
+    const fetchEssayCount = async () => {
+      if (!currentUser?.id) return;
+
+      const { data, error } = await supabase
+        .from('message_limits')
+        .select('essay_count, last_reset_essays, last_reset')
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching essay count:', error);
+        return;
+      }
+
+      if (data) {
+        const now = new Date();
+        const lastReset = new Date(data.last_reset_essays || data.last_reset);
+        
+        if (now > lastReset && now.getUTCDate() !== lastReset.getUTCDate()) {
+          setEssayCount(0);
+          setIsLimitReached(false);
+        } else {
+          setEssayCount(data.essay_count || 0);
+          setIsLimitReached((data.essay_count || 0) >= MAX_DAILY_ESSAYS);
+        }
+      }
+    };
+
+    fetchEssayCount();
+  }, [currentUser?.id]);
   
   const handleAnalyzeEssay = async (data: EssayFormValues) => {
     if (!currentUser?.id) {
@@ -44,9 +151,14 @@ const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen = false 
       return;
     }
 
-    // Check if user has API key
-    if (!currentUser.preferences.geminiApiKey) {
-      setShowApiKeyModal(true);
+    if (isLimitReached) {
+      toast.error(`You've reached your daily limit of ${MAX_DAILY_ESSAYS} essays. Please try again tomorrow at UTC midnight.`);
+      return;
+    }
+
+    const canAnalyze = await checkEssayLimit(currentUser.id);
+    if (!canAnalyze) {
+      toast.error(`You've reached your daily limit of ${MAX_DAILY_ESSAYS} essays. Please try again tomorrow at UTC midnight.`);
       return;
     }
 
@@ -89,7 +201,15 @@ const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen = false 
     setHasAnalyzedOnce(false);
   };
 
-  // Removed essay count display - no more limits
+  const essayCountDisplay = currentUser && (
+    <div className="text-sm text-muted-foreground text-center mt-4">
+      {isLimitReached ? (
+        <span className="text-destructive">Daily essay limit reached ({MAX_DAILY_ESSAYS}/{MAX_DAILY_ESSAYS})</span>
+      ) : (
+        <span>Essays remaining today: {MAX_DAILY_ESSAYS - essayCount}/{MAX_DAILY_ESSAYS}</span>
+      )}
+    </div>
+  );
 
   return (
     <div className="flex h-full">
@@ -101,8 +221,9 @@ const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen = false 
                 onSubmit={handleAnalyzeEssay} 
                 isAnalyzing={isAnalyzing}
                 defaultValues={currentFormValues}
-                disabled={false}
+                disabled={isLimitReached}
               />
+              {essayCountDisplay}
             </div>
           ) : (
             <div className="space-y-6">
@@ -129,21 +250,12 @@ const EssayChecker: React.FC<EssayCheckerProps> = ({ initialSidebarOpen = false 
                 essayType={currentFormValues.essayType}
                 prompt={currentFormValues.prompt}
               />
+              
+              {essayCountDisplay}
             </div>
           )}
         </div>
       </div>
-      
-      <ApiKeyModal 
-        open={showApiKeyModal}
-        onOpenChange={setShowApiKeyModal}
-        onSuccess={() => {
-          // Retry the essay analysis after API key is saved
-          if (currentFormValues.essay && currentFormValues.prompt) {
-            handleAnalyzeEssay(currentFormValues);
-          }
-        }}
-      />
     </div>
   );
 };

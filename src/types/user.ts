@@ -43,5 +43,4 @@ export interface UserPreferences {
   countryOfResidence?: string; // Added country of residence
   countryCode?: string;      // Added country code prefix
   phoneNumber?: string;      // Actual phone number
-  geminiApiKey?: string;     // Added Gemini API key
 }

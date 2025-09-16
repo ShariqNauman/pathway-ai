@@ -17,7 +17,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, User, GraduationCap, DollarSign, Map, Globe, Flag, Phone, Key } from "lucide-react";
+import { Loader2, User, GraduationCap, DollarSign, Map, Globe, Flag, Phone } from "lucide-react";
 import { UserPreferences } from "@/types/user";
 import { majorDomains } from "@/data/majorDomains";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -110,8 +110,7 @@ const OnboardingPage = () => {
     countryOfResidence: "",
     countryCode: "",
     phoneNumber: "",
-    englishTestScore: "",
-    geminiApiKey: ""
+    englishTestScore: ""
   });
 
   const availableDomains = preferences.intendedMajor ? majorDomains[preferences.intendedMajor] || [] : [];
@@ -168,8 +167,6 @@ const OnboardingPage = () => {
         return preferences.budget !== "";
       case 4:
         return preferences.preferredCountry && preferences.preferredUniversityType;
-      case 5:
-        return preferences.geminiApiKey && preferences.geminiApiKey.trim() !== '';
       default:
         return true;
     }
@@ -216,26 +213,26 @@ const OnboardingPage = () => {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="w-full max-w-lg p-8 rounded-lg shadow-lg bg-card"
         >
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold">Tell Us About You</h1>
-              <p className="text-muted-foreground mt-2">
-                Help us personalize your experience
-              </p>
-              
-              <div className="mt-6 flex justify-center">
-                <div className="flex space-x-2">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <div 
-                      key={s} 
-                      className={`h-2 w-12 rounded-full ${
-                        s === step ? "bg-primary" : 
-                        s < step ? "bg-primary/60" : "bg-muted"
-                      }`}
-                    />
-                  ))}
-                </div>
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold">Tell Us About You</h1>
+            <p className="text-muted-foreground mt-2">
+              Help us personalize your experience
+            </p>
+            
+            <div className="mt-6 flex justify-center">
+              <div className="flex space-x-2">
+                {[1, 2, 3, 4].map((s) => (
+                  <div 
+                    key={s} 
+                    className={`h-2 w-12 rounded-full ${
+                      s === step ? "bg-primary" : 
+                      s < step ? "bg-primary/60" : "bg-muted"
+                    }`}
+                  />
+                ))}
               </div>
             </div>
+          </div>
 
           {step === 1 && (
             <motion.div
@@ -488,51 +485,6 @@ const OnboardingPage = () => {
 
               <div className="flex space-x-3">
                 <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
-                  Back
-                </Button>
-                <Button onClick={handleNextStep} className="flex-1">
-                  Continue
-                </Button>
-              </div>
-            </motion.div>
-          )}
-
-          {step === 5 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-6"
-            >
-              <div className="flex items-center gap-2 mb-4">
-                <Key className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-semibold">AI Features Setup</h2>
-              </div>
-              
-              <div className="space-y-3">
-                <Label htmlFor="geminiApiKey">Gemini API Key</Label>
-                <Input
-                  id="geminiApiKey"
-                  type="password"
-                  placeholder="Enter your Gemini API key"
-                  value={preferences.geminiApiKey || ""}
-                  onChange={(e) => updatePreference("geminiApiKey", e.target.value)}
-                />
-                <p className="text-sm text-muted-foreground">
-                  This key is required to use our AI-powered features like Essay Analyzer, Smart Recommender, and AI Consultant. 
-                  <a 
-                    href="https://makersuite.google.com/app/apikey" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-primary hover:underline ml-1"
-                  >
-                    Get your free Gemini API key here.
-                  </a>
-                </p>
-              </div>
-
-              <div className="flex space-x-3">
-                <Button variant="outline" onClick={() => setStep(4)} className="flex-1">
                   Back
                 </Button>
                 <Button onClick={handleSubmit} className="flex-1" disabled={isLoading}>
